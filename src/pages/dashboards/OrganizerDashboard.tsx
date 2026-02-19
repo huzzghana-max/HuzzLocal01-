@@ -53,6 +53,9 @@ interface Event {
   date: string
   status: 'confirmed' | 'pending' | 'cancelled'
   vendors: number
+  type?: string
+  location?: string
+  description?: string
 }
 
 interface ServiceBooking {
@@ -200,6 +203,7 @@ const OrganizerDashboard: React.FC = () => {
       }
     }
   const [newEvent, setNewEvent] = useState({ name: '', date: '', type: '', location: '', description: '' })
+  const [editingEventId, setEditingEventId] = useState<number | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageError, setImageError] = useState<string | null>(null)
@@ -288,8 +292,31 @@ const OrganizerDashboard: React.FC = () => {
     setOpenDialog(true)
   }
 
-  const handleDeleteEvent = (eventId: number) => {
-    setEvents(events.filter((e) => e.id !== eventId))
+  const handleDeleteEvent = async (eventId: number) => {
+    if (!window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+      return
+    }
+    
+    try {
+      await api.delete(`/events/${eventId}`)
+      setEvents(events.filter((e) => e.id !== eventId))
+      alert('Event deleted successfully!')
+    } catch (error) {
+      console.error('Failed to delete event:', error)
+      alert('Failed to delete event. Please try again.')
+    }
+  }
+
+  const handleEditEvent = (event: Event) => {
+    setEditingEventId(event.id)
+    setNewEvent({
+      name: event.name,
+      date: event.date,
+      type: event.type || '',
+      location: event.location || '',
+      description: event.description || '',
+    })
+    setOpenDialog(true)
   }
 
   const openTicketsDialog = async (eventId: number) => {
@@ -359,6 +386,7 @@ const OrganizerDashboard: React.FC = () => {
   // Fix: Add missing handleCloseDialog function
   const handleCloseDialog = () => {
     setOpenDialog(false);
+    setEditingEventId(null);
     setNewEvent({ name: '', date: '', type: '', location: '', description: '' });
     setImageFile(null);
     setImagePreview(null);
@@ -421,16 +449,22 @@ const OrganizerDashboard: React.FC = () => {
       form.append('description', newEvent.description || '')
       if (imageFile) form.append('image', imageFile)
 
-      const response = await api.post('/events', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+      if (editingEventId) {
+        // Edit existing event
+        await api.put(`/events/${editingEventId}`, form, { headers: { 'Content-Type': 'multipart/form-data' } })
+        alert('Event updated successfully!')
+      } else {
+        // Create new event
+        await api.post('/events', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+        alert('Event created successfully!')
+      }
       
       handleCloseDialog()
-      alert('Event created successfully!')
-      
-      // Refresh dashboard data to show the newly created event
+      // Refresh dashboard data to show the updated/newly created event
       await fetchDashboardData()
     } catch (error) {
-      console.error('Failed to create event:', error)
-      alert('Failed to create event. Please try again.')
+      console.error('Failed to save event:', error)
+      alert('Failed to save event. Please try again.')
     }
   }
 
@@ -620,6 +654,7 @@ const OrganizerDashboard: React.FC = () => {
                                 size="small"
                                 startIcon={<EditIcon />}
                                 variant="text"
+                                onClick={() => handleEditEvent(event)}
                               >
                                 Edit
                               </Button>
@@ -804,7 +839,7 @@ const OrganizerDashboard: React.FC = () => {
               </Box>
               <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ fontWeight: 600 }}>
-                  Create New Event
+                  {editingEventId ? 'Edit Event' : 'Create New Event'}
                 </DialogTitle>
                 <DialogContent sx={{ pt: 3, maxHeight: '70vh', overflowY: 'auto' }}>
                   <TextField
@@ -992,7 +1027,7 @@ const OrganizerDashboard: React.FC = () => {
                     variant="contained"
                     sx={{ textTransform: 'none', background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)' }}
                   >
-                    Create Event
+                    {editingEventId ? 'Update Event' : 'Create Event'}
                   </Button>
                 </DialogActions>
               </Dialog>

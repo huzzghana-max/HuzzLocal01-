@@ -43,7 +43,7 @@ async function seedEvents() {
     // Sample events with descriptions and images
     const sampleEvents = [
       {
-        name: 'Summer Wedding Reception',
+        name: 'Summer Wedding Reception111',
         description: 'Join us for an elegant outdoor wedding reception with live music, gourmet dining, and dancing under the stars. We\'re celebrating the union of two families with an evening filled with joy, laughter, and wonderful memories. Dress code: Formal attire recommended.',
         image_url: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80',
         date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + ' 18:00:00',

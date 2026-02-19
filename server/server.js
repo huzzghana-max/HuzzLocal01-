@@ -204,35 +204,35 @@ app.post('/api/auth/login', async (req, res) => {
 app.get('/api/dashboard/organizer-stats', verifyToken, async (req, res) => {
   try {
     const pool = getPoolOrThrow()
-    const userId = req.user.id
+    const userId = req.userId
 
     // Get total events count
     const [eventCounts] = await pool.execute(
-      'SELECT COUNT(*) AS totalEvents FROM events WHERE user_id = ?',
+      'SELECT COUNT(*) AS totalEvents FROM events WHERE organizer_id = ?',
       [userId]
     )
 
     // Get upcoming events count
     const [upcomingCounts] = await pool.execute(
-      "SELECT COUNT(*) AS upcomingEvents FROM events WHERE user_id = ? AND date > NOW()",
+      "SELECT COUNT(*) AS upcomingEvents FROM events WHERE organizer_id = ? AND date > NOW()",
       [userId]
     )
 
     // Get pending bookings count
     const [pendingBookings] = await pool.execute(
-      "SELECT COUNT(*) AS pendingBookings FROM bookings WHERE user_id = ? AND status = 'pending'",
+      "SELECT COUNT(*) AS pendingBookings FROM bookings WHERE organizer_id = ? AND status = 'pending'",
       [userId]
     )
 
     // Get user's actual events
     const [events] = await pool.execute(
-      'SELECT id, name, date, status, (SELECT COUNT(*) FROM bookings WHERE event_id = events.id) AS vendors FROM events WHERE user_id = ? ORDER BY date DESC LIMIT 10',
+      'SELECT id, name, date, status, (SELECT COUNT(*) FROM bookings WHERE event_id = events.id) AS vendors FROM events WHERE organizer_id = ? ORDER BY date DESC LIMIT 10',
       [userId]
     )
 
     // Get total revenue (sum of completed bookings)
     const [revenue] = await pool.execute(
-      "SELECT COALESCE(SUM(amount), 0) AS totalRevenue FROM bookings WHERE user_id = ? AND status = 'completed'",
+      "SELECT COALESCE(SUM(total_cost), 0) AS totalRevenue FROM bookings WHERE organizer_id = ? AND status = 'completed'",
       [userId]
     )
 
@@ -252,7 +252,7 @@ app.get('/api/dashboard/organizer-stats', verifyToken, async (req, res) => {
 app.get('/api/dashboard/provider-stats', verifyToken, async (req, res) => {
   try {
     const pool = getPoolOrThrow()
-    const userId = req.user.id
+    const userId = req.userId
 
     // Get profile completion percentage
     const [provider] = await pool.execute(
@@ -2373,6 +2373,85 @@ app.delete('/api/admin/events/:eventId', verifyToken, async (req, res) => {
     res.json({ message: 'Event deleted successfully' })
   } catch (error) {
     console.error('Delete event error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+// Organizer: Delete their own event
+app.delete('/api/events/:eventId', verifyToken, async (req, res) => {
+  try {
+    const { eventId } = req.params
+    const userId = req.userId
+
+    const pool = getPoolOrThrow()
+    
+    // Verify the event belongs to the organizer
+    const [events] = await pool.execute(
+      'SELECT id FROM events WHERE id = ? AND organizer_id = ?',
+      [eventId, userId]
+    )
+
+    if (events.length === 0) {
+      return res.status(404).json({ message: 'Event not found or you do not have permission to delete it' })
+    }
+
+    // Delete the event
+    await pool.execute('DELETE FROM events WHERE id = ?', [eventId])
+
+    res.json({ message: 'Event deleted successfully' })
+  } catch (error) {
+    console.error('Delete event error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+// Organizer: Edit their own event
+app.put('/api/events/:eventId', verifyToken, upload.single('image'), async (req, res) => {
+  try {
+    const { eventId } = req.params
+    const userId = req.userId
+    const { name, date, type, description, location } = req.body
+
+    if (!name || !date) {
+      return res.status(400).json({ message: 'Event name and date are required' })
+    }
+
+    const pool = getPoolOrThrow()
+    
+    // Verify the event belongs to the organizer
+    const [events] = await pool.execute(
+      'SELECT * FROM events WHERE id = ? AND organizer_id = ?',
+      [eventId, userId]
+    )
+
+    if (events.length === 0) {
+      return res.status(404).json({ message: 'Event not found or you do not have permission to edit it' })
+    }
+
+    // Handle image update
+    let imageUrl = events[0].image_url
+    if (req.file) {
+      imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`
+    }
+
+    // Update the event
+    await pool.execute(
+      `UPDATE events SET name = ?, date = ?, type = ?, description = ?, location = ?, image_url = ? WHERE id = ?`,
+      [name, date, type || null, description || null, location || null, imageUrl, eventId]
+    )
+
+    res.json({
+      id: parseInt(eventId),
+      name,
+      date,
+      type,
+      description,
+      location,
+      image_url: imageUrl,
+      status: events[0].status,
+    })
+  } catch (error) {
+    console.error('Update event error:', error.message)
     res.status(500).json({ message: error.message })
   }
 })
