@@ -988,35 +988,30 @@ app.get('/api/settings', verifyToken, async (req, res) => {
     const pool = getPoolOrThrow()
     const userId = req.userId
 
-    pool.query(
+    const [results] = await pool.execute(
       'SELECT notification_preferences, privacy_settings FROM users WHERE id = ?',
-      [userId],
-      (error, results) => {
-        if (error) {
-          return res.status(500).json({ message: 'Database error' })
-        }
-
-        if (results.length === 0) {
-          return res.status(404).json({ message: 'User not found' })
-        }
-
-        const user = results[0]
-        const notifications = user.notification_preferences ? JSON.parse(user.notification_preferences) : {
-          emailNotifications: true,
-          pushNotifications: true,
-          messageNotifications: true,
-          bookingNotifications: true,
-          paymentNotifications: true,
-        }
-
-        const privacy = user.privacy_settings ? JSON.parse(user.privacy_settings) : {
-          profileVisibility: 'public',
-          allowMessagesFromAnyone: true,
-        }
-
-        res.json({ notifications, privacy })
-      }
+      [userId]
     )
+
+    if (results.length === 0) {
+      return res.status(404).json({ message: 'User not found' })
+    }
+
+    const user = results[0]
+    const notifications = user.notification_preferences ? JSON.parse(user.notification_preferences) : {
+      emailNotifications: true,
+      pushNotifications: true,
+      messageNotifications: true,
+      bookingNotifications: true,
+      paymentNotifications: true,
+    }
+
+    const privacy = user.privacy_settings ? JSON.parse(user.privacy_settings) : {
+      profileVisibility: 'public',
+      allowMessagesFromAnyone: true,
+    }
+
+    res.json({ notifications, privacy })
   } catch (error) {
     console.error('Get settings error:', error.message)
     res.status(500).json({ message: error.message })
@@ -1073,22 +1068,17 @@ app.put('/api/settings/profile', verifyToken, upload.single('profileImage'), asy
     updateQuery += ' WHERE id = ?'
     updateParams.push(userId)
 
-    pool.query(updateQuery, updateParams, (error) => {
-      if (error) {
-        console.error('Update profile error:', error)
-        return res.status(500).json({ message: 'Failed to update profile' })
-      }
+    await pool.execute(updateQuery, updateParams)
 
-      res.json({
-        message: 'Profile updated successfully',
-        user: {
-          id: userId,
-          name,
-          email,
-          phone: phone || '',
-          profile_image: req.file ? `/uploads/${req.file.filename}` : undefined,
-        },
-      })
+    res.json({
+      message: 'Profile updated successfully',
+      user: {
+        id: userId,
+        name,
+        email,
+        phone: phone || '',
+        profile_image: req.file ? `/uploads/${req.file.filename}` : undefined,
+      },
     })
   } catch (error) {
     console.error('Settings profile error:', error.stack || error.message)
@@ -1103,16 +1093,11 @@ app.put('/api/settings/notifications', verifyToken, async (req, res) => {
     const userId = req.userId
     const notifications = req.body
 
-    pool.query(
+    await pool.execute(
       'UPDATE users SET notification_preferences = ? WHERE id = ?',
-      [JSON.stringify(notifications), userId],
-      (error) => {
-        if (error) {
-          return res.status(500).json({ message: 'Failed to update preferences' })
-        }
-        res.json({ message: 'Notification preferences updated', notifications })
-      }
+      [JSON.stringify(notifications), userId]
     )
+    res.json({ message: 'Notification preferences updated', notifications })
   } catch (error) {
     console.error('Settings notifications error:', error.message)
     res.status(500).json({ message: error.message })
@@ -1126,16 +1111,11 @@ app.put('/api/settings/privacy', verifyToken, async (req, res) => {
     const userId = req.userId
     const privacy = req.body
 
-    pool.query(
+    await pool.execute(
       'UPDATE users SET privacy_settings = ? WHERE id = ?',
-      [JSON.stringify(privacy), userId],
-      (error) => {
-        if (error) {
-          return res.status(500).json({ message: 'Failed to update privacy settings' })
-        }
-        res.json({ message: 'Privacy settings updated', privacy })
-      }
+      [JSON.stringify(privacy), userId]
     )
+    res.json({ message: 'Privacy settings updated', privacy })
   } catch (error) {
     console.error('Settings privacy error:', error.message)
     res.status(500).json({ message: error.message })

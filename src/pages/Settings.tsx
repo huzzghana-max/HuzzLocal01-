@@ -123,38 +123,42 @@ const Settings: React.FC = () => {
     }
     const user = JSON.parse(userStr)
     setCurrentUser(user)
+    
+    // Initialize profile data immediately from localStorage
+    setProfileData({
+      name: user.name,
+      email: user.email,
+      phone: user.phone || '',
+    })
+    setProfileImagePreview(user.profile_image || '')
+    
+    // Set loading to false immediately - don't wait for API
+    setLoading(false)
+    
+    // Fetch settings in background (non-blocking)
     fetchSettings()
   }, [navigate])
 
   const fetchSettings = async () => {
     try {
-      setLoading(true)
       const token = localStorage.getItem('token')
-      const userStr = localStorage.getItem('user')
-      if (!userStr) {
-        setLoading(false)
-        return
-      }
+      if (!token) return
 
-      const user = JSON.parse(userStr)
-      setProfileData({
-        name: user.name,
-        email: user.email,
-        phone: user.phone || '',
-      })
-      setProfileImagePreview(user.profile_image || '')
-
-      // Mock fetch settings from API
+      // Non-blocking API call
       const response = await api.get('/settings', {
         headers: { Authorization: `Bearer ${token}` },
       })
-      setNotifications(response.data.notifications || notifications)
-      setPrivacy(response.data.privacy || privacy)
+      
+      // Update state with fetched settings if available
+      if (response.data?.notifications) {
+        setNotifications(response.data.notifications)
+      }
+      if (response.data?.privacy) {
+        setPrivacy(response.data.privacy)
+      }
     } catch (error) {
       console.error('Failed to fetch settings:', error)
-      // Use defaults if API fails
-    } finally {
-      setLoading(false)
+      // Use defaults if API fails - no error shown since defaults are fine
     }
   }
 
