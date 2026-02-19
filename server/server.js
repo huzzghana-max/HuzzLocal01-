@@ -203,54 +203,138 @@ app.post('/api/auth/login', async (req, res) => {
 // Dashboard endpoints
 app.get('/api/dashboard/organizer-stats', verifyToken, async (req, res) => {
   try {
-    // Mock data for organizer dashboard
+    const pool = getPoolOrThrow()
+    const userId = req.user.id
+
+    // Get total events count
+    const [eventCounts] = await pool.execute(
+      'SELECT COUNT(*) AS totalEvents FROM events WHERE user_id = ?',
+      [userId]
+    )
+
+    // Get upcoming events count
+    const [upcomingCounts] = await pool.execute(
+      "SELECT COUNT(*) AS upcomingEvents FROM events WHERE user_id = ? AND date > NOW()",
+      [userId]
+    )
+
+    // Get pending bookings count
+    const [pendingBookings] = await pool.execute(
+      "SELECT COUNT(*) AS pendingBookings FROM bookings WHERE user_id = ? AND status = 'pending'",
+      [userId]
+    )
+
+    // Get user's actual events
+    const [events] = await pool.execute(
+      'SELECT id, name, date, status, (SELECT COUNT(*) FROM bookings WHERE event_id = events.id) AS vendors FROM events WHERE user_id = ? ORDER BY date DESC LIMIT 10',
+      [userId]
+    )
+
+    // Get total revenue (sum of completed bookings)
+    const [revenue] = await pool.execute(
+      "SELECT COALESCE(SUM(amount), 0) AS totalRevenue FROM bookings WHERE user_id = ? AND status = 'completed'",
+      [userId]
+    )
+
     res.json({
-      totalEvents: 5,
-      pendingBookings: 3,
-      upcomingEvents: 2,
-      totalRevenue: '$2,450',
-      events: [
-        { id: 1, name: 'Wedding Reception', date: '2026-02-15', status: 'confirmed', vendors: 5 },
-        { id: 2, name: 'Corporate Gala', date: '2026-03-01', status: 'pending', vendors: 3 },
-      ]
+      totalEvents: eventCounts[0]?.totalEvents || 0,
+      pendingBookings: pendingBookings[0]?.pendingBookings || 0,
+      upcomingEvents: upcomingCounts[0]?.upcomingEvents || 0,
+      totalRevenue: revenue[0]?.totalRevenue || 0,
+      events: events || []
     })
   } catch (error) {
+    console.error('Organizer stats error:', error.message)
     res.status(500).json({ message: error.message })
   }
 })
 
 app.get('/api/dashboard/provider-stats', verifyToken, async (req, res) => {
   try {
-    // Mock data for provider dashboard
+    const pool = getPoolOrThrow()
+    const userId = req.user.id
+
+    // Get profile completion percentage
+    const [provider] = await pool.execute(
+      'SELECT * FROM service_providers WHERE user_id = ?',
+      [userId]
+    )
+
+    // Get pending service requests
+    const [pending] = await pool.execute(
+      "SELECT COUNT(*) AS pendingRequests FROM bookings WHERE vendor_id = ? AND status = 'pending'",
+      [userId]
+    )
+
+    // Get completed bookings
+    const [completed] = await pool.execute(
+      "SELECT COUNT(*) AS completedBookings FROM bookings WHERE vendor_id = ? AND status = 'completed'",
+      [userId]
+    )
+
+    // Get total earnings from completed bookings
+    const [earnings] = await pool.execute(
+      "SELECT COALESCE(SUM(amount), 0) AS earnings FROM bookings WHERE vendor_id = ? AND status = 'completed'",
+      [userId]
+    )
+
+    // Get recent bookings
+    const [bookings] = await pool.execute(
+      'SELECT id, event_id, amount, status, created_at FROM bookings WHERE vendor_id = ? ORDER BY created_at DESC LIMIT 10',
+      [userId]
+    )
+
+    const profileCompletion = provider?.[0]?.bio && provider?.[0]?.portfolio_url ? '100%' : '50%'
+
     res.json({
-      profileCompletion: '65%',
-      pendingRequests: 4,
-      completedBookings: 12,
-      earnings: '$3,250',
-      bookings: [
-        { id: 1, eventName: 'Wedding', date: '2026-02-15', status: 'confirmed', amount: '$500' },
-        { id: 2, eventName: 'Birthday', date: '2026-02-20', status: 'pending', amount: '$300' },
-      ]
+      profileCompletion,
+      pendingRequests: pending[0]?.pendingRequests || 0,
+      completedBookings: completed[0]?.completedBookings || 0,
+      earnings: earnings[0]?.earnings || 0,
+      bookings: bookings || []
     })
   } catch (error) {
+    console.error('Provider stats error:', error.message)
     res.status(500).json({ message: error.message })
   }
 })
 
 app.get('/api/dashboard/admin-stats', verifyToken, async (req, res) => {
   try {
-    // Mock data for admin dashboard
+    const pool = getPoolOrThrow()
+
+    // Get total users count
+    const [userCounts] = await pool.execute(
+      'SELECT COUNT(*) AS totalUsers FROM users'
+    )
+
+    // Get pending approvals (services awaiting approval)
+    const [pending] = await pool.execute(
+      "SELECT COUNT(*) AS pendingApprovals FROM services WHERE approval_status = 'pending'"
+    )
+
+    // Get total transactions (sum of all completed bookings)
+    const [transactions] = await pool.execute(
+      "SELECT COALESCE(SUM(amount), 0) AS totalTransactions FROM bookings WHERE status = 'completed'"
+    )
+
+    // Calculate platform fee (10% of transactions)
+    const platformFee = transactions[0]?.totalTransactions * 0.1 || 0
+
+    // Get recent users
+    const [users] = await pool.execute(
+      'SELECT id, name, email, role, created_at FROM users ORDER BY created_at DESC LIMIT 10'
+    )
+
     res.json({
-      totalUsers: 42,
-      pendingApprovals: 5,
-      totalTransactions: '$15,320',
-      platformFee: '$2,298',
-      users: [
-        { id: 1, name: 'John Doe', email: 'john@example.com', role: 'provider', status: 'pending' },
-        { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'organizer', status: 'approved' },
-      ]
+      totalUsers: userCounts[0]?.totalUsers || 0,
+      pendingApprovals: pending[0]?.pendingApprovals || 0,
+      totalTransactions: transactions[0]?.totalTransactions || 0,
+      platformFee: Math.round(platformFee * 100) / 100,
+      users: users || []
     })
   } catch (error) {
+    console.error('Admin stats error:', error.message)
     res.status(500).json({ message: error.message })
   }
 })
@@ -1205,6 +1289,24 @@ app.get('/api/events/public', async (req, res) => {
   }
 })
 
+// Get single event details (public)
+app.get('/api/events/:eventId', async (req, res) => {
+  try {
+    const { eventId } = req.params
+    const pool = getPoolOrThrow()
+    const [events] = await pool.execute('SELECT id, organizer_id, name, date, location, type, description, image_url, status FROM events WHERE id = ? LIMIT 1', [eventId])
+    
+    if (events.length === 0) {
+      return res.status(404).json({ message: 'Event not found' })
+    }
+    
+    res.json(events[0])
+  } catch (error) {
+    console.error('Get event details error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
 // Register for an event (non-ticketed)
 app.post('/api/events/:eventId/register', verifyToken, async (req, res) => {
   try {
@@ -1798,18 +1900,6 @@ app.put('/api/service-bookings/:bookingId', verifyToken, async (req, res) => {
 
 // --- Support System API ---
 
-// Get support categories
-app.get('/api/support/categories', async (req, res) => {
-  try {
-    const pool = getPoolOrThrow()
-    const [categories] = await pool.execute('SELECT id, name, description FROM support_categories ORDER BY name')
-    res.json(categories)
-  } catch (error) {
-    console.error('Get categories error:', error.message)
-    res.status(500).json({ message: error.message })
-  }
-})
-
 // Create support ticket
 app.post('/api/support/tickets', verifyToken, async (req, res) => {
   try {
@@ -2068,6 +2158,326 @@ app.post('/api/faqs/:faqId/helpful', verifyToken, async (req, res) => {
 // Import and mount advanced ticket management routes
 const ticketManagementRoutes = require('./ticket-management-routes')
 ticketManagementRoutes(app, { getPoolOrThrow, verifyToken, isAdmin: (req) => req.user?.role === 'admin' })
+
+// Contact form submission endpoint - using Resend for email
+app.post('/api/contact', async (req, res) => {
+  try {
+    const { name, email, message } = req.body
+
+    // Validate input
+    if (!name || !email || !message) {
+      return res.status(400).json({ message: 'Name, email, and message are required' })
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: 'Invalid email format' })
+    }
+
+    // Check if Resend API key is configured
+    if (!process.env.RESEND_API_KEY) {
+      console.error('❌ RESEND_API_KEY not configured in .env file')
+      return res.status(503).json({
+        message: 'Email service is not configured. Please contact the administrator.'
+      })
+    }
+
+    const { Resend } = require('resend')
+    const resend = new Resend(process.env.RESEND_API_KEY)
+
+    const adminEmail = process.env.ADMIN_EMAIL || 'jonathandraft02@gmail.com'
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@huzz.com'
+
+    // Send email to admin
+    await resend.emails.send({
+      from: fromEmail,
+      to: adminEmail,
+      subject: `New Contact Form Submission from ${name}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <h2 style="color: #0E3B26; border-bottom: 2px solid #1B5E3C; padding-bottom: 10px;">New Contact Form Submission</h2>
+          <p><strong>From:</strong> ${name}</p>
+          <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
+          <div style="background-color: #f5f5f5; padding: 15px; border-left: 4px solid #0E3B26; margin: 20px 0;">
+            <p><strong>Message:</strong></p>
+            <p>${message.replace(/\n/g, '<br>')}</p>
+          </div>
+          <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+          <p style="color: #666; font-size: 12px;">Submitted at: ${new Date().toLocaleString()}</p>
+        </div>
+      `
+    })
+
+    // Send confirmation email to user
+    await resend.emails.send({
+      from: fromEmail,
+      to: email,
+      subject: '✓ We received your message - Huzz',
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <h2 style="color: #0E3B26;">Thank you for reaching out!</h2>
+          <p>Hi ${name},</p>
+          <p>We've received your message and will get back to you as soon as possible. We appreciate your inquiry and look forward to connecting with you.</p>
+          <div style="background-color: #f5f5f5; padding: 15px; border-left: 4px solid #B8E3C5; margin: 20px 0;">
+            <p><strong>Your Message:</strong></p>
+            <p>${message.replace(/\n/g, '<br>')}</p>
+          </div>
+          <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+          <p style="color: #666;">Best regards,<br/><strong>The Huzz Team</strong></p>
+          <p style="color: #999; font-size: 12px;">If you have any questions, feel free to reply to this email.</p>
+        </div>
+      `
+    })
+
+    console.log(`✅ Contact emails sent successfully from ${email}`)
+
+    res.status(201).json({
+      message: 'Thank you! Your message has been received. We will get back to you soon.',
+      emailSent: true,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('❌ Contact form error:', error.message)
+    res.status(500).json({
+      message: 'Failed to send message. Please try again later or contact support directly.'
+    })
+  }
+})
+
+// --- Admin Event Management ---
+
+// Get all events in the system (admin only)
+app.get('/api/admin/events', verifyToken, async (req, res) => {
+  try {
+    const pool = getPoolOrThrow()
+    const [events] = await pool.execute(`
+      SELECT 
+        e.id,
+        e.organizer_id,
+        e.name,
+        e.description,
+        e.date,
+        e.location,
+        e.type,
+        e.guest_count,
+        e.budget,
+        e.status,
+        e.image_url,
+        e.created_at,
+        e.updated_at,
+        u.name as organizer_name,
+        u.email as organizer_email
+      FROM events e
+      JOIN users u ON e.organizer_id = u.id
+      ORDER BY e.date DESC
+    `)
+    res.json(events)
+  } catch (error) {
+    console.error('Get admin events error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+// Get single event (admin only)
+app.get('/api/admin/events/:eventId', verifyToken, async (req, res) => {
+  try {
+    const { eventId } = req.params
+    const pool = getPoolOrThrow()
+    const [events] = await pool.execute(`
+      SELECT 
+        e.id,
+        e.organizer_id,
+        e.name,
+        e.description,
+        e.date,
+        e.location,
+        e.type,
+        e.guest_count,
+        e.budget,
+        e.status,
+        e.image_url,
+        e.created_at,
+        e.updated_at,
+        u.name as organizer_name,
+        u.email as organizer_email
+      FROM events e
+      JOIN users u ON e.organizer_id = u.id
+      WHERE e.id = ?
+    `, [eventId])
+    
+    if (events.length === 0) {
+      return res.status(404).json({ message: 'Event not found' })
+    }
+    
+    res.json(events[0])
+  } catch (error) {
+    console.error('Get admin event error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+// Update event status (admin only)
+app.put('/api/admin/events/:eventId', verifyToken, async (req, res) => {
+  try {
+    const { eventId } = req.params
+    const { name, description, date, location, type, guest_count, budget, status } = req.body
+
+    const pool = getPoolOrThrow()
+    
+    // Build update query based on provided fields
+    const updates = []
+    const values = []
+    
+    if (name !== undefined) { updates.push('name = ?'); values.push(name) }
+    if (description !== undefined) { updates.push('description = ?'); values.push(description) }
+    if (date !== undefined) { updates.push('date = ?'); values.push(date) }
+    if (location !== undefined) { updates.push('location = ?'); values.push(location) }
+    if (type !== undefined) { updates.push('type = ?'); values.push(type) }
+    if (guest_count !== undefined) { updates.push('guest_count = ?'); values.push(guest_count) }
+    if (budget !== undefined) { updates.push('budget = ?'); values.push(budget) }
+    if (status !== undefined) { updates.push('status = ?'); values.push(status) }
+    
+    if (updates.length === 0) {
+      return res.status(400).json({ message: 'No fields to update' })
+    }
+
+    updates.push('updated_at = NOW()')
+    values.push(eventId)
+
+    const query = `UPDATE events SET ${updates.join(', ')} WHERE id = ?`
+    const [result] = await pool.execute(query, values)
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Event not found' })
+    }
+
+    res.json({ message: 'Event updated successfully' })
+  } catch (error) {
+    console.error('Update event error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+// Delete event (admin only)
+app.delete('/api/admin/events/:eventId', verifyToken, async (req, res) => {
+  try {
+    const { eventId } = req.params
+
+    const pool = getPoolOrThrow()
+    const [result] = await pool.execute('DELETE FROM events WHERE id = ?', [eventId])
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Event not found' })
+    }
+
+    res.json({ message: 'Event deleted successfully' })
+  } catch (error) {
+    console.error('Delete event error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+// --- Support & FAQ Endpoints ---
+
+// Get all support tickets for current user
+app.get('/api/support/tickets', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id
+    const pool = getPoolOrThrow()
+    const [tickets] = await pool.execute(
+      'SELECT id, category, subject, message, status, priority, created_at, updated_at FROM support_tickets WHERE user_id = ? ORDER BY created_at DESC',
+      [userId]
+    )
+    res.json(tickets)
+  } catch (error) {
+    console.error('Get support tickets error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+// Create support ticket
+app.post('/api/support/tickets', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id
+    const { category, subject, message, priority } = req.body
+    
+    if (!category || !subject || !message) {
+      return res.status(400).json({ message: 'Category, subject, and message are required' })
+    }
+
+    const pool = getPoolOrThrow()
+    const [result] = await pool.execute(
+      'INSERT INTO support_tickets (user_id, category, subject, message, priority) VALUES (?, ?, ?, ?, ?)',
+      [userId, category, subject, message, priority || 'medium']
+    )
+    
+    res.status(201).json({ 
+      id: result.insertId, 
+      message: 'Support ticket created successfully' 
+    })
+  } catch (error) {
+    console.error('Create support ticket error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+// Get support categories (public)
+app.get('/api/support/categories', async (req, res) => {
+  try {
+    const categories = [
+      'General Inquiry',
+      'Technical Issue',
+      'Billing & Payment',
+      'Account & Profile',
+      'Event Management',
+      'Service Booking',
+      'Other'
+    ]
+    res.json(categories)
+  } catch (error) {
+    console.error('Get support categories error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+// Get all FAQs (public)
+app.get('/api/faqs', async (req, res) => {
+  try {
+    const { category } = req.query
+    const pool = getPoolOrThrow()
+
+    let query = 'SELECT id, category, question, answer, views, helpful_count FROM faqs'
+    let params = []
+
+    if (category) {
+      query += ' WHERE category = ?'
+      params.push(category)
+    }
+
+    query += ' ORDER BY views DESC'
+
+    const [faqs] = await pool.execute(query, params)
+    res.json(faqs)
+  } catch (error) {
+    console.error('Get FAQs error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+// Get FAQ categories (public)
+app.get('/api/faqs/categories', async (req, res) => {
+  try {
+    const pool = getPoolOrThrow()
+    const [results] = await pool.execute(
+      'SELECT DISTINCT category FROM faqs WHERE is_active = TRUE ORDER BY category ASC'
+    )
+    const categories = results.map(r => r.category)
+    res.json(categories)
+  } catch (error) {
+    console.error('Get FAQ categories error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
 
 app.listen(PORT, HOST, () => {
   console.log(`Server running on http://${HOST}:${PORT}`);

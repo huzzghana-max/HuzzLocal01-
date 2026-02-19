@@ -332,10 +332,22 @@ const Settings: React.FC = () => {
       {/* Main Content */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', ml: { xs: 0, md: '280px' }, width: '100%', overflow: 'hidden' }}>
         <Box sx={{ p: { xs: 2, md: 4 }, flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
-          <Typography variant="h4" sx={{ mb: 3, fontWeight: 700, color: 'primary.main' }}>
+        <Box>
+          <Typography 
+            variant="h4" 
+            sx={{ 
+              mb: 3, 
+              fontWeight: 800, 
+              background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              fontSize: { xs: '1.8rem', md: '2.5rem' },
+            }}
+          >
             Settings
           </Typography>
-
+        </Box>
           {successMessage && (
             <Alert severity="success" sx={{ mb: 2 }}>
               {successMessage}
@@ -347,23 +359,32 @@ const Settings: React.FC = () => {
             </Alert>
           )}
 
-          <Paper sx={{ borderRadius: 2 }}>
+          <Paper sx={{ borderRadius: 2, boxShadow: '0 4px 20px rgba(14, 59, 38, 0.1)' }}>
             {/* Tabs */}
             <Tabs
               value={tabValue}
               onChange={handleTabChange}
               sx={{
-                borderBottom: '2px solid #f0f0f0',
+                borderBottom: '2px solid rgba(14, 59, 38, 0.1)',
+                background: 'linear-gradient(90deg, rgba(14, 59, 38, 0.04) 0%, rgba(184, 227, 197, 0.04) 100%)',
                 '& .MuiTab-root': {
                   textTransform: 'none',
                   fontSize: '1rem',
-                  fontWeight: 600,
+                  fontWeight: 700,
+                  color: '#666',
+                  transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    color: '#0E3B26',
+                  },
                 },
                 '& .MuiTab-root.Mui-selected': {
-                  color: '#ff8c00',
+                  color: '#0E3B26',
+                  fontWeight: 800,
                 },
                 '& .MuiTabs-indicator': {
-                  backgroundColor: '#ff8c00',
+                  backgroundColor: '#0E3B26',
+                  height: '3px',
+                  borderRadius: '2px',
                 },
               }}
             >
@@ -380,7 +401,16 @@ const Settings: React.FC = () => {
                   <Avatar
                     src={profileImagePreview}
                     alt={profileData.name}
-                    sx={{ width: 100, height: 100, bgcolor: '#ff8c00', fontSize: '2rem', fontWeight: 700 }}
+                    sx={{ 
+                      width: 120, 
+                      height: 120, 
+                      background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+                      fontSize: '2.5rem', 
+                      fontWeight: 800,
+                      color: '#FFFFFF',
+                      boxShadow: '0 8px 25px rgba(14, 59, 38, 0.25)',
+                      border: '3px solid #B8E3C5',
+                    }}
                   >
                     {profileData.name.charAt(0).toUpperCase()}
                   </Avatar>
@@ -398,13 +428,31 @@ const Settings: React.FC = () => {
                         component="span"
                         startIcon={<CameraAltIcon />}
                         sx={{
-                          borderColor: '#ff8c00',
-                          color: '#ff8c00',
+                          borderColor: '#0E3B26',
+                          color: '#0E3B26',
                           textTransform: 'none',
-                          fontWeight: 600,
+                          fontWeight: 700,
+                          borderWidth: '2px',
+                          transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: '-100%',
+                            width: '100%',
+                            height: '100%',
+                            background: 'linear-gradient(90deg, transparent, rgba(184, 227, 197, 0.3), transparent)',
+                            transition: 'left 0.6s ease',
+                          },
                           '&:hover': {
-                            borderColor: '#ff6b35',
-                            backgroundColor: 'rgba(255, 140, 0, 0.05)',
+                            borderColor: '#1B5E3C',
+                            backgroundColor: 'rgba(14, 59, 38, 0.08)',
+                            boxShadow: '0 4px 12px rgba(14, 59, 38, 0.15)',
+                            '&::before': {
+                              left: '100%',
+                            },
                           },
                         }}
                       >
@@ -421,7 +469,17 @@ const Settings: React.FC = () => {
 
                 {/* Profile Information */}
                 <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
+                  <Typography 
+                    variant="subtitle1" 
+                    sx={{ 
+                      fontWeight: 800, 
+                      mb: 3,
+                      fontSize: '1.1rem',
+                      color: '#0E3B26',
+                      borderBottom: '2px solid #1B5E3C',
+                      paddingBottom: '8px',
+                    }}
+                  >
                     Profile Information
                   </Typography>
                   <TextField
@@ -454,7 +512,17 @@ const Settings: React.FC = () => {
 
                 {/* Appearance (theme) */}
                 <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
+                  <Typography 
+                    variant="subtitle1" 
+                    sx={{ 
+                      fontWeight: 800, 
+                      mb: 3,
+                      fontSize: '1.1rem',
+                      color: '#0E3B26',
+                      borderBottom: '2px solid #1B5E3C',
+                      paddingBottom: '8px',
+                    }}
+                  >
                     Appearance
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
@@ -464,10 +532,14 @@ const Settings: React.FC = () => {
                         <Switch
                           checked={mode === 'dark'}
                           onChange={handleToggleTheme}
-                          sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#ff8c00' } }}
+                          sx={{ 
+                            '& .MuiSwitch-switchBase.Mui-checked': { color: '#0E3B26' },
+                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#B8E3C5' },
+                          }}
                         />
                       }
                       label={mode === 'dark' ? 'Dark mode' : 'Light mode'}
+                      sx={{ '& .MuiTypography-root': { fontWeight: 600 } }}
                     />
                   </Box>
                   <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
@@ -479,7 +551,17 @@ const Settings: React.FC = () => {
 
                 {/* Change Password */}
                 <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
+                  <Typography 
+                    variant="subtitle1" 
+                    sx={{ 
+                      fontWeight: 800, 
+                      mb: 3,
+                      fontSize: '1.1rem',
+                      color: '#0E3B26',
+                      borderBottom: '2px solid #1B5E3C',
+                      paddingBottom: '8px',
+                    }}
+                  >
                     Change Password
                   </Typography>
                   <TextField
@@ -516,10 +598,33 @@ const Settings: React.FC = () => {
                   onClick={handleSaveProfile}
                   disabled={saving}
                   sx={{
-                    background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)',
+                    background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
                     textTransform: 'none',
-                    fontWeight: 600,
+                    fontWeight: 700,
                     px: 4,
+                    py: 1.2,
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 15px rgba(14, 59, 38, 0.3)',
+                    transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: '-100%',
+                      width: '100%',
+                      height: '100%',
+                      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                      transition: 'left 0.6s ease',
+                    },
+                    '&:hover:not(:disabled)': {
+                      boxShadow: '0 8px 25px rgba(14, 59, 38, 0.4)',
+                      transform: 'translateY(-2px)',
+                      '&::before': {
+                        left: '100%',
+                      },
+                    },
                   }}
                 >
                   {saving ? 'Saving...' : 'Save Changes'}
@@ -530,9 +635,23 @@ const Settings: React.FC = () => {
             {/* Notifications Tab */}
             <TabPanel value={tabValue} index={1}>
               <Box sx={{ maxWidth: 600 }}>
-                <Card sx={{ mb: 3, borderRadius: 2, boxShadow: 1 }}>
+                <Card sx={{ 
+                  mb: 3, 
+                  borderRadius: 2, 
+                  boxShadow: '0 2px 12px rgba(14, 59, 38, 0.12)',
+                  border: '1px solid rgba(14, 59, 38, 0.1)',
+                  background: 'linear-gradient(135deg, rgba(14, 59, 38, 0.02) 0%, rgba(184, 227, 197, 0.02) 100%)',
+                }}>
                   <CardContent>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
+                    <Typography 
+                      variant="subtitle1" 
+                      sx={{ 
+                        fontWeight: 800, 
+                        mb: 2,
+                        fontSize: '1.05rem',
+                        color: '#0E3B26',
+                      }}
+                    >
                       Notification Channels
                     </Typography>
                     <FormGroup>
@@ -541,12 +660,15 @@ const Settings: React.FC = () => {
                           <Switch
                             checked={notifications.emailNotifications}
                             onChange={() => handleNotificationChange('emailNotifications')}
-                            sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#ff8c00' } }}
+                            sx={{ 
+                              '& .MuiSwitch-switchBase.Mui-checked': { color: '#0E3B26' },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#B8E3C5' },
+                            }}
                           />
                         }
                         label={
                           <Box>
-                            <Typography sx={{ fontWeight: 600 }}>Email Notifications</Typography>
+                            <Typography sx={{ fontWeight: 700, color: '#0E3B26' }}>Email Notifications</Typography>
                             <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
                               Receive important updates via email
                             </Typography>
@@ -558,12 +680,15 @@ const Settings: React.FC = () => {
                           <Switch
                             checked={notifications.pushNotifications}
                             onChange={() => handleNotificationChange('pushNotifications')}
-                            sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#ff8c00' } }}
+                            sx={{ 
+                              '& .MuiSwitch-switchBase.Mui-checked': { color: '#0E3B26' },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#B8E3C5' },
+                            }}
                           />
                         }
                         label={
                           <Box>
-                            <Typography sx={{ fontWeight: 600 }}>Push Notifications</Typography>
+                            <Typography sx={{ fontWeight: 700, color: '#0E3B26' }}>Push Notifications</Typography>
                             <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
                               Receive browser push notifications
                             </Typography>
@@ -574,9 +699,22 @@ const Settings: React.FC = () => {
                   </CardContent>
                 </Card>
 
-                <Card sx={{ borderRadius: 2, boxShadow: 1 }}>
+                <Card sx={{ 
+                  borderRadius: 2, 
+                  boxShadow: '0 2px 12px rgba(14, 59, 38, 0.12)',
+                  border: '1px solid rgba(14, 59, 38, 0.1)',
+                  background: 'linear-gradient(135deg, rgba(14, 59, 38, 0.02) 0%, rgba(184, 227, 197, 0.02) 100%)',
+                }}>
                   <CardContent>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
+                    <Typography 
+                      variant="subtitle1" 
+                      sx={{ 
+                        fontWeight: 800, 
+                        mb: 2,
+                        fontSize: '1.05rem',
+                        color: '#0E3B26',
+                      }}
+                    >
                       Notification Types
                     </Typography>
                     <FormGroup>
@@ -585,12 +723,15 @@ const Settings: React.FC = () => {
                           <Switch
                             checked={notifications.messageNotifications}
                             onChange={() => handleNotificationChange('messageNotifications')}
-                            sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#ff8c00' } }}
+                            sx={{ 
+                              '& .MuiSwitch-switchBase.Mui-checked': { color: '#0E3B26' },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#B8E3C5' },
+                            }}
                           />
                         }
                         label={
                           <Box>
-                            <Typography sx={{ fontWeight: 600 }}>Messages</Typography>
+                            <Typography sx={{ fontWeight: 700, color: '#0E3B26' }}>Messages</Typography>
                             <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
                               Get notified when you receive new messages
                             </Typography>
@@ -602,12 +743,15 @@ const Settings: React.FC = () => {
                           <Switch
                             checked={notifications.bookingNotifications}
                             onChange={() => handleNotificationChange('bookingNotifications')}
-                            sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#ff8c00' } }}
+                            sx={{ 
+                              '& .MuiSwitch-switchBase.Mui-checked': { color: '#0E3B26' },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#B8E3C5' },
+                            }}
                           />
                         }
                         label={
                           <Box>
-                            <Typography sx={{ fontWeight: 600 }}>Bookings</Typography>
+                            <Typography sx={{ fontWeight: 700, color: '#0E3B26' }}>Bookings</Typography>
                             <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
                               Get notified about booking updates
                             </Typography>
@@ -619,12 +763,15 @@ const Settings: React.FC = () => {
                           <Switch
                             checked={notifications.paymentNotifications}
                             onChange={() => handleNotificationChange('paymentNotifications')}
-                            sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#ff8c00' } }}
+                            sx={{ 
+                              '& .MuiSwitch-switchBase.Mui-checked': { color: '#0E3B26' },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#B8E3C5' },
+                            }}
                           />
                         }
                         label={
                           <Box>
-                            <Typography sx={{ fontWeight: 600 }}>Payments</Typography>
+                            <Typography sx={{ fontWeight: 700, color: '#0E3B26' }}>Payments</Typography>
                             <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
                               Get notified about payment transactions
                             </Typography>
@@ -641,11 +788,34 @@ const Settings: React.FC = () => {
                   onClick={handleSaveNotifications}
                   disabled={saving}
                   sx={{
-                    background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)',
+                    background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
                     textTransform: 'none',
-                    fontWeight: 600,
+                    fontWeight: 700,
                     px: 4,
+                    py: 1.2,
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 15px rgba(14, 59, 38, 0.3)',
+                    transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                    position: 'relative',
+                    overflow: 'hidden',
                     mt: 3,
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: '-100%',
+                      width: '100%',
+                      height: '100%',
+                      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                      transition: 'left 0.6s ease',
+                    },
+                    '&:hover:not(:disabled)': {
+                      boxShadow: '0 8px 25px rgba(14, 59, 38, 0.4)',
+                      transform: 'translateY(-2px)',
+                      '&::before': {
+                        left: '100%',
+                      },
+                    },
                   }}
                 >
                   {saving ? 'Saving...' : 'Save Preferences'}
@@ -656,9 +826,22 @@ const Settings: React.FC = () => {
             {/* Privacy Tab */}
             <TabPanel value={tabValue} index={2}>
               <Box sx={{ maxWidth: 600 }}>
-                <Card sx={{ borderRadius: 2, boxShadow: 1 }}>
+                <Card sx={{ 
+                  borderRadius: 2, 
+                  boxShadow: '0 2px 12px rgba(14, 59, 38, 0.12)',
+                  border: '1px solid rgba(14, 59, 38, 0.1)',
+                  background: 'linear-gradient(135deg, rgba(14, 59, 38, 0.02) 0%, rgba(184, 227, 197, 0.02) 100%)',
+                }}>
                   <CardContent>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
+                    <Typography 
+                      variant="subtitle1" 
+                      sx={{ 
+                        fontWeight: 800, 
+                        mb: 2,
+                        fontSize: '1.05rem',
+                        color: '#0E3B26',
+                      }}
+                    >
                       Profile Visibility
                     </Typography>
                     <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary', mb: 2 }}>
@@ -670,12 +853,15 @@ const Settings: React.FC = () => {
                           <Switch
                             checked={privacy.profileVisibility === 'public'}
                             onChange={() => handlePrivacyChange('profileVisibility', 'public')}
-                            sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#ff8c00' } }}
+                            sx={{ 
+                              '& .MuiSwitch-switchBase.Mui-checked': { color: '#0E3B26' },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#B8E3C5' },
+                            }}
                           />
                         }
                         label={
                           <Box>
-                            <Typography sx={{ fontWeight: 600 }}>Public Profile</Typography>
+                            <Typography sx={{ fontWeight: 700, color: '#0E3B26' }}>Public Profile</Typography>
                             <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
                               Everyone can see your profile
                             </Typography>
@@ -687,12 +873,15 @@ const Settings: React.FC = () => {
                           <Switch
                             checked={privacy.profileVisibility === 'private'}
                             onChange={() => handlePrivacyChange('profileVisibility', 'private')}
-                            sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#ff8c00' } }}
+                            sx={{ 
+                              '& .MuiSwitch-switchBase.Mui-checked': { color: '#0E3B26' },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#B8E3C5' },
+                            }}
                           />
                         }
                         label={
                           <Box>
-                            <Typography sx={{ fontWeight: 600 }}>Private Profile</Typography>
+                            <Typography sx={{ fontWeight: 700, color: '#0E3B26' }}>Private Profile</Typography>
                             <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
                               Only you can see your profile
                             </Typography>
@@ -703,9 +892,23 @@ const Settings: React.FC = () => {
                   </CardContent>
                 </Card>
 
-                <Card sx={{ mt: 3, borderRadius: 2, boxShadow: 1 }}>
+                <Card sx={{ 
+                  mt: 3, 
+                  borderRadius: 2, 
+                  boxShadow: '0 2px 12px rgba(14, 59, 38, 0.12)',
+                  border: '1px solid rgba(14, 59, 38, 0.1)',
+                  background: 'linear-gradient(135deg, rgba(14, 59, 38, 0.02) 0%, rgba(184, 227, 197, 0.02) 100%)',
+                }}>
                   <CardContent>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
+                    <Typography 
+                      variant="subtitle1" 
+                      sx={{ 
+                        fontWeight: 800, 
+                        mb: 2,
+                        fontSize: '1.05rem',
+                        color: '#0E3B26',
+                      }}
+                    >
                       Messaging
                     </Typography>
                     <FormGroup>
@@ -714,12 +917,15 @@ const Settings: React.FC = () => {
                           <Switch
                             checked={privacy.allowMessagesFromAnyone}
                             onChange={() => handlePrivacyChange('allowMessagesFromAnyone')}
-                            sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#ff8c00' } }}
+                            sx={{ 
+                              '& .MuiSwitch-switchBase.Mui-checked': { color: '#0E3B26' },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#B8E3C5' },
+                            }}
                           />
                         }
                         label={
                           <Box>
-                            <Typography sx={{ fontWeight: 600 }}>Allow Messages from Anyone</Typography>
+                            <Typography sx={{ fontWeight: 700, color: '#0E3B26' }}>Allow Messages from Anyone</Typography>
                             <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
                               When disabled, only verified users can message you
                             </Typography>
@@ -736,11 +942,34 @@ const Settings: React.FC = () => {
                   onClick={handleSavePrivacy}
                   disabled={saving}
                   sx={{
-                    background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)',
+                    background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
                     textTransform: 'none',
-                    fontWeight: 600,
+                    fontWeight: 700,
                     px: 4,
+                    py: 1.2,
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 15px rgba(14, 59, 38, 0.3)',
+                    transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                    position: 'relative',
+                    overflow: 'hidden',
                     mt: 3,
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: '-100%',
+                      width: '100%',
+                      height: '100%',
+                      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                      transition: 'left 0.6s ease',
+                    },
+                    '&:hover:not(:disabled)': {
+                      boxShadow: '0 8px 25px rgba(14, 59, 38, 0.4)',
+                      transform: 'translateY(-2px)',
+                      '&::before': {
+                        left: '100%',
+                      },
+                    },
                   }}
                 >
                   {saving ? 'Saving...' : 'Save Settings'}

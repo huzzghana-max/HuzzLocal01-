@@ -272,24 +272,31 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        bgcolor: theme.palette.background.paper,
+        bgcolor: theme.palette.mode === 'light' ? '#F4F7F6' : '#091A12',
+        background: theme.palette.mode === 'light' 
+          ? 'linear-gradient(180deg, #F4F7F6 0%, #FFFFFF 50%, #F4F7F6 100%)'
+          : 'linear-gradient(180deg, #091A12 0%, #122A1F 50%, #091A12 100%)',
       }}
     >
       {/* User Profile Section */}
       <Box
         sx={{
-          p: 2,
-          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+          p: 2.5,
+          background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
           color: 'white',
+          boxShadow: '0 4px 15px rgba(14, 59, 38, 0.2)',
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
           <Avatar
             sx={{
-              width: 48,
-              height: 48,
-              bgcolor: theme.palette.secondary.main,
+              width: 56,
+              height: 56,
+              background: 'linear-gradient(135deg, #B8E3C5 0%, #1B5E3C 100%)',
               fontWeight: 700,
+              fontSize: '1.3rem',
+              color: '#0E3B26',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
             }}
           >
             {userName.charAt(0).toUpperCase()}
@@ -298,96 +305,186 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', textOverflow: 'ellipsis', overflow: 'hidden' }}>
               {userName}
             </Typography>
-            <Typography sx={{ fontSize: '0.8rem', opacity: 0.9, textOverflow: 'ellipsis', overflow: 'hidden' }}>
+            <Typography 
+              sx={{ 
+                fontSize: '0.8rem', 
+                opacity: 0.85, 
+                textOverflow: 'ellipsis', 
+                overflow: 'hidden',
+                background: 'rgba(184, 227, 197, 0.2)',
+                px: 1,
+                py: 0.25,
+                borderRadius: '4px',
+                display: 'inline-block',
+              }}
+            >
               {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
             </Typography>
           </Box>
         </Box>
-        <Typography sx={{ fontSize: '0.75rem', opacity: 0.8, textOverflow: 'ellipsis', overflow: 'hidden' }}>
+        <Typography sx={{ fontSize: '0.75rem', opacity: 0.75, textOverflow: 'ellipsis', overflow: 'hidden' }}>
           {userEmail}
         </Typography>
       </Box>
 
-      <Divider />
+      <Box sx={{ h: '2px', background: 'linear-gradient(90deg, transparent, rgba(14, 59, 38, 0.3), transparent)' }} />
 
       {/* Quick Stats */}
       <Box
         sx={{
-          p: 2,
+          p: 2.5,
           display: 'grid',
           gridTemplateColumns: notifications || messages ? '1fr 1fr' : '1fr',
-          gap: 1,
+          gap: 1.5,
         }}
       >
         {notifications > 0 && (
           <Box
             sx={{
               p: 1.5,
-              bgcolor: theme.palette.action.hover,
-              borderRadius: 1,
+              background: theme.palette.mode === 'light'
+                ? 'linear-gradient(135deg, rgba(14, 59, 38, 0.08) 0%, rgba(184, 227, 197, 0.1) 100%)'
+                : 'linear-gradient(135deg, rgba(27, 94, 60, 0.3) 0%, rgba(184, 227, 197, 0.1) 100%)',
+              border: '1px solid rgba(184, 227, 197, 0.3)',
+              borderRadius: '8px',
               textAlign: 'center',
               cursor: 'pointer',
-              transition: 'all 0.3s',
+              transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+              position: 'relative',
+              overflow: 'hidden',
+              '&:before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: '-100%',
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                transition: 'left 0.6s ease',
+              },
               '&:hover': {
-                bgcolor: theme.palette.secondary.main,
+                background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
                 color: 'white',
+                boxShadow: '0 6px 20px rgba(14, 59, 38, 0.25)',
+                transform: 'translateY(-2px)',
+                '&:before': {
+                  left: '100%',
+                },
               },
             }}
           >
-            <Typography sx={{ fontSize: '0.75rem', opacity: 0.7 }}>Notifications</Typography>
-            <Typography sx={{ fontWeight: 700, fontSize: '1.2rem' }}>{notifications}</Typography>
+            <Typography sx={{ fontSize: '0.7rem', opacity: 0.7, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Notifications</Typography>
+            <Typography sx={{ fontWeight: 800, fontSize: '1.3rem', mt: 0.5 }}>{notifications}</Typography>
           </Box>
         )}
         {messages > 0 && (
           <Box
             sx={{
               p: 1.5,
-              bgcolor: theme.palette.action.hover,
-              borderRadius: 1,
+              background: theme.palette.mode === 'light'
+                ? 'linear-gradient(135deg, rgba(14, 59, 38, 0.08) 0%, rgba(184, 227, 197, 0.1) 100%)'
+                : 'linear-gradient(135deg, rgba(27, 94, 60, 0.3) 0%, rgba(184, 227, 197, 0.1) 100%)',
+              border: '1px solid rgba(184, 227, 197, 0.3)',
+              borderRadius: '8px',
               textAlign: 'center',
               cursor: 'pointer',
-              transition: 'all 0.3s',
+              transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+              position: 'relative',
+              overflow: 'hidden',
+              '&:before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: '-100%',
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                transition: 'left 0.6s ease',
+              },
               '&:hover': {
-                bgcolor: theme.palette.secondary.main,
+                background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
                 color: 'white',
+                boxShadow: '0 6px 20px rgba(14, 59, 38, 0.25)',
+                transform: 'translateY(-2px)',
+                '&:before': {
+                  left: '100%',
+                },
               },
             }}
           >
-            <Typography sx={{ fontSize: '0.75rem', opacity: 0.7 }}>Messages</Typography>
-            <Typography sx={{ fontWeight: 700, fontSize: '1.2rem' }}>{messages}</Typography>
+            <Typography sx={{ fontSize: '0.7rem', opacity: 0.7, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Messages</Typography>
+            <Typography sx={{ fontWeight: 800, fontSize: '1.3rem', mt: 0.5 }}>{messages}</Typography>
           </Box>
         )}
       </Box>
 
-      <Divider />
+      <Box sx={{ h: '2px', background: 'linear-gradient(90deg, transparent, rgba(14, 59, 38, 0.3), transparent)' }} />
 
       {/* Navigation Menu */}
-      <List sx={{ flex: 1, overflow: 'auto', py: 1 }}>
+      <List sx={{ flex: 1, overflow: 'auto', py: 1.5, px: 1.5 }}>
         {menuItems.map((item, index) => (
           <React.Fragment key={index}>
-            <ListItem disablePadding sx={{ display: 'block' }}>
+            <ListItem disablePadding sx={{ display: 'block', mb: 0.75 }}>
               <ListItemButton
                 onClick={() => handleNavigation(item.path, item.onClick)}
                 sx={{
                   py: 1.25,
                   px: 2,
-                  bgcolor: isActive(item.path) ? theme.palette.action.selected : 'transparent',
-                  color: isActive(item.path) ? theme.palette.secondary.main : 'inherit',
-                  borderRight: isActive(item.path) ? `4px solid ${theme.palette.secondary.main}` : 'none',
-                  transition: 'all 0.3s',
+                  borderRadius: '8px',
+                  bgcolor: isActive(item.path) 
+                    ? 'rgba(14, 59, 38, 0.15)'
+                    : 'transparent',
+                  color: isActive(item.path) ? '#0E3B26' : 'inherit',
+                  border: isActive(item.path) 
+                    ? '2px solid #0E3B26'
+                    : '2px solid transparent',
+                  fontWeight: isActive(item.path) ? 700 : 500,
+                  transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: '-100%',
+                    width: '100%',
+                    height: '100%',
+                    background: 'linear-gradient(90deg, transparent, rgba(184, 227, 197, 0.3), transparent)',
+                    transition: 'left 0.6s ease',
+                  },
                   '&:hover': {
-                    bgcolor: theme.palette.action.hover,
+                    bgcolor: isActive(item.path)
+                      ? 'rgba(14, 59, 38, 0.25)'
+                      : 'rgba(14, 59, 38, 0.1)',
+                    color: '#0E3B26',
+                    border: '2px solid rgba(14, 59, 38, 0.3)',
+                    boxShadow: '0 4px 12px rgba(14, 59, 38, 0.15)',
+                    transform: 'translateX(4px)',
+                    '&::before': {
+                      left: '100%',
+                    },
                   },
                 }}
               >
                 <ListItemIcon
                   sx={{
                     minWidth: 40,
-                    color: isActive(item.path) ? theme.palette.secondary.main : 'inherit',
+                    color: isActive(item.path) ? '#0E3B26' : 'inherit',
+                    fontWeight: 600,
                   }}
                 >
                   {item.badge ? (
-                    <Badge badgeContent={item.badge} color="error">
+                    <Badge 
+                      badgeContent={item.badge} 
+                      color="error"
+                      sx={{
+                        '& .MuiBadge-badge': {
+                          background: 'linear-gradient(135deg, #F5A623 0%, #FF8A00 100%)',
+                          fontWeight: 700,
+                          fontSize: '0.65rem',
+                        }
+                      }}
+                    >
                       {item.icon}
                     </Badge>
                   ) : (
@@ -399,12 +496,12 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                   sx={{
                     '& .MuiTypography-root': {
                       fontSize: '0.95rem',
-                      fontWeight: isActive(item.path) ? 600 : 500,
+                      fontWeight: isActive(item.path) ? 700 : 500,
                     },
                   }}
                 />
                 {item.submenu && (
-                  <Box sx={{ ml: 'auto' }}>
+                  <Box sx={{ ml: 'auto', color: isActive(item.path) ? '#0E3B26' : 'inherit' }}>
                     {expanded[item.label] ? <ExpandLess /> : <ExpandMore />}
                   </Box>
                 )}
@@ -414,25 +511,32 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             {/* Submenu */}
             {item.submenu && (
               <Collapse in={expanded[item.label]} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding>
+                <List component="div" disablePadding sx={{ pl: 1.5 }}>
                   {item.submenu.map((subitem, subindex) => (
-                    <ListItem key={subindex} disablePadding sx={{ display: 'block' }}>
+                    <ListItem key={subindex} disablePadding sx={{ display: 'block', mb: 0.5 }}>
                       <ListItemButton
                         onClick={() => handleNavigation(subitem.path, subitem.onClick)}
                         sx={{
-                          py: 1,
-                          pl: 4,
+                          py: 0.8,
+                          pl: 3,
                           pr: 2,
-                          bgcolor: isActive(subitem.path) ? theme.palette.action.selected : 'transparent',
-                          color: isActive(subitem.path) ? theme.palette.secondary.main : 'inherit',
+                          borderRadius: '6px',
+                          bgcolor: isActive(subitem.path) 
+                            ? 'rgba(184, 227, 197, 0.2)'
+                            : 'transparent',
+                          color: isActive(subitem.path) ? '#1B5E3C' : 'inherit',
                           fontSize: '0.9rem',
-                          transition: 'all 0.3s',
+                          fontWeight: isActive(subitem.path) ? 600 : 400,
+                          transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                          position: 'relative',
                           '&:hover': {
-                            bgcolor: theme.palette.action.hover,
+                            bgcolor: 'rgba(184, 227, 197, 0.15)',
+                            transform: 'translateX(3px)',
+                            color: '#1B5E3C',
                           },
                         }}
                       >
-                        <ListItemIcon sx={{ minWidth: 36 }}>{subitem.icon}</ListItemIcon>
+                        <ListItemIcon sx={{ minWidth: 36, opacity: 0.8 }}>{subitem.icon}</ListItemIcon>
                         <ListItemText
                           primary={subitem.label}
                           sx={{
@@ -448,65 +552,97 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                 </List>
               </Collapse>
             )}
-
-            {item.submenu && (
-              <ListItemButton
-                onClick={() => toggleSubmenu(item.label)}
-                sx={{
-                  py: 0.75,
-                  px: 2,
-                  display: 'flex',
-                  justifyContent: 'center',
-                }}
-              >
-                <Typography sx={{ fontSize: '0.8rem', opacity: 0.5 }}>
-                  {expanded[item.label] ? 'Show less' : 'Show more'}
-                </Typography>
-              </ListItemButton>
-            )}
           </React.Fragment>
         ))}
       </List>
 
-      <Divider />
+      <Box sx={{ h: '2px', background: 'linear-gradient(90deg, transparent, rgba(14, 59, 38, 0.3), transparent)' }} />
 
       {/* Footer Actions */}
-      <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+      <Box sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
         <ListItemButton
           onClick={() => handleNavigation('/')}
           sx={{
-            borderRadius: 1,
-            py: 1,
+            borderRadius: '8px',
+            py: 1.25,
             px: 2,
-            transition: 'all 0.3s',
+            bgcolor: 'rgba(14, 59, 38, 0.08)',
+            border: '1px solid rgba(14, 59, 38, 0.15)',
+            transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+            position: 'relative',
+            overflow: 'hidden',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: '-100%',
+              width: '100%',
+              height: '100%',
+              background: 'linear-gradient(90deg, transparent, rgba(184, 227, 197, 0.3), transparent)',
+              transition: 'left 0.6s ease',
+            },
             '&:hover': {
-              bgcolor: theme.palette.action.hover,
+              bgcolor: 'rgba(14, 59, 38, 0.15)',
+              border: '1px solid rgba(14, 59, 38, 0.3)',
+              color: '#0E3B26',
+              boxShadow: '0 4px 12px rgba(14, 59, 38, 0.15)',
+              transform: 'translateY(-2px)',
+              '&::before': {
+                left: '100%',
+              },
             },
           }}
         >
           <ListItemIcon sx={{ minWidth: 40 }}>
             <HomeIcon />
           </ListItemIcon>
-          <ListItemText primary="Back to Home" sx={{ '& .MuiTypography-root': { fontSize: '0.95rem' } }} />
+          <ListItemText primary="Back to Home" sx={{ '& .MuiTypography-root': { fontSize: '0.95rem', fontWeight: 600 } }} />
         </ListItemButton>
 
         <ListItemButton
           onClick={onLogout}
           sx={{
-            borderRadius: 1,
-            py: 1,
+            borderRadius: '8px',
+            py: 1.25,
             px: 2,
-            color: 'error.main',
-            transition: 'all 0.3s',
+            color: '#FFFFFF',
+            background: 'linear-gradient(135deg, #D32F2F 0%, #C62828 100%)',
+            boxShadow: '0 4px 12px rgba(211, 47, 47, 0.2)',
+            transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+            position: 'relative',
+            overflow: 'hidden',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: '-100%',
+              width: '100%',
+              height: '100%',
+              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+              transition: 'left 0.6s ease',
+            },
             '&:hover': {
-              bgcolor: 'error.lighter',
+              background: 'linear-gradient(135deg, #C62828 0%, #B71C1C 100%)',
+              boxShadow: '0 6px 20px rgba(211, 47, 47, 0.3)',
+              transform: 'translateY(-2px)',
+              '&::before': {
+                left: '100%',
+              },
             },
           }}
         >
-          <ListItemIcon sx={{ minWidth: 40, color: 'error.main' }}>
+          <ListItemIcon sx={{ minWidth: 40, color: '#FFFFFF' }}>
             <LogoutIcon />
           </ListItemIcon>
-          <ListItemText primary="Logout" sx={{ '& .MuiTypography-root': { fontSize: '0.95rem' } }} />
+          <ListItemText 
+            primary="Logout" 
+            sx={{ 
+              '& .MuiTypography-root': { 
+                fontSize: '0.95rem', 
+                fontWeight: 700,
+              } 
+            }} 
+          />
         </ListItemButton>
       </Box>
     </Box>

@@ -189,7 +189,7 @@ const ProviderDashboard: React.FC = () => {
         userName={user?.name || 'Service Provider'}
         userEmail={user?.email || 'provider@huzz.com'}
         notifications={stats?.pendingRequests || 0}
-        messages={2}
+        messages={stats?.unreadMessages || 0}
         onLogout={handleLogout}
       />
 

@@ -353,7 +353,7 @@ const EventsNearYou: React.FC = () => {
                 </CardContent>
               </Card>
             </Box>
-          ))}}
+          ))}
         </Box>
 
         {sorted.length === 0 && (

@@ -32,8 +32,10 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import PendingIcon from '@mui/icons-material/Pending'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
-import PeopleIcon from '@mui/icons-material/People'
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'
+import CloseIcon from '@mui/icons-material/Close'
 import ReceiptIcon from '@mui/icons-material/Receipt'
+import PeopleIcon from '@mui/icons-material/People'
 import api from '../../api'
 import DashboardSidebar from '../../components/DashboardSidebar'
 import { StatCard, DashboardHeader } from '../../components/DashboardComponents'
@@ -197,7 +199,10 @@ const OrganizerDashboard: React.FC = () => {
         setReviewSubmitting(false)
       }
     }
-  const [newEvent, setNewEvent] = useState({ name: '', date: '', type: '' })
+  const [newEvent, setNewEvent] = useState({ name: '', date: '', type: '', location: '', description: '' })
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imageError, setImageError] = useState<string | null>(null)
   const [ticketsDialogOpen, setTicketsDialogOpen] = useState(false)
   const [currentEventTickets, setCurrentEventTickets] = useState<any[]>([])
   const [currentEventId, setCurrentEventId] = useState<number | null>(null)
@@ -354,30 +359,75 @@ const OrganizerDashboard: React.FC = () => {
   // Fix: Add missing handleCloseDialog function
   const handleCloseDialog = () => {
     setOpenDialog(false);
-    setNewEvent({ name: '', date: '', type: '' });
+    setNewEvent({ name: '', date: '', type: '', location: '', description: '' });
+    setImageFile(null);
+    setImagePreview(null);
+    setImageError(null);
+  }
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    setImageError(null)
+    
+    if (!file) {
+      setImageFile(null)
+      setImagePreview(null)
+      return
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setImageError('Please select a valid image file')
+      setImageFile(null)
+      setImagePreview(null)
+      return
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024
+    if (file.size > maxSize) {
+      setImageError('Image size must be less than 5MB')
+      setImageFile(null)
+      setImagePreview(null)
+      return
+    }
+
+    // Create preview
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      setImagePreview(event.target?.result as string)
+    }
+    reader.readAsDataURL(file)
+    setImageFile(file)
+  }
+
+  const clearImage = () => {
+    setImageFile(null)
+    setImagePreview(null)
+    setImageError(null)
   }
 
   const handleSaveEvent = async () => {
     if (!newEvent.name || !newEvent.date) {
-      alert('Please fill all fields')
+      alert('Please fill all required fields')
       return
     }
     try {
-      const response = await api.post('/events', {
-        name: newEvent.name,
-        date: newEvent.date,
-        type: newEvent.type || null,
-      })
+      const form = new FormData()
+      form.append('name', newEvent.name)
+      form.append('date', newEvent.date)
+      form.append('type', newEvent.type || '')
+      form.append('location', newEvent.location || '')
+      form.append('description', newEvent.description || '')
+      if (imageFile) form.append('image', imageFile)
+
+      const response = await api.post('/events', form, { headers: { 'Content-Type': 'multipart/form-data' } })
       
-      const savedEvent = {
-        id: response.data.id,
-        name: response.data.name,
-        date: response.data.date,
-        status: response.data.status,
-        vendors: 0,
-      }
-      setEvents([...events, savedEvent])
       handleCloseDialog()
+      alert('Event created successfully!')
+      
+      // Refresh dashboard data to show the newly created event
+      await fetchDashboardData()
     } catch (error) {
       console.error('Failed to create event:', error)
       alert('Failed to create event. Please try again.')
@@ -756,7 +806,7 @@ const OrganizerDashboard: React.FC = () => {
                 <DialogTitle sx={{ fontWeight: 600 }}>
                   Create New Event
                 </DialogTitle>
-                <DialogContent sx={{ pt: 3 }}>
+                <DialogContent sx={{ pt: 3, maxHeight: '70vh', overflowY: 'auto' }}>
                   <TextField
                     fullWidth
                     label="Event Name"
@@ -768,7 +818,7 @@ const OrganizerDashboard: React.FC = () => {
                   <TextField
                     fullWidth
                     label="Event Date"
-                    type="date"
+                    type="datetime-local"
                     value={newEvent.date}
                     onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
                     margin="normal"
@@ -788,6 +838,150 @@ const OrganizerDashboard: React.FC = () => {
                       <MenuItem value="other">Other</MenuItem>
                     </Select>
                   </FormControl>
+                  <TextField
+                    fullWidth
+                    label="Location"
+                    placeholder="Enter event location"
+                    value={newEvent.location}
+                    onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+                    margin="normal"
+                  />
+                  <TextField
+                    fullWidth
+                    label="Description"
+                    placeholder="Enter event description"
+                    multiline
+                    minRows={2}
+                    value={newEvent.description}
+                    onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+                    margin="normal"
+                  />
+                  
+                  {/* Image Upload Section */}
+                  <Box sx={{ mt: 3, mb: 0 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2, color: '#0E3B26', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: 1 }}>
+                      📸 Event Image <Typography variant="caption" sx={{ fontWeight: 400, color: '#999' }}>(Optional)</Typography>
+                    </Typography>
+                    
+                    {!imagePreview ? (
+                      <Box
+                        sx={{
+                          border: '2.5px dashed #0E3B26',
+                          borderRadius: '16px',
+                          padding: '32px 20px',
+                          textAlign: 'center',
+                          cursor: 'pointer',
+                          transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                          background: 'linear-gradient(135deg, rgba(14, 59, 38, 0.05) 0%, rgba(27, 94, 60, 0.02) 100%)',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'radial-gradient(circle at 20% 50%, rgba(184, 227, 197, 0.1), transparent 50%)',
+                            pointerEvents: 'none',
+                          },
+                          '&:hover': {
+                            backgroundColor: 'rgba(14, 59, 38, 0.1)',
+                            borderColor: '#1B5E3C',
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 8px 24px rgba(14, 59, 38, 0.12)',
+                          },
+                          '&:active': {
+                            transform: 'translateY(0px)',
+                          }
+                        }}
+                        component="label"
+                      >
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={handleImageChange}
+                          style={{ display: 'none' }}
+                        />
+                        <CloudUploadIcon sx={{ fontSize: '3rem', color: '#0E3B26', mb: 1.5, display: 'block' }} />
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E3B26', mb: 0.75, fontSize: '1rem' }}>
+                          Click to upload image
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#666', display: 'block', fontSize: '0.875rem' }}>
+                          or drag and drop • JPG, PNG, GIF, WebP • Max 5MB
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Box
+                        sx={{
+                          borderRadius: '16px',
+                          overflow: 'hidden',
+                          border: '2px solid #0E3B26',
+                          backgroundColor: '#fff',
+                          boxShadow: '0 4px 16px rgba(14, 59, 38, 0.15)',
+                          transition: 'all 0.3s ease',
+                        }}
+                      >
+                        <Box sx={{ position: 'relative', paddingTop: '62.5%', backgroundColor: '#f5f5f5' }}>
+                          <img 
+                            src={imagePreview} 
+                            alt="Preview" 
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                            }}
+                          />
+                        </Box>
+                        <Box sx={{ p: 2, backgroundColor: '#fff' }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E3B26', mb: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {imageFile?.name}
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: '#999', display: 'block', fontWeight: 500 }}>
+                                {((imageFile?.size || 0) / 1024 / 1024).toFixed(2)} MB
+                              </Typography>
+                            </Box>
+                            <Button 
+                              size="small"
+                              variant="contained"
+                              startIcon={<CloseIcon sx={{ fontSize: '1.1rem' }} />}
+                              onClick={clearImage}
+                              sx={{
+                                backgroundColor: '#D32F2F',
+                                color: '#fff',
+                                fontSize: '0.8rem',
+                                textTransform: 'none',
+                                fontWeight: 600,
+                                borderRadius: '8px',
+                                padding: '6px 12px',
+                                whiteSpace: 'nowrap',
+                                '&:hover': {
+                                  backgroundColor: '#B71C1C',
+                                }
+                              }}
+                            >
+                              Remove
+                            </Button>
+                          </Box>
+                        </Box>
+                      </Box>
+                    )}
+
+                    {imageError && (
+                      <Alert 
+                        severity="error" 
+                        sx={{ mt: 2, fontWeight: 500, borderRadius: '12px', backgroundColor: 'rgba(211, 47, 47, 0.08)', borderLeft: '4px solid #D32F2F' }}
+                        onClose={() => setImageError(null)}
+                      >
+                        {imageError}
+                      </Alert>
+                    )}
+                  </Box>
                 </DialogContent>
                 <DialogActions sx={{ p: 2, gap: 1 }}>
                   <Button onClick={handleCloseDialog} sx={{ textTransform: 'none' }}>
@@ -796,7 +990,7 @@ const OrganizerDashboard: React.FC = () => {
                   <Button
                     onClick={handleSaveEvent}
                     variant="contained"
-                    sx={{ textTransform: 'none' }}
+                    sx={{ textTransform: 'none', background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)' }}
                   >
                     Create Event
                   </Button>

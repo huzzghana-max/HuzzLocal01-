@@ -45,6 +45,11 @@ const Navbar: React.FC<NavbarProps> = ({ navState = 'default', activeIndex: _act
     setAnchorEl(null)
   }
 
+  const handleSettings = () => {
+    navigate('/settings')
+    handleMenuClose()
+  }
+
   const handleLogout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
@@ -205,6 +210,7 @@ const Navbar: React.FC<NavbarProps> = ({ navState = 'default', activeIndex: _act
                     onClose={handleMenuClose}
                   >
                     <MenuItem onClick={handleDashboard}>Go to Dashboard</MenuItem>
+                    <MenuItem onClick={handleSettings}>Settings</MenuItem>
                     <MenuItem onClick={handleLogout}>Logout</MenuItem>
                   </Menu>
                 </>
@@ -214,21 +220,37 @@ const Navbar: React.FC<NavbarProps> = ({ navState = 'default', activeIndex: _act
                     component={NavLink}
                     to="/signin"
                     sx={{
-                      borderRadius: '6px',
+                      borderRadius: '8px',
                       px: { xs: 1.5, sm: 2.5 },
                       py: 0.8,
-                      fontWeight: 600,
+                      fontWeight: 700,
                       fontSize: { xs: '0.75rem', sm: '0.9rem' },
-                      color: theme.palette.secondary.main,
+                      color: '#0E3B26',
                       textTransform: 'none',
-                      border: `2px solid ${theme.palette.secondary.main}`,
+                      border: '2px solid #0E3B26',
                       backgroundColor: 'transparent',
-                      transition: 'all 200ms ease',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: '-100%',
+                        width: '100%',
+                        height: '100%',
+                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                        transition: 'left 0.6s ease',
+                      },
                       '&:hover': {
-                        backgroundColor: theme.palette.mode === 'light' 
-                          ? 'rgba(244, 166, 74, 0.1)' 
-                          : 'rgba(242, 178, 97, 0.1)',
-                        color: theme.palette.text.primary
+                        backgroundColor: 'rgba(14, 59, 38, 0.08)',
+                        borderColor: '#1B5E3C',
+                        color: '#1B5E3C',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 6px 20px rgba(14, 59, 38, 0.25)',
+                        '&::before': {
+                          left: '100%',
+                        },
                       },
                     }}
                   >
@@ -238,24 +260,35 @@ const Navbar: React.FC<NavbarProps> = ({ navState = 'default', activeIndex: _act
                     component={NavLink}
                     to="/signup"
                     sx={{
-                      borderRadius: '6px',
+                      borderRadius: '8px',
                       px: { xs: 1.5, sm: 2.5 },
                       py: 0.8,
-                      fontWeight: 600,
+                      fontWeight: 700,
                       fontSize: { xs: '0.75rem', sm: '0.9rem' },
-                      backgroundColor: theme.palette.secondary.main,
-                      color: theme.palette.secondary.contrastText,
+                      background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+                      color: '#FFFFFF',
                       textTransform: 'none',
-                      boxShadow: theme.palette.mode === 'light'
-                        ? '0 4px 12px rgba(244, 166, 74, 0.2)'
-                        : '0 4px 12px rgba(242, 178, 97, 0.2)',
-                      transition: 'all 200ms ease',
+                      boxShadow: '0 4px 15px rgba(14, 59, 38, 0.3)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: '-100%',
+                        width: '100%',
+                        height: '100%',
+                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+                        transition: 'left 0.6s ease',
+                      },
                       '&:hover': {
-                        backgroundColor: theme.palette.secondary.dark,
-                        boxShadow: theme.palette.mode === 'light'
-                          ? '0 6px 20px rgba(244, 166, 74, 0.3)'
-                          : '0 6px 20px rgba(242, 178, 97, 0.3)',
-                        color: 'white'
+                        background: 'linear-gradient(135deg, #1B5E3C 0%, #0E3B26 100%)',
+                        boxShadow: '0 8px 25px rgba(14, 59, 38, 0.4)',
+                        transform: 'translateY(-3px)',
+                        '&::before': {
+                          left: '100%',
+                        },
                       },
                     }}
                   >
@@ -268,32 +301,48 @@ const Navbar: React.FC<NavbarProps> = ({ navState = 'default', activeIndex: _act
                 to="/contact"
                 aria-label="Contact us"
                 sx={{
-                  borderRadius: '6px',
+                  borderRadius: '8px',
                   px: { xs: 1.5, sm: 2.5 },
                   py: 0.8,
-                  fontWeight: 600,
+                  fontWeight: 700,
                   fontSize: { xs: '0.75rem', sm: '0.9rem' },
-                  boxShadow: isAlternate
+                  background: isAlternate 
+                    ? 'transparent'
+                    : 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+                  color: isAlternate ? '#0E3B26' : '#FFFFFF',
+                  border: isAlternate ? '2px solid #0E3B26' : '2px solid transparent',
+                  boxShadow: isAlternate 
                     ? 'none'
-                    : theme.palette.mode === 'light'
-                    ? '0 4px 12px rgba(244, 166, 74, 0.2)'
-                    : '0 4px 12px rgba(242, 178, 97, 0.2)',
-                  backgroundColor: isAlternate ? 'transparent' : theme.palette.secondary.main,
-                  color: isAlternate ? theme.palette.secondary.main : theme.palette.secondary.contrastText,
-                  border: isAlternate ? `2px solid ${theme.palette.secondary.main}` : '2px solid transparent',
-                  transition: 'all 200ms ease',
+                    : '0 4px 15px rgba(14, 59, 38, 0.3)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: '-100%',
+                    width: '100%',
+                    height: '100%',
+                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                    transition: 'left 0.6s ease',
+                  },
                   '&:hover': {
                     backgroundColor: isAlternate 
-                      ? (theme.palette.mode === 'light' 
-                        ? 'rgba(244, 166, 74, 0.1)' 
-                        : 'rgba(242, 178, 97, 0.1)')
-                      : theme.palette.secondary.dark,
+                      ? 'rgba(14, 59, 38, 0.08)'
+                      : undefined,
+                    background: isAlternate
+                      ? undefined
+                      : 'linear-gradient(135deg, #1B5E3C 0%, #0E3B26 100%)',
+                    borderColor: isAlternate ? '#1B5E3C' : 'transparent',
+                    color: isAlternate ? '#1B5E3C' : '#FFFFFF',
                     boxShadow: isAlternate
                       ? 'none'
-                      : theme.palette.mode === 'light'
-                      ? '0 6px 20px rgba(244, 166, 74, 0.3)'
-                      : '0 6px 20px rgba(242, 178, 97, 0.3)',
-                    color: 'white'
+                      : '0 8px 25px rgba(14, 59, 38, 0.4)',
+                    transform: 'translateY(-3px)',
+                    '&::before': {
+                      left: '100%',
+                    },
                   },
                   '@media (prefers-reduced-motion: reduce)': {
                     transition: 'none',

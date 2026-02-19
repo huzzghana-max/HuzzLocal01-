@@ -10,23 +10,44 @@ import {
   Button,
   useTheme,
   Alert,
+  CircularProgress,
 } from '@mui/material'
 import { Email as EmailIcon, Phone as PhoneIcon, LocationOn as LocationIcon } from '@mui/icons-material'
+import api from '../api'
 
 const Contact: React.FC = () => {
   const [formData, setFormData] = useState({ name: '', email: '', message: '' })
   const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const theme = useTheme()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
+    setError('')
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
-    setFormData({ name: '', email: '', message: '' })
-    setTimeout(() => setSubmitted(false), 3000)
+    setLoading(true)
+    setError('')
+
+    try {
+      // Call the backend API to send the contact email
+      const response = await api.post('/contact', formData)
+      
+      setSubmitted(true)
+      setFormData({ name: '', email: '', message: '' })
+      
+      // Hide success message after 5 seconds
+      setTimeout(() => setSubmitted(false), 5000)
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.message || err?.message || 'Failed to send message. Please try again.'
+      setError(errorMsg)
+      console.error('Contact form error:', err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const contactInfo = [
@@ -113,6 +134,11 @@ const Contact: React.FC = () => {
                     Message sent successfully! We'll get back to you soon.
                   </Alert>
                 )}
+                {error && (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    {error}
+                  </Alert>
+                )}
                 <form onSubmit={handleSubmit}>
                   <TextField
                     fullWidth
@@ -123,6 +149,7 @@ const Contact: React.FC = () => {
                     required
                     margin="normal"
                     variant="outlined"
+                    disabled={loading}
                   />
                   <TextField
                     fullWidth
@@ -134,6 +161,7 @@ const Contact: React.FC = () => {
                     required
                     margin="normal"
                     variant="outlined"
+                    disabled={loading}
                   />
                   <TextField
                     fullWidth
@@ -146,6 +174,7 @@ const Contact: React.FC = () => {
                     variant="outlined"
                     multiline
                     rows={5}
+                    disabled={loading}
                   />
                   <Button
                     fullWidth
@@ -171,20 +200,32 @@ const Contact: React.FC = () => {
                         background: 'rgba(255, 255, 255, 0.1)',
                         transition: 'left 0.35s ease-out',
                       },
-                      '&:hover': {
+                      '&:hover:not(:disabled)': {
                         boxShadow: '0 8px 25px rgba(14, 59, 38, 0.4)',
                         transform: 'translateY(-2px)',
                         '&::before': {
                           left: '100%',
                         },
                       },
-                      '&:active': {
+                      '&:active:not(:disabled)': {
                         transform: 'translateY(0)',
+                      },
+                      '&:disabled': {
+                        opacity: 0.7,
+                        cursor: 'not-allowed',
                       },
                     }}
                     type="submit"
+                    disabled={loading}
                   >
-                    Send Message
+                    {loading ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CircularProgress size={20} sx={{ color: 'inherit' }} />
+                        Sending...
+                      </Box>
+                    ) : (
+                      'Send Message'
+                    )}
                   </Button>
                 </form>
               </CardContent>

@@ -25,6 +25,8 @@ import {
   FormControl,
   InputLabel,
   Alert,
+  Tabs,
+  Tab,
 } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import PersonIcon from '@mui/icons-material/Person'
@@ -35,6 +37,8 @@ import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import EventIcon from '@mui/icons-material/Event'
+import LocationOnIcon from '@mui/icons-material/LocationOn'
 import api from '../../api'
 import DashboardSidebar from '../../components/DashboardSidebar'
 import { StatCard, DashboardHeader } from '../../components/DashboardComponents'
@@ -47,19 +51,44 @@ interface User {
   created_at?: string
 }
 
+interface Event {
+  id: number
+  name: string
+  description: string
+  date: string
+  location: string
+  type: string
+  organizer_id: number
+  organizer_name: string
+  organizer_email: string
+  guest_count?: number
+  budget?: number
+  status: 'pending' | 'draft' | 'published' | 'confirmed' | 'ongoing' | 'completed' | 'cancelled'
+  created_at: string
+  image_url?: string
+}
+
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
+  const [currentTab, setCurrentTab] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [openUserDialog, setOpenUserDialog] = useState(false)
   const [openCreateDialog, setOpenCreateDialog] = useState(false)
   const [openEditRoleDialog, setOpenEditRoleDialog] = useState(false)
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false)
+  const [openEventDialog, setOpenEventDialog] = useState(false)
+  const [openDeleteEventDialog, setOpenDeleteEventDialog] = useState(false)
+  const [openEditEventDialog, setOpenEditEventDialog] = useState(false)
   const [filterRole, setFilterRole] = useState<'all' | 'organizer' | 'provider' | 'admin'>('all')
+  const [filterEventStatus, setFilterEventStatus] = useState<string>('all')
   const [users, setUsers] = useState<User[]>([])
+  const [events, setEvents] = useState<Event[]>([])
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+  const [eventSearchQuery, setEventSearchQuery] = useState('')
 
   // Form states for creating new user
   const [newUserData, setNewUserData] = useState({
@@ -69,11 +98,16 @@ const AdminDashboard: React.FC = () => {
     role: 'organizer' as 'organizer' | 'provider' | 'admin',
   })
 
+  // Form state for editing event
+  const [editEventData, setEditEventData] = useState<Partial<Event>>({})
+
   // Form state for editing role
   const [newRole, setNewRole] = useState<'organizer' | 'provider' | 'admin'>('organizer')
   const [creatingUser, setCreatingUser] = useState(false)
   const [updatingRole, setUpdatingRole] = useState(false)
   const [deletingUser, setDeletingUser] = useState(false)
+  const [updatingEvent, setUpdatingEvent] = useState(false)
+  const [deletingEvent, setDeletingEvent] = useState(false)
   const [pendingServicesCount, setPendingServicesCount] = useState(0)
 
   useEffect(() => {
@@ -91,6 +125,7 @@ const AdminDashboard: React.FC = () => {
       return
     }
     fetchUsers()
+    fetchEvents()
     fetchPendingServices()
   }, [navigate])
 
@@ -119,12 +154,28 @@ const AdminDashboard: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(response.data)
-      setLoading(false)
     } catch (err: any) {
       console.error('Error fetching users:', err)
-      // Don't fall back to mock data - show error instead
       setUsers([])
+    } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchEvents = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        console.error('No authentication token found')
+        return
+      }
+      const response = await api.get('/admin/events', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setEvents(response.data)
+    } catch (err: any) {
+      console.error('Error fetching events:', err)
+      setEvents([])
     }
   }
 
@@ -137,6 +188,16 @@ const AdminDashboard: React.FC = () => {
   const handleCloseUserDialog = () => {
     setOpenUserDialog(false)
     setSelectedUser(null)
+  }
+
+  const handleOpenEventDialog = (event: Event) => {
+    setSelectedEvent(event)
+    setOpenEventDialog(true)
+  }
+
+  const handleCloseEventDialog = () => {
+    setOpenEventDialog(false)
+    setSelectedEvent(null)
   }
 
   const handleOpenCreateDialog = () => {
@@ -230,6 +291,68 @@ const AdminDashboard: React.FC = () => {
     }
   }
 
+  const handleOpenEditEventDialog = (event: Event) => {
+    setSelectedEvent(event)
+    setEditEventData({ ...event })
+    setOpenEventDialog(false)
+    setOpenEditEventDialog(true)
+  }
+
+  const handleCloseEditEventDialog = () => {
+    setOpenEditEventDialog(false)
+    setEditEventData({})
+    setError('')
+  }
+
+  const handleUpdateEvent = async () => {
+    if (!selectedEvent) return
+
+    setUpdatingEvent(true)
+    try {
+      await api.put(`/admin/events/${selectedEvent.id}`, editEventData, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      })
+      setSuccessMessage('Event updated successfully!')
+      setOpenEditEventDialog(false)
+      fetchEvents()
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to update event')
+    } finally {
+      setUpdatingEvent(false)
+    }
+  }
+
+  const handleOpenDeleteEventDialog = (event: Event) => {
+    setSelectedEvent(event)
+    setOpenEventDialog(false)
+    setOpenDeleteEventDialog(true)
+  }
+
+  const handleCloseDeleteEventDialog = () => {
+    setOpenDeleteEventDialog(false)
+    setError('')
+  }
+
+  const handleDeleteEvent = async () => {
+    if (!selectedEvent) return
+
+    setDeletingEvent(true)
+    try {
+      await api.delete(`/admin/events/${selectedEvent.id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      })
+      setSuccessMessage(`Event "${selectedEvent.name}" deleted successfully!`)
+      setOpenDeleteEventDialog(false)
+      fetchEvents()
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to delete event')
+    } finally {
+      setDeletingEvent(false)
+    }
+  }
+
   const handleLogout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
@@ -244,11 +367,20 @@ const AdminDashboard: React.FC = () => {
     return matchesSearch && matchesRole
   })
 
+  // Filter and search events
+  const filteredEvents = events.filter(event => {
+    const matchesSearch = event.name.toLowerCase().includes(eventSearchQuery.toLowerCase()) ||
+                         event.organizer_name.toLowerCase().includes(eventSearchQuery.toLowerCase())
+    const matchesStatus = filterEventStatus === 'all' || event.status === filterEventStatus
+    return matchesSearch && matchesStatus
+  })
+
   // Calculate stats
   const totalUsers = users.length
   const organizersCount = users.filter(u => u.role === 'organizer').length
   const providersCount = users.filter(u => u.role === 'provider').length
   const adminsCount = users.filter(u => u.role === 'admin').length
+  const totalEvents = events.length
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -257,8 +389,8 @@ const AdminDashboard: React.FC = () => {
         userRole="admin"
         userName="Admin User"
         userEmail="admin@huzz.com"
-        notifications={5}
-        messages={3}
+        notifications={0}
+        messages={pendingServicesCount}
         onLogout={handleLogout}
       />
 
@@ -278,27 +410,29 @@ const AdminDashboard: React.FC = () => {
             subtitle="System management and platform oversight"
             actionButton={
               <Box sx={{ display: 'flex', gap: 2 }}>
-                <Button
-                  startIcon={<AddIcon />}
-                  variant="contained"
-                  onClick={handleOpenCreateDialog}
-                  sx={{
-                    background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
-                    textTransform: 'none',
-                    fontWeight: 700,
-                    borderRadius: '12px',
-                    py: 1,
-                    px: 3,
-                    boxShadow: '0 4px 15px rgba(14, 59, 38, 0.3)',
-                    transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '&:hover': {
-                      boxShadow: '0 8px 25px rgba(14, 59, 38, 0.4)',
-                      transform: 'translateY(-2px)',
-                    },
-                  }}
-                >
-                  Add User
-                </Button>
+                {currentTab === 0 && (
+                  <Button
+                    startIcon={<AddIcon />}
+                    variant="contained"
+                    onClick={handleOpenCreateDialog}
+                    sx={{
+                      background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+                      textTransform: 'none',
+                      fontWeight: 700,
+                      borderRadius: '12px',
+                      py: 1,
+                      px: 3,
+                      boxShadow: '0 4px 15px rgba(14, 59, 38, 0.3)',
+                      transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&:hover': {
+                        boxShadow: '0 8px 25px rgba(14, 59, 38, 0.4)',
+                        transform: 'translateY(-2px)',
+                      },
+                    }}
+                  >
+                    Add User
+                  </Button>
+                )}
               </Box>
             }
           />
@@ -345,8 +479,43 @@ const AdminDashboard: React.FC = () => {
                 </Paper>
               </Box>
 
-              {/* User Management Section */}
-              <Fade in={true} timeout={900}>
+              {/* Tab Navigation */}
+              <Paper sx={{ mb: 4 }}>
+                <Tabs
+                  value={currentTab}
+                  onChange={(_, newValue) => setCurrentTab(newValue)}
+                  sx={{
+                    borderBottom: '2px solid rgba(14, 59, 38, 0.1)',
+                    background: 'linear-gradient(90deg, rgba(14, 59, 38, 0.04) 0%, rgba(184, 227, 197, 0.04) 100%)',
+                    '& .MuiTab-root': {
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      color: '#666',
+                      transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&:hover': {
+                        color: '#0E3B26',
+                      },
+                    },
+                    '& .MuiTab-root.Mui-selected': {
+                      color: '#0E3B26',
+                      fontWeight: 800,
+                    },
+                    '& .MuiTabs-indicator': {
+                      backgroundColor: '#0E3B26',
+                      height: '3px',
+                      borderRadius: '2px',
+                    },
+                  }}
+                >
+                  <Tab label="👥 Users" />
+                  <Tab label={`📅 Events (${totalEvents})`} />
+                </Tabs>
+              </Paper>
+
+              {/* Tab Content */}
+              <Fade in={true} timeout={500}>
+                {currentTab === 0 ? (
                 <Box>
                   <Typography variant="h5" sx={{ fontWeight: 600, mb: 3 }}>
                     User Management
@@ -492,6 +661,186 @@ const AdminDashboard: React.FC = () => {
                     </Typography>
                   </Box>
                 </Box>
+              ) : (
+                <Box>
+                  <Typography variant="h5" sx={{ fontWeight: 600, mb: 3 }}>
+                    Event Management
+                  </Typography>
+
+                  {/* Search and Filter Bar */}
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 220px' }, gap: 2, mb: 3 }}>
+                    <TextField
+                      fullWidth
+                      placeholder="Search by event name or organizer..."
+                      value={eventSearchQuery}
+                      onChange={(e) => setEventSearchQuery(e.target.value)}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                        },
+                      }}
+                    />
+                    <TextField
+                      select
+                      value={filterEventStatus}
+                      onChange={(e) => setFilterEventStatus(e.target.value as any)}
+                      SelectProps={{ native: true }}
+                      sx={{ borderRadius: 2 }}
+                    >
+                      <option value="all">All Status</option>
+                      <option value="draft">Draft</option>
+                      <option value="pending">Pending</option>
+                      <option value="published">Published</option>
+                      <option value="confirmed">Confirmed</option>
+                      <option value="ongoing">Ongoing</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </TextField>
+                  </Box>
+
+                  {/* Events Table */}
+                  {filteredEvents.length === 0 ? (
+                    <Paper
+                      sx={{
+                        textAlign: 'center',
+                        py: 6,
+                        borderRadius: 2,
+                      }}
+                    >
+                      <EventIcon sx={{ fontSize: 64, mb: 2, opacity: 0.3 }} />
+                      <Typography variant="h6" sx={{ color: 'text.secondary' }}>
+                        No events found
+                      </Typography>
+                    </Paper>
+                  ) : (
+                    <TableContainer component={Paper} sx={{
+                      borderRadius: '16px',
+                      overflow: 'hidden',
+                      boxShadow: '0 4px 20px rgba(14, 59, 38, 0.1)',
+                      border: '1px solid rgba(184, 227, 197, 0.2)',
+                    }}>
+                      <Table>
+                        <TableHead sx={{
+                          background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+                        }}>
+                          <TableRow>
+                            <TableCell sx={{ fontWeight: 700, py: 2.5, color: '#FFFFFF' }}>Event</TableCell>
+                            <TableCell sx={{ fontWeight: 700, py: 2.5, color: '#FFFFFF' }}>Organizer</TableCell>
+                            <TableCell sx={{ fontWeight: 700, py: 2.5, color: '#FFFFFF' }}>Date</TableCell>
+                            <TableCell sx={{ fontWeight: 700, py: 2.5, color: '#FFFFFF' }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 700, py: 2.5, color: '#FFFFFF', textAlign: 'center' }}>Actions</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {filteredEvents.map((event) => (
+                            <TableRow
+                              key={event.id}
+                              sx={{
+                                transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                                '&:hover': {
+                                  bgcolor: 'rgba(184, 227, 197, 0.1)',
+                                  boxShadow: '0 2px 8px rgba(14, 59, 38, 0.08) inset',
+                                },
+                              }}
+                            >
+                              <TableCell sx={{ py: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                  <EventIcon sx={{ color: '#0E3B26', fontSize: 20 }} />
+                                  <Box>
+                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                      {event.name}
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, opacity: 0.7 }}>
+                                      <LocationOnIcon sx={{ fontSize: 14 }} />
+                                      <Typography variant="caption">
+                                        {event.location}
+                                      </Typography>
+                                    </Box>
+                                  </Box>
+                                </Box>
+                              </TableCell>
+                              <TableCell sx={{ py: 2 }}>
+                                <Box>
+                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                    {event.organizer_name}
+                                  </Typography>
+                                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                    {event.organizer_email}
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                              <TableCell sx={{ py: 2, color: 'text.secondary', fontSize: '0.9rem' }}>
+                                {event.date ? new Date(event.date).toLocaleDateString() : 'N/A'}
+                              </TableCell>
+                              <TableCell sx={{ py: 2 }}>
+                                <Chip
+                                  label={event.status}
+                                  size="small"
+                                  sx={{
+                                    textTransform: 'capitalize',
+                                    fontWeight: 700,
+                                    background: event.status === 'published' || event.status === 'confirmed' 
+                                      ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(129, 199, 132, 0.15) 100%)'
+                                      : event.status === 'cancelled'
+                                      ? 'linear-gradient(135deg, rgba(244, 67, 54, 0.15) 0%, rgba(229, 57, 53, 0.15) 100%)'
+                                      : 'linear-gradient(135deg, rgba(255, 152, 0, 0.15) 0%, rgba(255, 167, 38, 0.15) 100%)',
+                                    color: event.status === 'published' || event.status === 'confirmed'
+                                      ? '#2e7d32'
+                                      : event.status === 'cancelled'
+                                      ? '#c62828'
+                                      : '#e65100',
+                                    border: `1.5px solid ${event.status === 'published' || event.status === 'confirmed'
+                                      ? '#81c784'
+                                      : event.status === 'cancelled'
+                                      ? '#ef5350'
+                                      : '#ffb74d'}`,
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell sx={{ py: 2, textAlign: 'center' }}>
+                                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                                  <Button
+                                    size="small"
+                                    startIcon={<VisibilityIcon />}
+                                    variant="text"
+                                    onClick={() => handleOpenEventDialog(event)}
+                                  >
+                                    View
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    startIcon={<EditIcon />}
+                                    variant="text"
+                                    onClick={() => handleOpenEditEventDialog(event)}
+                                  >
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    startIcon={<DeleteIcon />}
+                                    variant="text"
+                                    color="error"
+                                    onClick={() => handleOpenDeleteEventDialog(event)}
+                                  >
+                                    Delete
+                                  </Button>
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  )}
+
+                  {/* Results Info */}
+                  <Box sx={{ mt: 2, textAlign: 'center' }}>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      Showing {filteredEvents.length} of {events.length} events
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
               </Fade>
 
               {/* User Details Dialog */}
@@ -729,6 +1078,232 @@ const AdminDashboard: React.FC = () => {
                     sx={{ textTransform: 'none' }}
                   >
                     {deletingUser ? 'Deleting...' : 'Delete User'}
+                  </Button>
+                </DialogActions>
+              </Dialog>
+
+              {/* Event Details Dialog */}
+              <Dialog open={openEventDialog} onClose={handleCloseEventDialog} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ fontWeight: 600 }}>
+                  Event Details
+                </DialogTitle>
+                <DialogContent sx={{ pt: 3 }}>
+                  {selectedEvent && (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                      {/* Event Name */}
+                      <Box>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5 }}>
+                          Event Name
+                        </Typography>
+                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                          {selectedEvent.name}
+                        </Typography>
+                      </Box>
+
+                      {/* Organizer */}
+                      <Box>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5 }}>
+                          Organizer
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {selectedEvent.organizer_name}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                          {selectedEvent.organizer_email}
+                        </Typography>
+                      </Box>
+
+                      {/* Date & Location */}
+                      <Box>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5 }}>
+                          Date & Location
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {selectedEvent.date ? new Date(selectedEvent.date).toLocaleDateString() : 'N/A'}
+                        </Typography>
+                        <Typography variant="body2">
+                          {selectedEvent.location}
+                        </Typography>
+                      </Box>
+
+                      {/* Description */}
+                      <Box>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5 }}>
+                          Description
+                        </Typography>
+                        <Typography variant="body2" sx={{ textAlign: 'justify' }}>
+                          {selectedEvent.description || 'No description provided'}
+                        </Typography>
+                      </Box>
+
+                      {/* Status */}
+                      <Box>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5 }}>
+                          Status
+                        </Typography>
+                        <Chip
+                          label={selectedEvent.status}
+                          size="small"
+                          sx={{
+                            textTransform: 'capitalize',
+                            fontWeight: 700,
+                            background: selectedEvent.status === 'published' || selectedEvent.status === 'confirmed'
+                              ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(129, 199, 132, 0.15) 100%)'
+                              : selectedEvent.status === 'cancelled'
+                              ? 'linear-gradient(135deg, rgba(244, 67, 54, 0.15) 0%, rgba(229, 57, 53, 0.15) 100%)'
+                              : 'linear-gradient(135deg, rgba(255, 152, 0, 0.15) 0%, rgba(255, 167, 38, 0.15) 100%)',
+                            color: selectedEvent.status === 'published' || selectedEvent.status === 'confirmed'
+                              ? '#2e7d32'
+                              : selectedEvent.status === 'cancelled'
+                              ? '#c62828'
+                              : '#e65100',
+                            border: `1.5px solid ${selectedEvent.status === 'published' || selectedEvent.status === 'confirmed'
+                              ? '#81c784'
+                              : selectedEvent.status === 'cancelled'
+                              ? '#ef5350'
+                              : '#ffb74d'}`,
+                          }}
+                        />
+                      </Box>
+                    </Box>
+                  )}
+                </DialogContent>
+                <DialogActions sx={{ p: 2, gap: 1 }}>
+                  <Button onClick={handleCloseEventDialog} sx={{ textTransform: 'none' }}>
+                    Close
+                  </Button>
+                  <Button
+                    onClick={() => handleOpenEditEventDialog(selectedEvent!)}
+                    startIcon={<EditIcon />}
+                    variant="contained"
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Edit Event
+                  </Button>
+                </DialogActions>
+              </Dialog>
+
+              {/* Edit Event Dialog */}
+              <Dialog open={openEditEventDialog} onClose={handleCloseEditEventDialog} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ fontWeight: 600 }}>
+                  Edit Event
+                </DialogTitle>
+                <DialogContent sx={{ pt: 3 }}>
+                  {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <TextField
+                      fullWidth
+                      label="Event Name"
+                      value={editEventData.name}
+                      onChange={(e) => setEditEventData({ ...editEventData, name: e.target.value })}
+                    />
+                    <TextField
+                      fullWidth
+                      label="Description"
+                      multiline
+                      rows={4}
+                      value={editEventData.description}
+                      onChange={(e) => setEditEventData({ ...editEventData, description: e.target.value })}
+                    />
+                    <TextField
+                      fullWidth
+                      label="Location"
+                      value={editEventData.location}
+                      onChange={(e) => setEditEventData({ ...editEventData, location: e.target.value })}
+                    />
+                    <TextField
+                      fullWidth
+                      label="Event Type"
+                      value={editEventData.type}
+                      onChange={(e) => setEditEventData({ ...editEventData, type: e.target.value })}
+                    />
+                    <TextField
+                      fullWidth
+                      label="Date & Time"
+                      type="datetime-local"
+                      value={editEventData.date}
+                      onChange={(e) => setEditEventData({ ...editEventData, date: e.target.value })}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                    <FormControl fullWidth>
+                      <InputLabel>Status</InputLabel>
+                      <Select
+                        value={editEventData.status}
+                        label="Status"
+                        onChange={(e) => setEditEventData({ ...editEventData, status: e.target.value as any })}
+                      >
+                        <MenuItem value="draft">Draft</MenuItem>
+                        <MenuItem value="pending">Pending</MenuItem>
+                        <MenuItem value="published">Published</MenuItem>
+                        <MenuItem value="confirmed">Confirmed</MenuItem>
+                        <MenuItem value="ongoing">Ongoing</MenuItem>
+                        <MenuItem value="completed">Completed</MenuItem>
+                        <MenuItem value="cancelled">Cancelled</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Box>
+                </DialogContent>
+                <DialogActions sx={{ p: 2, gap: 1 }}>
+                  <Button onClick={handleCloseEditEventDialog} sx={{ textTransform: 'none' }}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleUpdateEvent}
+                    variant="contained"
+                    disabled={updatingEvent}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    {updatingEvent ? 'Updating...' : 'Update Event'}
+                  </Button>
+                </DialogActions>
+              </Dialog>
+
+              {/* Delete Event Confirmation Dialog */}
+              <Dialog open={openDeleteEventDialog} onClose={handleCloseDeleteEventDialog} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ fontWeight: 600, color: 'error.main' }}>
+                  Delete Event
+                </DialogTitle>
+                <DialogContent sx={{ pt: 3 }}>
+                  {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+                  {selectedEvent && (
+                    <Box>
+                      <Typography variant="body1" sx={{ mb: 3 }}>
+                        Are you sure you want to delete <strong>{selectedEvent.name}</strong>?
+                      </Typography>
+
+                      <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 2, mb: 2 }}>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500, mb: 1 }}>
+                          Event Details
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          <strong>Name:</strong> {selectedEvent.name}
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          <strong>Organizer:</strong> {selectedEvent.organizer_name}
+                        </Typography>
+                        <Typography variant="body2">
+                          <strong>Date:</strong> {selectedEvent.date ? new Date(selectedEvent.date).toLocaleDateString() : 'N/A'}
+                        </Typography>
+                      </Box>
+
+                      <Alert severity="warning">
+                        This action cannot be undone. The event will be permanently deleted from the system.
+                      </Alert>
+                    </Box>
+                  )}
+                </DialogContent>
+                <DialogActions sx={{ p: 2, gap: 1 }}>
+                  <Button onClick={handleCloseDeleteEventDialog} sx={{ textTransform: 'none' }}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleDeleteEvent}
+                    variant="contained"
+                    color="error"
+                    disabled={deletingEvent}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    {deletingEvent ? 'Deleting...' : 'Delete Event'}
                   </Button>
                 </DialogActions>
               </Dialog>

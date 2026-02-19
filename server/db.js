@@ -293,6 +293,38 @@ async function initializeDatabase() {
       )
     `)
 
+    // Create support tickets table
+    await dbConnection.execute(`
+      CREATE TABLE IF NOT EXISTS support_tickets (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        subject VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        status ENUM('open', 'in_progress', 'resolved', 'closed') DEFAULT 'open',
+        priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `)
+
+    // Create FAQs table
+    await dbConnection.execute(`
+      CREATE TABLE IF NOT EXISTS faqs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        category VARCHAR(100) NOT NULL,
+        question VARCHAR(500) NOT NULL,
+        answer TEXT NOT NULL,
+        views INT DEFAULT 0,
+        helpful_count INT DEFAULT 0,
+        display_order INT DEFAULT 0,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `)
+
     // Create default admin account if missing
     try {
       const adminEmail = 'root@admin.com'
