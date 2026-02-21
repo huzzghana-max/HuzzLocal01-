@@ -48,6 +48,7 @@ interface DashboardSidebarProps {
   userRole: 'admin' | 'organizer' | 'provider'
   userName?: string
   userEmail?: string
+  userImage?: string
   notifications?: number
   messages?: number
   onLogout: () => void
@@ -57,6 +58,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   userRole,
   userName = 'User',
   userEmail = '',
+  userImage = '',
   notifications = 0,
   messages = 0,
   onLogout,
@@ -66,6 +68,19 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   const theme = useTheme()
   const [expanded, setExpanded] = useState<{ [key: string]: boolean }>({})
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  const storedUserImage = (() => {
+    try {
+      const stored = localStorage.getItem('user')
+      if (!stored) return ''
+      const parsed = JSON.parse(stored)
+      return parsed?.profile_image || ''
+    } catch {
+      return ''
+    }
+  })()
+
+  const avatarSrc = userImage || storedUserImage || undefined
 
   const toggleSubmenu = (label: string) => {
     setExpanded((prev) => ({
@@ -181,7 +196,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
           {
             label: 'Analytics',
             icon: <AnalyticsIcon />,
-            path: '#analytics',
+            path: '/organizer/analytics',
           },
           {
             label: 'Providers',
@@ -241,7 +256,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
           {
             label: 'Analytics',
             icon: <AnalyticsIcon />,
-            path: '#analytics',
+            path: '/provider/analytics',
           },
           {
             label: 'Support',
@@ -289,6 +304,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
           <Avatar
+            src={avatarSrc}
             sx={{
               width: 56,
               height: 56,

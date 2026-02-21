@@ -115,6 +115,7 @@ const Contacts: React.FC = () => {
           userRole={user.role}
           userName={user.name}
           userEmail={user.email}
+          userImage={user.profile_image}
           messages={0}
           onLogout={() => {
             localStorage.removeItem('token')

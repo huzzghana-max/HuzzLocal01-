@@ -45,6 +45,13 @@ interface Ticket {
 
 const TicketListPage: React.FC = () => {
   const navigate = useNavigate()
+  const currentUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || '{}')
+    } catch {
+      return {}
+    }
+  })()
   const [loading, setLoading] = useState(true)
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [page, setPage] = useState(1)
@@ -145,7 +152,13 @@ const TicketListPage: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
-      <DashboardSidebar userRole="organizer" onLogout={() => {}} />
+      <DashboardSidebar
+        userRole="organizer"
+        userName={currentUser?.name || 'Organizer'}
+        userEmail={currentUser?.email || ''}
+        userImage={currentUser?.profile_image}
+        onLogout={() => {}}
+      />
       <Container maxWidth="lg" sx={{ py: 4, width: '100%' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Typography variant="h4" sx={{ fontWeight: 'bold' }}>

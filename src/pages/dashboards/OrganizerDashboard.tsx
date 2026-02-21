@@ -45,6 +45,7 @@ interface User {
   name: string
   email: string
   role: string
+  profile_image?: string
 }
 
 interface Event {
@@ -481,6 +482,7 @@ const OrganizerDashboard: React.FC = () => {
         userRole="organizer"
         userName={user?.name || 'Organizer'}
         userEmail={user?.email || 'organizer@huzz.com'}
+        userImage={user?.profile_image}
         notifications={stats?.pendingBookings || 0}
         messages={conversations.reduce((sum, conv) => sum + (conv.unread_count || 0), 0)}
         onLogout={handleLogout}

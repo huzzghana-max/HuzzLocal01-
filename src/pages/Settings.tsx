@@ -34,12 +34,18 @@ import {
   Tab,
   Card,
   CardContent,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
-import { useTheme } from '../themes/ThemeContext'
+import { useTheme as useAppTheme } from '../themes/ThemeContext'
 import SaveIcon from '@mui/icons-material/Save'
 import CameraAltIcon from '@mui/icons-material/CameraAlt'
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline'
+import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone'
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
 import DashboardSidebar from '../components/DashboardSidebar'
 
 interface User {
@@ -61,7 +67,7 @@ const TabPanel = (props: TabPanelProps) => {
   const { children, value, index, ...other } = props
   return (
     <div role="tabpanel" hidden={value !== index} {...other}>
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+      {value === index && <Box sx={{ p: { xs: 2, sm: 3 } }}>{children}</Box>}
     </div>
   )
 }
@@ -106,7 +112,7 @@ const Settings: React.FC = () => {
   const [profileImagePreview, setProfileImagePreview] = useState<string>('')
 
   // Theme (light / dark)
-  const { mode, toggleTheme } = useTheme()
+  const { mode, toggleTheme } = useAppTheme()
   const handleToggleTheme = () => {
     const newMode = mode === 'light' ? 'dark' : 'light'
     toggleTheme()
@@ -189,10 +195,18 @@ const Settings: React.FC = () => {
     }))
   }
 
-  const handlePrivacyChange = (key: keyof typeof privacy, value?: any) => {
+  const handleProfileVisibilityChange = (
+    _event: React.MouseEvent<HTMLElement>,
+    value: 'public' | 'private' | 'friends' | null,
+  ) => {
+    if (!value) return
+    setPrivacy((prev) => ({ ...prev, profileVisibility: value }))
+  }
+
+  const handlePrivacyChange = (key: 'allowMessagesFromAnyone') => {
     setPrivacy((prev) => ({
       ...prev,
-      [key]: value !== undefined ? value : !prev[key as keyof typeof prev],
+      [key]: !prev[key],
     }))
   }
 
@@ -245,6 +259,9 @@ const Settings: React.FC = () => {
           : updatedUserRaw.profile_image || ''
       }
       localStorage.setItem('user', JSON.stringify(updatedUser))
+      if (updatedUser.email) {
+        localStorage.setItem(`profileImage:${updatedUser.email}`, updatedUser.profile_image || '')
+      }
       setCurrentUser(updatedUser)
       setProfileImagePreview(updatedUser.profile_image || '')
 
@@ -311,6 +328,7 @@ const Settings: React.FC = () => {
             userRole={currentUser.role}
             userName={currentUser.name}
             userEmail={currentUser.email}
+            userImage={currentUser.profile_image}
             onLogout={handleLogout}
           />
         )}
@@ -322,13 +340,20 @@ const Settings: React.FC = () => {
   }
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'background.default' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        minHeight: '100vh',
+        backgroundColor: 'background.default',
+      }}
+    >
       {/* Sidebar */}
       {currentUser && (
         <DashboardSidebar
           userRole={currentUser.role as 'admin' | 'organizer' | 'provider'}
           userName={currentUser.name}
           userEmail={currentUser.email}
+          userImage={currentUser.profile_image}
           onLogout={handleLogout}
         />
       )}
@@ -336,84 +361,109 @@ const Settings: React.FC = () => {
       {/* Main Content */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', ml: { xs: 0, md: '280px' }, width: '100%', overflow: 'hidden' }}>
         <Box sx={{ p: { xs: 2, md: 4 }, flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
-        <Box>
-          <Typography 
-            variant="h4" 
-            sx={{ 
-              mb: 3, 
-              fontWeight: 800, 
-              background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              fontSize: { xs: '1.8rem', md: '2.5rem' },
-            }}
-          >
+        <Paper
+          elevation={0}
+          sx={{
+            mb: 2,
+            p: { xs: 2, md: 2.5 },
+            borderRadius: 3,
+            backgroundColor: 'background.paper',
+            border: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <Typography variant="h4" sx={{ fontWeight: 700, fontSize: { xs: '1.5rem', md: '1.8rem' }, color: 'text.primary' }}>
             Settings
           </Typography>
-        </Box>
+          <Typography sx={{ mt: 0.6, color: 'text.secondary', fontSize: { xs: '0.9rem', md: '0.95rem' } }}>
+            Manage your profile, account security, notifications, and privacy preferences.
+          </Typography>
+        </Paper>
           {successMessage && (
-            <Alert severity="success" sx={{ mb: 2 }}>
+            <Alert severity="success" sx={{ mb: 2, borderRadius: 2.5 }}>
               {successMessage}
             </Alert>
           )}
           {errorMessage && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mb: 2, borderRadius: 2.5 }}>
               {errorMessage}
             </Alert>
           )}
 
-          <Paper sx={{ borderRadius: 2, boxShadow: '0 4px 20px rgba(14, 59, 38, 0.1)' }}>
+          <Paper
+            elevation={0}
+            sx={{
+              borderRadius: 3,
+              border: '1px solid',
+              borderColor: 'divider',
+              boxShadow: (theme) =>
+                theme.palette.mode === 'light'
+                  ? `0 8px 24px ${alpha(theme.palette.primary.main, 0.12)}`
+                  : `0 8px 24px ${alpha(theme.palette.primary.main, 0.3)}`,
+              backgroundColor: 'background.paper',
+              overflow: 'hidden',
+            }}
+          >
             {/* Tabs */}
             <Tabs
               value={tabValue}
               onChange={handleTabChange}
+              variant="scrollable"
+              scrollButtons="auto"
               sx={{
-                borderBottom: '2px solid rgba(14, 59, 38, 0.1)',
-                background: 'linear-gradient(90deg, rgba(14, 59, 38, 0.04) 0%, rgba(184, 227, 197, 0.04) 100%)',
+                px: { xs: 1, sm: 2 },
+                pt: 1,
+                borderBottom: '1px solid',
+                borderColor: 'divider',
                 '& .MuiTab-root': {
+                  minHeight: 52,
                   textTransform: 'none',
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  color: '#666',
-                  transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    color: '#0E3B26',
-                  },
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                  color: 'text.secondary',
+                  borderRadius: '12px 12px 0 0',
+                  mx: 0.4,
+                  px: 1.8,
+                  gap: 0.8,
+                  transition: 'all 0.2s ease',
                 },
                 '& .MuiTab-root.Mui-selected': {
-                  color: '#0E3B26',
-                  fontWeight: 800,
+                  color: 'text.primary',
+                  backgroundColor: (theme) => alpha(theme.palette.primary.main, theme.palette.mode === 'light' ? 0.08 : 0.2),
                 },
                 '& .MuiTabs-indicator': {
-                  backgroundColor: '#0E3B26',
-                  height: '3px',
-                  borderRadius: '2px',
+                  backgroundColor: 'primary.main',
+                  height: 3,
+                  borderRadius: 3,
                 },
               }}
             >
-              <Tab label="Account" />
-              <Tab label="Notifications" />
-              <Tab label="Privacy" />
+              <Tab icon={<PersonOutlineIcon fontSize="small" />} iconPosition="start" label="Account" />
+              <Tab icon={<NotificationsNoneIcon fontSize="small" />} iconPosition="start" label="Notifications" />
+              <Tab icon={<LockOutlinedIcon fontSize="small" />} iconPosition="start" label="Privacy" />
             </Tabs>
 
             {/* Account Tab */}
             <TabPanel value={tabValue} index={0}>
-              <Box sx={{ maxWidth: 600 }}>
+              <Box sx={{ maxWidth: 680 }}>
                 {/* Profile Picture */}
-                <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
+                <Box sx={{ mb: 4, display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, gap: 3 }}>
                   <Avatar
                     src={profileImagePreview}
                     alt={profileData.name}
                     sx={{ 
-                      width: 120, 
-                      height: 120, 
-                      background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
-                      fontSize: '2.5rem', 
-                      fontWeight: 800,
-                      color: '#FFFFFF',
-                      boxShadow: '0 8px 25px rgba(14, 59, 38, 0.25)',
-                      border: '3px solid #B8E3C5',
+                      width: 104,
+                      height: 104,
+                      backgroundColor: 'primary.main',
+                      fontSize: '2.2rem',
+                      fontWeight: 700,
+                      color: 'primary.contrastText',
+                      boxShadow: (theme) =>
+                        theme.palette.mode === 'light'
+                          ? `0 6px 14px ${alpha(theme.palette.primary.main, 0.24)}`
+                          : `0 6px 14px ${alpha(theme.palette.primary.main, 0.36)}`,
+                      border: '2px solid',
+                      borderColor: 'divider',
                     }}
                   >
                     {profileData.name.charAt(0).toUpperCase()}
@@ -432,35 +482,18 @@ const Settings: React.FC = () => {
                         component="span"
                         startIcon={<CameraAltIcon />}
                         sx={{
-                          borderColor: '#0E3B26',
-                          color: '#0E3B26',
+                          borderColor: 'primary.main',
+                          color: 'primary.main',
                           textTransform: 'none',
-                          fontWeight: 700,
-                          borderWidth: '2px',
-                          transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
-                          position: 'relative',
-                          overflow: 'hidden',
-                          '&::before': {
-                            content: '""',
-                            position: 'absolute',
-                            top: 0,
-                            left: '-100%',
-                            width: '100%',
-                            height: '100%',
-                            background: 'linear-gradient(90deg, transparent, rgba(184, 227, 197, 0.3), transparent)',
-                            transition: 'left 0.6s ease',
-                          },
+                          fontWeight: 600,
+                          px: 1.8,
                           '&:hover': {
-                            borderColor: '#1B5E3C',
-                            backgroundColor: 'rgba(14, 59, 38, 0.08)',
-                            boxShadow: '0 4px 12px rgba(14, 59, 38, 0.15)',
-                            '&::before': {
-                              left: '100%',
-                            },
+                            borderColor: 'secondary.main',
+                            backgroundColor: (theme) => alpha(theme.palette.primary.main, theme.palette.mode === 'light' ? 0.08 : 0.2),
                           },
                         }}
                       >
-                        Change Picture
+                        Upload New Photo
                       </Button>
                     </label>
                     <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary', mt: 1 }}>
@@ -479,9 +512,7 @@ const Settings: React.FC = () => {
                       fontWeight: 800, 
                       mb: 3,
                       fontSize: '1.1rem',
-                      color: '#0E3B26',
-                      borderBottom: '2px solid #1B5E3C',
-                      paddingBottom: '8px',
+                      color: 'text.primary',
                     }}
                   >
                     Profile Information
@@ -522,9 +553,7 @@ const Settings: React.FC = () => {
                       fontWeight: 800, 
                       mb: 3,
                       fontSize: '1.1rem',
-                      color: '#0E3B26',
-                      borderBottom: '2px solid #1B5E3C',
-                      paddingBottom: '8px',
+                      color: 'text.primary',
                     }}
                   >
                     Appearance
@@ -537,8 +566,8 @@ const Settings: React.FC = () => {
                           checked={mode === 'dark'}
                           onChange={handleToggleTheme}
                           sx={{ 
-                            '& .MuiSwitch-switchBase.Mui-checked': { color: '#0E3B26' },
-                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#B8E3C5' },
+                            '& .MuiSwitch-switchBase.Mui-checked': { color: 'primary.main' },
+                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.5) },
                           }}
                         />
                       }
@@ -561,9 +590,7 @@ const Settings: React.FC = () => {
                       fontWeight: 800, 
                       mb: 3,
                       fontSize: '1.1rem',
-                      color: '#0E3B26',
-                      borderBottom: '2px solid #1B5E3C',
-                      paddingBottom: '8px',
+                      color: 'text.primary',
                     }}
                   >
                     Change Password
@@ -602,32 +629,19 @@ const Settings: React.FC = () => {
                   onClick={handleSaveProfile}
                   disabled={saving}
                   sx={{
-                    background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+                    backgroundColor: 'primary.main',
+                    color: 'primary.contrastText',
                     textTransform: 'none',
-                    fontWeight: 700,
-                    px: 4,
-                    py: 1.2,
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 15px rgba(14, 59, 38, 0.3)',
-                    transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: '-100%',
-                      width: '100%',
-                      height: '100%',
-                      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
-                      transition: 'left 0.6s ease',
-                    },
+                    fontWeight: 600,
+                    px: 3,
+                    py: 1.1,
+                    borderRadius: 2,
+                    boxShadow: (theme) =>
+                      theme.palette.mode === 'light'
+                        ? `0 4px 14px ${alpha(theme.palette.primary.main, 0.22)}`
+                        : `0 4px 14px ${alpha(theme.palette.primary.main, 0.32)}`,
                     '&:hover:not(:disabled)': {
-                      boxShadow: '0 8px 25px rgba(14, 59, 38, 0.4)',
-                      transform: 'translateY(-2px)',
-                      '&::before': {
-                        left: '100%',
-                      },
+                      backgroundColor: 'primary.dark',
                     },
                   }}
                 >
@@ -638,13 +652,14 @@ const Settings: React.FC = () => {
 
             {/* Notifications Tab */}
             <TabPanel value={tabValue} index={1}>
-              <Box sx={{ maxWidth: 600 }}>
+              <Box sx={{ maxWidth: 680 }}>
                 <Card sx={{ 
                   mb: 3, 
-                  borderRadius: 2, 
-                  boxShadow: '0 2px 12px rgba(14, 59, 38, 0.12)',
-                  border: '1px solid rgba(14, 59, 38, 0.1)',
-                  background: 'linear-gradient(135deg, rgba(14, 59, 38, 0.02) 0%, rgba(184, 227, 197, 0.02) 100%)',
+                  borderRadius: 2.5,
+                  boxShadow: 'none',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  backgroundColor: 'background.paper',
                 }}>
                   <CardContent>
                     <Typography 
@@ -653,7 +668,7 @@ const Settings: React.FC = () => {
                         fontWeight: 800, 
                         mb: 2,
                         fontSize: '1.05rem',
-                        color: '#0E3B26',
+                        color: 'text.primary',
                       }}
                     >
                       Notification Channels
@@ -665,14 +680,14 @@ const Settings: React.FC = () => {
                             checked={notifications.emailNotifications}
                             onChange={() => handleNotificationChange('emailNotifications')}
                             sx={{ 
-                              '& .MuiSwitch-switchBase.Mui-checked': { color: '#0E3B26' },
-                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#B8E3C5' },
+                              '& .MuiSwitch-switchBase.Mui-checked': { color: 'primary.main' },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.5) },
                             }}
                           />
                         }
                         label={
                           <Box>
-                            <Typography sx={{ fontWeight: 700, color: '#0E3B26' }}>Email Notifications</Typography>
+                            <Typography sx={{ fontWeight: 700, color: 'text.primary' }}>Email Notifications</Typography>
                             <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
                               Receive important updates via email
                             </Typography>
@@ -685,14 +700,14 @@ const Settings: React.FC = () => {
                             checked={notifications.pushNotifications}
                             onChange={() => handleNotificationChange('pushNotifications')}
                             sx={{ 
-                              '& .MuiSwitch-switchBase.Mui-checked': { color: '#0E3B26' },
-                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#B8E3C5' },
+                              '& .MuiSwitch-switchBase.Mui-checked': { color: 'primary.main' },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.5) },
                             }}
                           />
                         }
                         label={
                           <Box>
-                            <Typography sx={{ fontWeight: 700, color: '#0E3B26' }}>Push Notifications</Typography>
+                            <Typography sx={{ fontWeight: 700, color: 'text.primary' }}>Push Notifications</Typography>
                             <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
                               Receive browser push notifications
                             </Typography>
@@ -704,10 +719,11 @@ const Settings: React.FC = () => {
                 </Card>
 
                 <Card sx={{ 
-                  borderRadius: 2, 
-                  boxShadow: '0 2px 12px rgba(14, 59, 38, 0.12)',
-                  border: '1px solid rgba(14, 59, 38, 0.1)',
-                  background: 'linear-gradient(135deg, rgba(14, 59, 38, 0.02) 0%, rgba(184, 227, 197, 0.02) 100%)',
+                  borderRadius: 2.5,
+                  boxShadow: 'none',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  backgroundColor: 'background.paper',
                 }}>
                   <CardContent>
                     <Typography 
@@ -716,7 +732,7 @@ const Settings: React.FC = () => {
                         fontWeight: 800, 
                         mb: 2,
                         fontSize: '1.05rem',
-                        color: '#0E3B26',
+                        color: 'text.primary',
                       }}
                     >
                       Notification Types
@@ -728,14 +744,14 @@ const Settings: React.FC = () => {
                             checked={notifications.messageNotifications}
                             onChange={() => handleNotificationChange('messageNotifications')}
                             sx={{ 
-                              '& .MuiSwitch-switchBase.Mui-checked': { color: '#0E3B26' },
-                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#B8E3C5' },
+                              '& .MuiSwitch-switchBase.Mui-checked': { color: 'primary.main' },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.5) },
                             }}
                           />
                         }
                         label={
                           <Box>
-                            <Typography sx={{ fontWeight: 700, color: '#0E3B26' }}>Messages</Typography>
+                            <Typography sx={{ fontWeight: 700, color: 'text.primary' }}>Messages</Typography>
                             <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
                               Get notified when you receive new messages
                             </Typography>
@@ -748,14 +764,14 @@ const Settings: React.FC = () => {
                             checked={notifications.bookingNotifications}
                             onChange={() => handleNotificationChange('bookingNotifications')}
                             sx={{ 
-                              '& .MuiSwitch-switchBase.Mui-checked': { color: '#0E3B26' },
-                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#B8E3C5' },
+                              '& .MuiSwitch-switchBase.Mui-checked': { color: 'primary.main' },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.5) },
                             }}
                           />
                         }
                         label={
                           <Box>
-                            <Typography sx={{ fontWeight: 700, color: '#0E3B26' }}>Bookings</Typography>
+                            <Typography sx={{ fontWeight: 700, color: 'text.primary' }}>Bookings</Typography>
                             <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
                               Get notified about booking updates
                             </Typography>
@@ -768,14 +784,14 @@ const Settings: React.FC = () => {
                             checked={notifications.paymentNotifications}
                             onChange={() => handleNotificationChange('paymentNotifications')}
                             sx={{ 
-                              '& .MuiSwitch-switchBase.Mui-checked': { color: '#0E3B26' },
-                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#B8E3C5' },
+                              '& .MuiSwitch-switchBase.Mui-checked': { color: 'primary.main' },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.5) },
                             }}
                           />
                         }
                         label={
                           <Box>
-                            <Typography sx={{ fontWeight: 700, color: '#0E3B26' }}>Payments</Typography>
+                            <Typography sx={{ fontWeight: 700, color: 'text.primary' }}>Payments</Typography>
                             <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
                               Get notified about payment transactions
                             </Typography>
@@ -792,33 +808,20 @@ const Settings: React.FC = () => {
                   onClick={handleSaveNotifications}
                   disabled={saving}
                   sx={{
-                    background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+                    backgroundColor: 'primary.main',
+                    color: 'primary.contrastText',
                     textTransform: 'none',
-                    fontWeight: 700,
-                    px: 4,
-                    py: 1.2,
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 15px rgba(14, 59, 38, 0.3)',
-                    transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
-                    position: 'relative',
-                    overflow: 'hidden',
+                    fontWeight: 600,
+                    px: 3,
+                    py: 1.1,
+                    borderRadius: 2,
+                    boxShadow: (theme) =>
+                      theme.palette.mode === 'light'
+                        ? `0 4px 14px ${alpha(theme.palette.primary.main, 0.22)}`
+                        : `0 4px 14px ${alpha(theme.palette.primary.main, 0.32)}`,
                     mt: 3,
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: '-100%',
-                      width: '100%',
-                      height: '100%',
-                      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
-                      transition: 'left 0.6s ease',
-                    },
                     '&:hover:not(:disabled)': {
-                      boxShadow: '0 8px 25px rgba(14, 59, 38, 0.4)',
-                      transform: 'translateY(-2px)',
-                      '&::before': {
-                        left: '100%',
-                      },
+                      backgroundColor: 'primary.dark',
                     },
                   }}
                 >
@@ -829,12 +832,13 @@ const Settings: React.FC = () => {
 
             {/* Privacy Tab */}
             <TabPanel value={tabValue} index={2}>
-              <Box sx={{ maxWidth: 600 }}>
+              <Box sx={{ maxWidth: 680 }}>
                 <Card sx={{ 
-                  borderRadius: 2, 
-                  boxShadow: '0 2px 12px rgba(14, 59, 38, 0.12)',
-                  border: '1px solid rgba(14, 59, 38, 0.1)',
-                  background: 'linear-gradient(135deg, rgba(14, 59, 38, 0.02) 0%, rgba(184, 227, 197, 0.02) 100%)',
+                  borderRadius: 3, 
+                  boxShadow: 'none',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  backgroundColor: 'background.paper',
                 }}>
                   <CardContent>
                     <Typography 
@@ -843,65 +847,51 @@ const Settings: React.FC = () => {
                         fontWeight: 800, 
                         mb: 2,
                         fontSize: '1.05rem',
-                        color: '#0E3B26',
+                        color: 'text.primary',
                       }}
                     >
                       Profile Visibility
                     </Typography>
                     <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary', mb: 2 }}>
-                      Control who can see your profile
+                      Select who can discover and view your profile.
                     </Typography>
-                    <FormGroup>
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            checked={privacy.profileVisibility === 'public'}
-                            onChange={() => handlePrivacyChange('profileVisibility', 'public')}
-                            sx={{ 
-                              '& .MuiSwitch-switchBase.Mui-checked': { color: '#0E3B26' },
-                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#B8E3C5' },
-                            }}
-                          />
-                        }
-                        label={
-                          <Box>
-                            <Typography sx={{ fontWeight: 700, color: '#0E3B26' }}>Public Profile</Typography>
-                            <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
-                              Everyone can see your profile
-                            </Typography>
-                          </Box>
-                        }
-                      />
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            checked={privacy.profileVisibility === 'private'}
-                            onChange={() => handlePrivacyChange('profileVisibility', 'private')}
-                            sx={{ 
-                              '& .MuiSwitch-switchBase.Mui-checked': { color: '#0E3B26' },
-                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#B8E3C5' },
-                            }}
-                          />
-                        }
-                        label={
-                          <Box>
-                            <Typography sx={{ fontWeight: 700, color: '#0E3B26' }}>Private Profile</Typography>
-                            <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
-                              Only you can see your profile
-                            </Typography>
-                          </Box>
-                        }
-                      />
-                    </FormGroup>
+                    <ToggleButtonGroup
+                      exclusive
+                      value={privacy.profileVisibility}
+                      onChange={handleProfileVisibilityChange}
+                      size="small"
+                      sx={{
+                        flexWrap: 'wrap',
+                        gap: 1,
+                        '& .MuiToggleButton-root': {
+                          textTransform: 'none',
+                          borderRadius: 2,
+                          borderColor: 'divider',
+                          color: 'text.secondary',
+                          fontWeight: 700,
+                          px: 1.8,
+                          '&.Mui-selected': {
+                            color: 'text.primary',
+                            backgroundColor: (theme) => alpha(theme.palette.primary.main, theme.palette.mode === 'light' ? 0.1 : 0.24),
+                            borderColor: 'primary.main',
+                          },
+                        },
+                      }}
+                    >
+                      <ToggleButton value="public">Public</ToggleButton>
+                      <ToggleButton value="friends">Connections</ToggleButton>
+                      <ToggleButton value="private">Private</ToggleButton>
+                    </ToggleButtonGroup>
                   </CardContent>
                 </Card>
 
                 <Card sx={{ 
                   mt: 3, 
-                  borderRadius: 2, 
-                  boxShadow: '0 2px 12px rgba(14, 59, 38, 0.12)',
-                  border: '1px solid rgba(14, 59, 38, 0.1)',
-                  background: 'linear-gradient(135deg, rgba(14, 59, 38, 0.02) 0%, rgba(184, 227, 197, 0.02) 100%)',
+                  borderRadius: 3, 
+                  boxShadow: 'none',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  backgroundColor: 'background.paper',
                 }}>
                   <CardContent>
                     <Typography 
@@ -910,7 +900,7 @@ const Settings: React.FC = () => {
                         fontWeight: 800, 
                         mb: 2,
                         fontSize: '1.05rem',
-                        color: '#0E3B26',
+                        color: 'text.primary',
                       }}
                     >
                       Messaging
@@ -922,14 +912,14 @@ const Settings: React.FC = () => {
                             checked={privacy.allowMessagesFromAnyone}
                             onChange={() => handlePrivacyChange('allowMessagesFromAnyone')}
                             sx={{ 
-                              '& .MuiSwitch-switchBase.Mui-checked': { color: '#0E3B26' },
-                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#B8E3C5' },
+                              '& .MuiSwitch-switchBase.Mui-checked': { color: 'primary.main' },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.5) },
                             }}
                           />
                         }
                         label={
                           <Box>
-                            <Typography sx={{ fontWeight: 700, color: '#0E3B26' }}>Allow Messages from Anyone</Typography>
+                            <Typography sx={{ fontWeight: 700, color: 'text.primary' }}>Allow Messages from Anyone</Typography>
                             <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
                               When disabled, only verified users can message you
                             </Typography>
@@ -946,33 +936,20 @@ const Settings: React.FC = () => {
                   onClick={handleSavePrivacy}
                   disabled={saving}
                   sx={{
-                    background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+                    backgroundColor: 'primary.main',
+                    color: 'primary.contrastText',
                     textTransform: 'none',
-                    fontWeight: 700,
-                    px: 4,
-                    py: 1.2,
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 15px rgba(14, 59, 38, 0.3)',
-                    transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
-                    position: 'relative',
-                    overflow: 'hidden',
+                    fontWeight: 600,
+                    px: 3,
+                    py: 1.1,
+                    borderRadius: 2,
+                    boxShadow: (theme) =>
+                      theme.palette.mode === 'light'
+                        ? `0 4px 14px ${alpha(theme.palette.primary.main, 0.22)}`
+                        : `0 4px 14px ${alpha(theme.palette.primary.main, 0.32)}`,
                     mt: 3,
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: '-100%',
-                      width: '100%',
-                      height: '100%',
-                      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
-                      transition: 'left 0.6s ease',
-                    },
                     '&:hover:not(:disabled)': {
-                      boxShadow: '0 8px 25px rgba(14, 59, 38, 0.4)',
-                      transform: 'translateY(-2px)',
-                      '&::before': {
-                        left: '100%',
-                      },
+                      backgroundColor: 'primary.dark',
                     },
                   }}
                 >

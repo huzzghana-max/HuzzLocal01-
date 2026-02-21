@@ -77,6 +77,13 @@ interface AnalyticsData {
 }
 
 const AdminTicketDashboard: React.FC = () => {
+  const currentUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || '{}')
+    } catch {
+      return {}
+    }
+  })()
   const [activeTab, setActiveTab] = useState(0)
   const [loading, setLoading] = useState(true)
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
@@ -213,7 +220,13 @@ const AdminTicketDashboard: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
-      <DashboardSidebar userRole="admin" onLogout={() => {}} />
+      <DashboardSidebar
+        userRole="admin"
+        userName={currentUser?.name || 'Admin User'}
+        userEmail={currentUser?.email || 'admin@huzz.com'}
+        userImage={currentUser?.profile_image}
+        onLogout={() => {}}
+      />
       <Container maxWidth="lg" sx={{ py: 4, width: '100%' }}>
         <Typography variant="h4" sx={{ mb: 4, fontWeight: 'bold' }}>
           Admin Ticket Dashboard

@@ -400,7 +400,14 @@ async function loginUser(email, password) {
       throw new Error('Invalid password')
     }
     
-    const userObj = { id: user.id, name: user.name, email: user.email, role: user.role }
+    const userObj = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone || '',
+      profile_image: user.profile_image || '',
+    }
     const token = jwt.sign(userObj, JWT_SECRET, { expiresIn: '7d' })
     
     return { token, user: userObj }

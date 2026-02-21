@@ -68,6 +68,7 @@ interface User {
   name: string
   email: string
   role: string
+  profile_image?: string
 }
 
 const VendorServices: React.FC = () => {
@@ -317,6 +318,7 @@ const VendorServices: React.FC = () => {
           userRole={currentUser.role as 'admin' | 'organizer' | 'provider'}
           userName={currentUser.name}
           userEmail={currentUser.email}
+          userImage={currentUser.profile_image}
           onLogout={handleLogout}
         />
       )}

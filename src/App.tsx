@@ -12,6 +12,8 @@ import SignUp from './pages/SignUp'
 import OrganizerDashboard from './pages/dashboards/OrganizerDashboard'
 import ProviderDashboard from './pages/dashboards/ProviderDashboard'
 import AdminDashboard from './pages/dashboards/AdminDashboard'
+import OrganizerAnalytics from './pages/dashboards/OrganizerAnalytics'
+import ProviderAnalytics from './pages/dashboards/ProviderAnalytics'
 import AdminServiceApproval from './pages/AdminServiceApproval'
 import AdminTicketReports from './pages/AdminTicketReports'
 import EventsNearYou from './pages/EventsNearYou'
@@ -39,7 +41,7 @@ const LayoutWithNavbar = ({ children }: { children: React.ReactNode }) => (
 function App() {
   return (
     <ThemeProvider>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_relativeSplatPath: true }}>
         <Routes>
           {/* Auth routes - no navbar */}
           <Route path="/signin" element={<SignIn />} />
@@ -67,6 +69,22 @@ function App() {
             element={
               <ProtectedRoute requiredRole="provider">
                 <ProviderDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/organizer/analytics"
+            element={
+              <ProtectedRoute requiredRole="organizer">
+                <OrganizerAnalytics />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/provider/analytics"
+            element={
+              <ProtectedRoute requiredRole="provider">
+                <ProviderAnalytics />
               </ProtectedRoute>
             }
           />

@@ -37,15 +37,29 @@ const SignIn: React.FC = () => {
       })
 
       if (response.data.token && response.data.user) {
+        const apiHost = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').replace(/\/api$/, '')
+        const cachedProfileImage = response.data.user.email
+          ? localStorage.getItem(`profileImage:${response.data.user.email}`) || ''
+          : ''
+        const normalizedUser = {
+          ...response.data.user,
+          profile_image:
+            response.data.user.profile_image && response.data.user.profile_image.startsWith('/uploads/')
+              ? `${apiHost}${response.data.user.profile_image}`
+              : response.data.user.profile_image || cachedProfileImage || '',
+        }
         localStorage.setItem('token', response.data.token)
-        localStorage.setItem('user', JSON.stringify(response.data.user))
+        localStorage.setItem('user', JSON.stringify(normalizedUser))
+        if (normalizedUser.email && normalizedUser.profile_image) {
+          localStorage.setItem(`profileImage:${normalizedUser.email}`, normalizedUser.profile_image)
+        }
         
         if (rememberMe) {
           localStorage.setItem('rememberMe', 'true')
         }
 
         // Route based on user role
-        const userRole = response.data.user.role
+        const userRole = normalizedUser.role
         if (userRole === 'admin') {
           navigate('/admin-dashboard')
         } else if (userRole === 'provider') {
@@ -223,4 +237,3 @@ const SignIn: React.FC = () => {
 }
 
 export default SignIn
-

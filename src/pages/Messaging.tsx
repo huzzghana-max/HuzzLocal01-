@@ -304,6 +304,7 @@ const Messaging: React.FC = () => {
           userRole={currentUser.role}
           userName={currentUser.name}
           userEmail={currentUser.email}
+          userImage={currentUser.profile_image}
           messages={conversations.reduce((sum, conv) => sum + (conv.unread_count || 0), 0)}
           onLogout={() => {
             localStorage.removeItem('token')

@@ -1,219 +1,211 @@
-import { createTheme } from '@mui/material/styles';
+import { alpha, createTheme } from '@mui/material/styles'
 
-// --- Forest Green & Mint Palette ---
-// Core Colors
-const deepForest = '#0E3B26';    // Primary Buttons, Headers
-const emeraldGreen = '#1B5E3C';  // Active States, Success
-const softMint = '#B8E3C5';      // Secondary Accents, Progress Bars
-const alertOrange = '#F5A623';   // Pending Status, Notifications
-const cleanWhite = '#FFFFFF';    // Card Backgrounds
-const subtleGray = '#F4F7F6';    // App Background
+const fontFamily = '"Manrope", "Plus Jakarta Sans", "Avenir Next", "Segoe UI", sans-serif'
 
-// Light Mode
-const lightBG = '#F4F7F6';
-const lightSurface = '#FFFFFF';
-const lightTextPrimary = '#1A1C1E';
-const lightTextSecondary = '#6B7280';
-const lightPrimary = deepForest;
-const lightAccent = softMint;
+const lightTokens = {
+  primary: '#0E5A3B',
+  primaryDark: '#0A422B',
+  secondary: '#C97A19',
+  bg: '#F3F7F4',
+  paper: '#FFFFFF',
+  text: '#16211B',
+  textMuted: '#5F6F66',
+  border: '#DDE8E1',
+  shadow: '0 10px 30px rgba(14, 38, 26, 0.10)',
+}
 
-// Dark Mode
-const darkBG = '#091A12';
-const darkSurface = '#122A1F';
-const darkTextPrimary = '#E2E8F0';
-const darkTextSecondary = '#94A3B8';
-const darkPrimary = softMint;  // Mint for visibility on dark
-const darkAccent = emeraldGreen;
+const darkTokens = {
+  primary: '#7DE2B8',
+  primaryDark: '#59C998',
+  secondary: '#F3B35B',
+  bg: '#0B1712',
+  paper: '#12211A',
+  text: '#EAF3EE',
+  textMuted: '#9DB2A6',
+  border: '#2D4338',
+  shadow: '0 12px 32px rgba(0, 0, 0, 0.38)',
+}
 
-const shadowLight = '0 4px 24px 0 rgba(14,59,38,0.10), 0 1.5px 4px 0 rgba(14,59,38,0.04)';
-const shadowDark = '0 4px 24px 0 rgba(0,0,0,0.38), 0 1.5px 4px 0 rgba(0,0,0,0.10)';
+const baseComponents = (tokens: typeof lightTokens) => ({
+  MuiCssBaseline: {
+    styleOverrides: {
+      body: {
+        fontFamily,
+        background:
+          `radial-gradient(circle at 18% -10%, ${alpha(tokens.primary, 0.12)} 0%, transparent 42%),` +
+          `radial-gradient(circle at 90% 0%, ${alpha(tokens.secondary, 0.1)} 0%, transparent 35%),` +
+          tokens.bg,
+      },
+      '#root': {
+        minHeight: '100vh',
+      },
+    },
+  },
+  MuiButton: {
+    styleOverrides: {
+      root: {
+        fontWeight: 700,
+        letterSpacing: 0.2,
+        textTransform: 'none' as const,
+        borderRadius: 12,
+      },
+      contained: {
+        background: `linear-gradient(135deg, ${tokens.primary} 0%, ${tokens.primaryDark} 100%)`,
+        color: tokens.bg,
+        boxShadow: tokens.shadow,
+        padding: '10px 20px',
+        '&:hover': {
+          background: `linear-gradient(135deg, ${tokens.primaryDark} 0%, ${tokens.primary} 100%)`,
+          boxShadow: tokens.shadow,
+          transform: 'translateY(-1px)',
+        },
+      },
+      outlined: {
+        border: `1px solid ${alpha(tokens.primary, 0.35)}`,
+        color: tokens.primary,
+        padding: '10px 20px',
+        '&:hover': {
+          backgroundColor: alpha(tokens.primary, 0.08),
+          borderColor: tokens.primary,
+        },
+      },
+    },
+  },
+  MuiPaper: {
+    styleOverrides: {
+      root: {
+        backgroundImage: 'none',
+        borderRadius: 14,
+        border: `1px solid ${alpha(tokens.border, 0.8)}`,
+        boxShadow: tokens.shadow,
+      },
+    },
+  },
+  MuiCard: {
+    styleOverrides: {
+      root: {
+        borderRadius: 14,
+        border: `1px solid ${alpha(tokens.border, 0.85)}`,
+        boxShadow: tokens.shadow,
+      },
+    },
+  },
+  MuiAppBar: {
+    styleOverrides: {
+      root: {
+        backgroundColor: alpha(tokens.paper, 0.88),
+        color: tokens.text,
+        backdropFilter: 'blur(8px)',
+        boxShadow: 'none',
+        borderBottom: `1px solid ${alpha(tokens.border, 0.9)}`,
+      },
+    },
+  },
+  MuiChip: {
+    styleOverrides: {
+      root: {
+        fontWeight: 600,
+        borderRadius: 10,
+      },
+    },
+  },
+  MuiTabs: {
+    styleOverrides: {
+      indicator: {
+        height: 3,
+        borderRadius: 999,
+      },
+    },
+  },
+  MuiTab: {
+    styleOverrides: {
+      root: {
+        textTransform: 'none',
+        fontWeight: 700,
+      },
+    },
+  },
+  MuiOutlinedInput: {
+    styleOverrides: {
+      root: {
+        borderRadius: 12,
+      },
+    },
+  },
+})
 
-// --- Light Theme ---
 export const lightTheme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: lightPrimary,
-      contrastText: cleanWhite,
+      main: lightTokens.primary,
+      dark: lightTokens.primaryDark,
+      contrastText: '#FFFFFF',
     },
     secondary: {
-      main: alertOrange,
-      contrastText: cleanWhite,
+      main: lightTokens.secondary,
+      contrastText: '#FFFFFF',
     },
     background: {
-      default: lightBG,
-      paper: lightSurface,
+      default: lightTokens.bg,
+      paper: lightTokens.paper,
     },
     text: {
-      primary: lightTextPrimary,
-      secondary: lightTextSecondary,
-      disabled: lightTextSecondary,
+      primary: lightTokens.text,
+      secondary: lightTokens.textMuted,
+      disabled: alpha(lightTokens.textMuted, 0.7),
     },
-    divider: subtleGray,
+    divider: lightTokens.border,
   },
-  shape: { borderRadius: 18 },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        contained: {
-          background: lightPrimary,
-          color: cleanWhite,
-          fontWeight: 600,
-          borderRadius: '24px',
-          boxShadow: shadowLight,
-          padding: '12px 32px',
-          textTransform: 'none',
-          letterSpacing: 0.5,
-          border: 'none',
-          transition: 'all 0.18s cubic-bezier(.4,0,.2,1)',
-          '&:hover': {
-            background: emeraldGreen,
-            color: cleanWhite,
-            boxShadow: shadowLight,
-            filter: 'brightness(0.95)',
-          },
-          '&:focus-visible': {
-            outline: `2px solid ${alertOrange}`,
-            outlineOffset: '2px',
-          },
-        },
-        outlined: {
-          background: 'transparent',
-          color: lightPrimary,
-          border: `2px solid ${lightPrimary}`,
-          fontWeight: 600,
-          borderRadius: '24px',
-          boxShadow: 'none',
-          padding: '12px 32px',
-          textTransform: 'none',
-          letterSpacing: 0.5,
-          transition: 'all 0.18s cubic-bezier(.4,0,.2,1)',
-          '&:hover': {
-            background: 'rgba(14,59,38,0.08)',
-            color: lightPrimary,
-            boxShadow: shadowLight,
-            borderColor: alertOrange,
-          },
-          '&:focus-visible': {
-            outline: `2px solid ${alertOrange}`,
-            outlineOffset: '2px',
-          },
-        },
-      },
-    },
-    MuiAppBar: {
-      styleOverrides: {
-        root: {
-          background: cleanWhite,
-          color: lightTextPrimary,
-          boxShadow: shadowLight,
-          borderBottom: `1px solid ${subtleGray}`,
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          borderRadius: '18px',
-          boxShadow: shadowLight,
-        },
-      },
-    },
+  shape: { borderRadius: 14 },
+  typography: {
+    fontFamily,
+    h1: { fontWeight: 800, letterSpacing: -0.6 },
+    h2: { fontWeight: 800, letterSpacing: -0.5 },
+    h3: { fontWeight: 800, letterSpacing: -0.4 },
+    h4: { fontWeight: 800, letterSpacing: -0.3 },
+    h5: { fontWeight: 750, letterSpacing: -0.2 },
+    h6: { fontWeight: 750, letterSpacing: -0.1 },
+    button: { fontWeight: 700 },
   },
-});
+  components: baseComponents(lightTokens),
+})
 
-// --- Dark Theme ---
 export const darkTheme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: darkPrimary,  // Mint for visibility on dark background
-      contrastText: darkBG,
+      main: darkTokens.primary,
+      dark: darkTokens.primaryDark,
+      contrastText: darkTokens.bg,
     },
     secondary: {
-      main: alertOrange,
-      contrastText: darkBG,
+      main: darkTokens.secondary,
+      contrastText: darkTokens.bg,
     },
     background: {
-      default: darkBG,
-      paper: darkSurface,
+      default: darkTokens.bg,
+      paper: darkTokens.paper,
     },
     text: {
-      primary: darkTextPrimary,
-      secondary: darkTextSecondary,
-      disabled: darkTextSecondary,
+      primary: darkTokens.text,
+      secondary: darkTokens.textMuted,
+      disabled: alpha(darkTokens.textMuted, 0.75),
     },
-    divider: darkAccent,
+    divider: darkTokens.border,
   },
-  shape: { borderRadius: 18 },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        contained: {
-          background: darkPrimary,  // Mint primary in dark mode
-          color: darkBG,
-          fontWeight: 600,
-          borderRadius: '24px',
-          boxShadow: shadowDark,
-          padding: '12px 32px',
-          textTransform: 'none',
-          letterSpacing: 0.5,
-          border: 'none',
-          transition: 'all 0.18s cubic-bezier(.4,0,.2,1)',
-          '&:hover': {
-            background: softMint,
-            color: darkBG,
-            boxShadow: shadowDark,
-            filter: 'brightness(0.95)',
-          },
-          '&:focus-visible': {
-            outline: `2px solid ${alertOrange}`,
-            outlineOffset: '2px',
-          },
-        },
-        outlined: {
-          background: 'transparent',
-          color: darkPrimary,
-          border: `2px solid ${darkPrimary}`,
-          fontWeight: 600,
-          borderRadius: '24px',
-          boxShadow: 'none',
-          padding: '12px 32px',
-          textTransform: 'none',
-          letterSpacing: 0.5,
-          transition: 'all 0.18s cubic-bezier(.4,0,.2,1)',
-          '&:hover': {
-            background: 'rgba(184,227,197,0.13)',
-            color: darkPrimary,
-            boxShadow: shadowDark,
-            borderColor: alertOrange,
-          },
-          '&:focus-visible': {
-            outline: `2px solid ${alertOrange}`,
-            outlineOffset: '2px',
-          },
-        },
-      },
-    },
-    MuiAppBar: {
-      styleOverrides: {
-        root: {
-          background: darkBG,
-          color: darkTextPrimary,
-          boxShadow: shadowDark,
-          borderBottom: `1px solid ${darkAccent}`,
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          borderRadius: '18px',
-          boxShadow: shadowDark,
-        },
-      },
-    },
+  shape: { borderRadius: 14 },
+  typography: {
+    fontFamily,
+    h1: { fontWeight: 800, letterSpacing: -0.6 },
+    h2: { fontWeight: 800, letterSpacing: -0.5 },
+    h3: { fontWeight: 800, letterSpacing: -0.4 },
+    h4: { fontWeight: 800, letterSpacing: -0.3 },
+    h5: { fontWeight: 750, letterSpacing: -0.2 },
+    h6: { fontWeight: 750, letterSpacing: -0.1 },
+    button: { fontWeight: 700 },
   },
-});
+  components: baseComponents(darkTokens),
+})
 
-export default darkTheme;
+export default darkTheme

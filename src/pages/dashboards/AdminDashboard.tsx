@@ -48,6 +48,7 @@ interface User {
   name: string
   email: string
   role: 'organizer' | 'provider' | 'admin'
+  profile_image?: string
   created_at?: string
 }
 
@@ -85,6 +86,7 @@ const AdminDashboard: React.FC = () => {
   const [filterRole, setFilterRole] = useState<'all' | 'organizer' | 'provider' | 'admin'>('all')
   const [filterEventStatus, setFilterEventStatus] = useState<string>('all')
   const [users, setUsers] = useState<User[]>([])
+  const [adminUser, setAdminUser] = useState<User | null>(null)
   const [events, setEvents] = useState<Event[]>([])
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
@@ -114,6 +116,7 @@ const AdminDashboard: React.FC = () => {
     const userStr = localStorage.getItem('user')
     if (userStr) {
       const parsedUser = JSON.parse(userStr)
+      setAdminUser(parsedUser)
       if (parsedUser.role !== 'admin') {
         setLoading(false)
         navigate('/signin')
@@ -381,14 +384,32 @@ const AdminDashboard: React.FC = () => {
   const providersCount = users.filter(u => u.role === 'provider').length
   const adminsCount = users.filter(u => u.role === 'admin').length
   const totalEvents = events.length
+  const activeEventsCount = events.filter((event) => event.status === 'published' || event.status === 'confirmed' || event.status === 'ongoing').length
+  const completedEventsCount = events.filter((event) => event.status === 'completed').length
+  const cancelledEventsCount = events.filter((event) => event.status === 'cancelled').length
+  const draftEventsCount = events.filter((event) => event.status === 'draft' || event.status === 'pending').length
+  const roleDistribution = [
+    { label: 'Organizers', value: organizersCount, color: '#1B5E3C' },
+    { label: 'Providers', value: providersCount, color: '#ff8c00' },
+    { label: 'Admins', value: adminsCount, color: '#5C6BC0' },
+  ]
+  const statusDistribution = [
+    { label: 'Active', value: activeEventsCount, color: '#2E7D32' },
+    { label: 'Draft/Pending', value: draftEventsCount, color: '#FFA726' },
+    { label: 'Completed', value: completedEventsCount, color: '#546E7A' },
+    { label: 'Cancelled', value: cancelledEventsCount, color: '#D32F2F' },
+  ]
+  const maxRoleValue = Math.max(1, ...roleDistribution.map((item) => item.value))
+  const maxStatusValue = Math.max(1, ...statusDistribution.map((item) => item.value))
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* Sidebar */}
       <DashboardSidebar
         userRole="admin"
-        userName="Admin User"
-        userEmail="admin@huzz.com"
+        userName={adminUser?.name || 'Admin User'}
+        userEmail={adminUser?.email || 'admin@huzz.com'}
+        userImage={adminUser?.profile_image}
         notifications={0}
         messages={pendingServicesCount}
         onLogout={handleLogout}
@@ -510,6 +531,7 @@ const AdminDashboard: React.FC = () => {
                 >
                   <Tab label="👥 Users" />
                   <Tab label={`📅 Events (${totalEvents})`} />
+                  <Tab label="ðŸ“ˆ Analytics" />
                 </Tabs>
               </Paper>
 
@@ -661,7 +683,7 @@ const AdminDashboard: React.FC = () => {
                     </Typography>
                   </Box>
                 </Box>
-              ) : (
+                ) : currentTab === 1 ? (
                 <Box>
                   <Typography variant="h5" sx={{ fontWeight: 600, mb: 3 }}>
                     Event Management
@@ -840,7 +862,156 @@ const AdminDashboard: React.FC = () => {
                     </Typography>
                   </Box>
                 </Box>
-              )}
+                ) : (
+                <Box>
+                  <Typography variant="h5" sx={{ fontWeight: 600, mb: 3 }}>
+                    Platform Analytics
+                  </Typography>
+
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
+                    <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(14, 59, 38, 0.12)' }}>
+                      <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 700 }}>
+                        Total Users
+                      </Typography>
+                      <Typography variant="h4" sx={{ fontWeight: 800, color: '#0E3B26', mt: 1 }}>
+                        {totalUsers}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
+                        Registered accounts across all roles
+                      </Typography>
+                    </Paper>
+                    <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(14, 59, 38, 0.12)' }}>
+                      <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 700 }}>
+                        Active Events
+                      </Typography>
+                      <Typography variant="h4" sx={{ fontWeight: 800, color: '#1B5E3C', mt: 1 }}>
+                        {activeEventsCount}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
+                        Published, confirmed, or ongoing
+                      </Typography>
+                    </Paper>
+                    <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(14, 59, 38, 0.12)' }}>
+                      <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 700 }}>
+                        Pending Services
+                      </Typography>
+                      <Typography variant="h4" sx={{ fontWeight: 800, color: '#ff8c00', mt: 1 }}>
+                        {pendingServicesCount}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
+                        Awaiting review and approval
+                      </Typography>
+                    </Paper>
+                    <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(14, 59, 38, 0.12)' }}>
+                      <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 700 }}>
+                        Total Events
+                      </Typography>
+                      <Typography variant="h4" sx={{ fontWeight: 800, color: '#4E6E5D', mt: 1 }}>
+                        {totalEvents}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
+                        All events across the platform
+                      </Typography>
+                    </Paper>
+                  </Box>
+
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.1fr 0.9fr' }, gap: 3, mb: 4 }}>
+                    <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(14, 59, 38, 0.12)' }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
+                        Users By Role
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {roleDistribution.map((item) => (
+                          <Box key={item.label}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                {item.label}
+                              </Typography>
+                              <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                {item.value}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ height: 10, borderRadius: 999, bgcolor: 'rgba(14, 59, 38, 0.08)', overflow: 'hidden' }}>
+                              <Box
+                                sx={{
+                                  height: '100%',
+                                  width: `${Math.round((item.value / maxRoleValue) * 100)}%`,
+                                  bgcolor: item.color,
+                                  borderRadius: 999,
+                                  transition: 'width 0.4s ease',
+                                }}
+                              />
+                            </Box>
+                          </Box>
+                        ))}
+                      </Box>
+                    </Paper>
+
+                    <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(14, 59, 38, 0.12)' }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
+                        Event Status Mix
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {statusDistribution.map((item) => (
+                          <Box key={item.label}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                {item.label}
+                              </Typography>
+                              <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                {item.value}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ height: 10, borderRadius: 999, bgcolor: 'rgba(14, 59, 38, 0.08)', overflow: 'hidden' }}>
+                              <Box
+                                sx={{
+                                  height: '100%',
+                                  width: `${Math.round((item.value / maxStatusValue) * 100)}%`,
+                                  bgcolor: item.color,
+                                  borderRadius: 999,
+                                  transition: 'width 0.4s ease',
+                                }}
+                              />
+                            </Box>
+                          </Box>
+                        ))}
+                      </Box>
+                    </Paper>
+                  </Box>
+
+                  <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(14, 59, 38, 0.12)' }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
+                      Health Signals
+                    </Typography>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+                      <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(14, 59, 38, 0.06)' }}>
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                          Completion Rate
+                        </Typography>
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: '#0E3B26' }}>
+                          {totalEvents === 0 ? '0%' : `${Math.round((completedEventsCount / totalEvents) * 100)}%`}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(255, 140, 0, 0.08)' }}>
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                          Draft & Pending Share
+                        </Typography>
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: '#ff8c00' }}>
+                          {totalEvents === 0 ? '0%' : `${Math.round((draftEventsCount / totalEvents) * 100)}%`}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(211, 47, 47, 0.08)' }}>
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                          Cancellation Rate
+                        </Typography>
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: '#D32F2F' }}>
+                          {totalEvents === 0 ? '0%' : `${Math.round((cancelledEventsCount / totalEvents) * 100)}%`}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Paper>
+                </Box>
+                )}
               </Fade>
 
               {/* User Details Dialog */}

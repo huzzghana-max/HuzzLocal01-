@@ -262,35 +262,38 @@ app.get('/api/dashboard/provider-stats', verifyToken, async (req, res) => {
 
     // Get pending service requests
     const [pending] = await pool.execute(
-      "SELECT COUNT(*) AS pendingRequests FROM bookings WHERE vendor_id = ? AND status = 'pending'",
+      "SELECT COUNT(*) AS pendingRequests FROM bookings WHERE provider_id = ? AND status = 'pending'",
       [userId]
     )
 
     // Get completed bookings
     const [completed] = await pool.execute(
-      "SELECT COUNT(*) AS completedBookings FROM bookings WHERE vendor_id = ? AND status = 'completed'",
+      "SELECT COUNT(*) AS completedBookings FROM bookings WHERE provider_id = ? AND status = 'completed'",
       [userId]
     )
 
     // Get total earnings from completed bookings
     const [earnings] = await pool.execute(
-      "SELECT COALESCE(SUM(amount), 0) AS earnings FROM bookings WHERE vendor_id = ? AND status = 'completed'",
+      "SELECT COALESCE(SUM(total_cost), 0) AS totalEarnings FROM bookings WHERE provider_id = ? AND status = 'completed'",
       [userId]
     )
 
     // Get recent bookings
     const [bookings] = await pool.execute(
-      'SELECT id, event_id, amount, status, created_at FROM bookings WHERE vendor_id = ? ORDER BY created_at DESC LIMIT 10',
+      'SELECT id, event_id, total_cost, status, created_at FROM bookings WHERE provider_id = ? ORDER BY created_at DESC LIMIT 10',
       [userId]
     )
 
-    const profileCompletion = provider?.[0]?.bio && provider?.[0]?.portfolio_url ? '100%' : '50%'
+    const hasDescription = Boolean(provider?.[0]?.description)
+    const hasPortfolio = Boolean(provider?.[0]?.portfolio_images)
+    const profileCompletion = hasDescription && hasPortfolio ? '100%' : (hasDescription || hasPortfolio ? '75%' : '50%')
 
     res.json({
       profileCompletion,
       pendingRequests: pending[0]?.pendingRequests || 0,
       completedBookings: completed[0]?.completedBookings || 0,
-      earnings: earnings[0]?.earnings || 0,
+      totalEarnings: earnings[0]?.totalEarnings || 0,
+      earnings: earnings[0]?.totalEarnings || 0,
       bookings: bookings || []
     })
   } catch (error) {
@@ -315,7 +318,7 @@ app.get('/api/dashboard/admin-stats', verifyToken, async (req, res) => {
 
     // Get total transactions (sum of all completed bookings)
     const [transactions] = await pool.execute(
-      "SELECT COALESCE(SUM(amount), 0) AS totalTransactions FROM bookings WHERE status = 'completed'"
+      "SELECT COALESCE(SUM(total_cost), 0) AS totalTransactions FROM bookings WHERE status = 'completed'"
     )
 
     // Calculate platform fee (10% of transactions)

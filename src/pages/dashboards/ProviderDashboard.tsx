@@ -34,6 +34,7 @@ interface User {
   name: string
   email: string
   role: string
+  profile_image?: string
 }
 
 interface Booking {
@@ -41,7 +42,7 @@ interface Booking {
   eventName?: string
   date?: string
   status: 'pending' | 'confirmed' | 'completed' | 'rejected' | 'cancelled'
-  amount?: string
+  amount?: string | number
   service_title?: string
   organizer_name?: string
   booking_date?: string
@@ -76,33 +77,29 @@ const ProviderDashboard: React.FC = () => {
         navigate('/signin')
         return
       }
-      const response = await api.get('/dashboard/provider-stats', {
+      const bookingsResponse = await api.get('/provider-bookings', {
         headers: { Authorization: `Bearer ${token}` },
       })
-      setStats(response.data)
-
-      // Fetch service bookings for provider
-      try {
-        const bookingsResponse = await api.get('/provider-bookings', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        const fetchedBookings = bookingsResponse.data || []
-        // Transform data to match Booking interface
-        const transformedBookings = fetchedBookings.map((booking: any) => ({
-          id: booking.id,
-          service_title: booking.service_title || booking.title,
-          organizer_name: booking.organizer_name,
-          booking_date: booking.booking_date,
-          date: booking.booking_date,
-          status: booking.status,
-          notes: booking.notes,
-          organizer_id: booking.organizer_id,
-        }))
-        setBookings(transformedBookings)
-      } catch (bookingError) {
-        console.error('Failed to fetch service bookings:', bookingError)
-        setBookings(response.data.bookings || [])
-      }
+      const fetchedBookings = bookingsResponse.data || []
+      const transformedBookings = fetchedBookings.map((booking: any) => ({
+        id: booking.id,
+        service_title: booking.service_title || booking.title,
+        organizer_name: booking.organizer_name,
+        booking_date: booking.booking_date,
+        date: booking.booking_date,
+        status: booking.status,
+        notes: booking.notes,
+        organizer_id: booking.organizer_id,
+        amount: booking.amount ?? booking.price ?? 0,
+      }))
+      setBookings(transformedBookings)
+      const totalEarnings = transformedBookings
+        .filter((booking: Booking) => booking.status === 'completed')
+        .reduce((sum: number, booking: Booking) => sum + Number(booking.amount || 0), 0)
+      setStats({
+        pendingRequests: transformedBookings.filter((booking: Booking) => booking.status === 'pending').length,
+        totalEarnings: totalEarnings.toFixed(2),
+      })
     } catch (error: any) {
       console.error('Failed to fetch dashboard data:', error)
       if (error.response?.status === 401) {
@@ -188,6 +185,7 @@ const ProviderDashboard: React.FC = () => {
         userRole="provider"
         userName={user?.name || 'Service Provider'}
         userEmail={user?.email || 'provider@huzz.com'}
+        userImage={user?.profile_image}
         notifications={stats?.pendingRequests || 0}
         messages={0}
         onLogout={handleLogout}

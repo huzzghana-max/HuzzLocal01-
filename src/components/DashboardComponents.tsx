@@ -27,39 +27,18 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, change, icon, 
       sx={{
         height: '100%',
         borderRadius: '16px',
-        background: theme.palette.mode === 'light'
-          ? 'linear-gradient(135deg, #FFFFFF 0%, #F4F7F6 100%)'
-          : 'linear-gradient(135deg, #122A1F 0%, #0E2620 100%)',
-        border: theme.palette.mode === 'light'
-          ? '1px solid rgba(184, 227, 197, 0.2)'
-          : '1px solid rgba(184, 227, 197, 0.15)',
+        background: theme.palette.background.paper,
+        border: `1px solid ${theme.palette.divider}`,
         boxShadow: theme.palette.mode === 'light'
-          ? '0 4px 20px rgba(14, 59, 38, 0.08)'
-          : '0 4px 20px rgba(0, 0, 0, 0.3)',
-        transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+          ? '0 4px 16px rgba(17,24,39,0.08)'
+          : '0 4px 16px rgba(0, 0, 0, 0.35)',
+        transition: 'box-shadow 0.2s ease',
         position: 'relative',
         overflow: 'hidden',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          width: '100px',
-          height: '100px',
-          background: theme.palette.mode === 'light'
-            ? 'radial-gradient(circle, rgba(184, 227, 197, 0.1) 0%, transparent 70%)'
-            : 'radial-gradient(circle, rgba(184, 227, 197, 0.05) 0%, transparent 70%)',
-          borderRadius: '50%',
-          pointerEvents: 'none',
-        },
         '&:hover': {
-          transform: 'translateY(-8px)',
           boxShadow: theme.palette.mode === 'light'
-            ? '0 12px 32px rgba(14, 59, 38, 0.15)'
-            : '0 12px 32px rgba(0, 0, 0, 0.5)',
-          border: theme.palette.mode === 'light'
-            ? '1px solid rgba(14, 59, 38, 0.3)'
-            : '1px solid rgba(184, 227, 197, 0.25)',
+            ? '0 8px 24px rgba(17,24,39,0.12)'
+            : '0 8px 24px rgba(0, 0, 0, 0.45)',
         },
       }}
     >
@@ -87,15 +66,12 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, change, icon, 
                 p: 1.5,
                 borderRadius: '12px',
                 background: theme.palette.mode === 'light'
-                  ? 'linear-gradient(135deg, rgba(14, 59, 38, 0.1) 0%, rgba(184, 227, 197, 0.1) 100%)'
-                  : 'linear-gradient(135deg, rgba(184, 227, 197, 0.1) 0%, rgba(14, 59, 38, 0.1) 100%)',
+                  ? 'rgba(17,24,39,0.05)'
+                  : 'rgba(148,163,184,0.15)',
                 color: theme.palette.primary.main,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: theme.palette.mode === 'light'
-                  ? 'inset 0 2px 8px rgba(14, 59, 38, 0.1)'
-                  : 'inset 0 2px 8px rgba(0, 0, 0, 0.2)',
               }}
             >
               {icon}
@@ -106,15 +82,15 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, change, icon, 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 2 }}>
             {change >= 0 ? (
               <>
-                <TrendingUpIcon sx={{ fontSize: '1rem', color: '#1B5E3C' }} />
-                <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#1B5E3C' }}>
+                <TrendingUpIcon sx={{ fontSize: '1rem', color: 'success.main' }} />
+                <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'success.main' }}>
                   {Math.abs(change)}% increase
                 </Typography>
               </>
             ) : (
               <>
-                <TrendingDownIcon sx={{ fontSize: '1rem', color: '#F5A623' }} />
-                <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#F5A623' }}>
+                <TrendingDownIcon sx={{ fontSize: '1rem', color: 'warning.main' }} />
+                <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'warning.main' }}>
                   {Math.abs(change)}% decrease
                 </Typography>
               </>
@@ -142,19 +118,15 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({ title, current, tota
       sx={{
         p: 3,
         borderRadius: '16px',
-        background: theme.palette.mode === 'light'
-          ? 'linear-gradient(135deg, #FFFFFF 0%, #F4F7F6 100%)'
-          : 'linear-gradient(135deg, #122A1F 0%, #0E2620 100%)',
-        border: theme.palette.mode === 'light'
-          ? '1px solid rgba(184, 227, 197, 0.2)'
-          : '1px solid rgba(184, 227, 197, 0.15)',
+        background: theme.palette.background.paper,
+        border: `1px solid ${theme.palette.divider}`,
         boxShadow: theme.palette.mode === 'light'
-          ? '0 4px 20px rgba(14, 59, 38, 0.08)'
+          ? '0 4px 16px rgba(17,24,39,0.08)'
           : '0 4px 20px rgba(0, 0, 0, 0.3)',
-        transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'box-shadow 0.2s ease',
         '&:hover': {
           boxShadow: theme.palette.mode === 'light'
-            ? '0 8px 28px rgba(14, 59, 38, 0.12)'
+            ? '0 8px 24px rgba(17,24,39,0.12)'
             : '0 8px 28px rgba(0, 0, 0, 0.4)',
         },
       }}
@@ -167,9 +139,7 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({ title, current, tota
           sx={{
             fontWeight: 800,
             fontSize: '1.1rem',
-            background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
+            color: 'text.primary',
           }}
         >
           {percentage}%
@@ -182,12 +152,11 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({ title, current, tota
           height: 10,
           borderRadius: 8,
           background: theme.palette.mode === 'light'
-            ? 'rgba(14, 59, 38, 0.1)'
-            : 'rgba(184, 227, 197, 0.1)',
+            ? 'rgba(17,24,39,0.1)'
+            : 'rgba(148,163,184,0.2)',
           '& .MuiLinearProgress-bar': {
             borderRadius: 8,
-            background: 'linear-gradient(90deg, #0E3B26 0%, #B8E3C5 100%)',
-            boxShadow: '0 2px 8px rgba(14, 59, 38, 0.3)',
+            background: theme.palette.primary.main,
           },
         }}
       />
@@ -222,9 +191,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ title, subtitl
             fontSize: { xs: '2rem', md: '2.5rem' },
             fontWeight: 800,
             mb: 0.5,
-            background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
+            color: 'text.primary',
           }}
         >
           {title}

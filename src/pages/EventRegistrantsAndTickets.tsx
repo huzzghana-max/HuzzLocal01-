@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Box,
   Container,
@@ -9,8 +9,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Tabs,
-  Tab,
   Typography,
   CircularProgress,
   Chip,
@@ -62,8 +60,26 @@ interface TicketSale {
   buyer_email: string
 }
 
+type AttendeeType = 'all' | 'registration' | 'ticket'
+
+interface UnifiedAttendee {
+  id: string
+  type: 'registration' | 'ticket'
+  name: string
+  email: string
+  eventName: string
+  eventDate: string
+  createdAt: string
+  details: string
+  amount?: number
+  paymentMethod?: string
+  validated?: boolean
+  token?: string
+  eventId: number
+}
+
 const EventRegistrantsAndTickets: React.FC = () => {
-  const [tabValue, setTabValue] = useState(0) // 0: Registrants, 1: Tickets
+  const [attendeeType, setAttendeeType] = useState<AttendeeType>('all')
   const [registrants, setRegistrants] = useState<Registrant[]>([])
   const [tickets, setTickets] = useState<TicketSale[]>([])
   const [events, setEvents] = useState<any[]>([])
@@ -120,19 +136,59 @@ const EventRegistrantsAndTickets: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedEventId])
 
-  const handleExportRegistrants = () => {
-    const exportList = selectedEventId === 'all' ? registrants : registrants.filter((r) => r.event_id === selectedEventId)
+  const unifiedAttendees = useMemo<UnifiedAttendee[]>(() => {
+    const registrationRows: UnifiedAttendee[] = registrants.map((r) => ({
+      id: `reg-${r.id}`,
+      type: 'registration',
+      name: r.name,
+      email: r.email,
+      eventName: r.event_name,
+      eventDate: r.event_date,
+      createdAt: r.created_at,
+      details: r.phone || '-',
+      token: r.token,
+      eventId: r.event_id,
+    }))
+
+    const ticketRows: UnifiedAttendee[] = tickets.map((t) => ({
+      id: `tkt-${t.id}`,
+      type: 'ticket',
+      name: t.buyer_name,
+      email: t.buyer_email,
+      eventName: t.event_name,
+      eventDate: t.event_date,
+      createdAt: t.created_at,
+      details: `${t.ticket_type} x${t.quantity}`,
+      amount: t.amount,
+      paymentMethod: t.payment_method,
+      validated: t.validated,
+      eventId: t.event_id,
+    }))
+
+    return [...registrationRows, ...ticketRows].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )
+  }, [registrants, tickets])
+
+  const filteredAttendees = useMemo(() => {
+    if (attendeeType === 'all') return unifiedAttendees
+    return unifiedAttendees.filter((attendee) => attendee.type === attendeeType)
+  }, [unifiedAttendees, attendeeType])
+
+  const handleExport = () => {
     const csv = [
-      ['Name', 'Email', 'Phone', 'Event', 'Date', 'Location', 'Token', 'Registered'],
-      ...exportList.map((r) => [
-        r.name,
-        r.email,
-        r.phone,
-        r.event_name,
-        new Date(r.event_date).toLocaleString(),
-        r.location,
-        r.token,
-        new Date(r.created_at).toLocaleString(),
+      ['Name', 'Email', 'Event', 'Event Date', 'Type', 'Details', 'Amount', 'Payment', 'Status/Token', 'Created'],
+      ...filteredAttendees.map((item) => [
+        item.name,
+        item.email,
+        item.eventName,
+        new Date(item.eventDate).toLocaleString(),
+        item.type === 'registration' ? 'Registration' : 'Ticket',
+        item.details,
+        item.amount ? `$${item.amount.toFixed(2)}` : '-',
+        item.paymentMethod || '-',
+        item.type === 'registration' ? item.token || '-' : item.validated ? 'Verified' : 'Pending',
+        new Date(item.createdAt).toLocaleString(),
       ]),
     ]
       .map((row) => row.map((cell) => `"${cell}"`).join(','))
@@ -142,35 +198,7 @@ const EventRegistrantsAndTickets: React.FC = () => {
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'registrants.csv'
-    a.click()
-  }
-
-  const handleExportTickets = () => {
-    const exportList = selectedEventId === 'all' ? tickets : tickets.filter((t) => t.event_id === selectedEventId)
-    const csv = [
-      ['Buyer', 'Email', 'Event', 'Date', 'Ticket Type', 'Quantity', 'Amount', 'Payment', 'Validated', 'Date'],
-      ...exportList.map((t) => [
-        t.buyer_name,
-        t.buyer_email,
-        t.event_name,
-        new Date(t.event_date).toLocaleString(),
-        t.ticket_type,
-        t.quantity,
-        `$${t.amount.toFixed(2)}`,
-        t.payment_method,
-        t.validated ? 'Yes' : 'No',
-        new Date(t.created_at).toLocaleString(),
-      ]),
-    ]
-      .map((row) => row.map((cell) => `"${cell}"`).join(','))
-      .join('\n')
-
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'ticket-sales.csv'
+    a.download = 'attendees.csv'
     a.click()
   }
 
@@ -180,6 +208,7 @@ const EventRegistrantsAndTickets: React.FC = () => {
         userRole={userRole}
         userName={userName}
         userEmail={userEmail}
+        userImage={(storedUser && storedUser.profile_image) || ''}
         messages={0}
         onLogout={() => {
           localStorage.removeItem('token')
@@ -190,159 +219,123 @@ const EventRegistrantsAndTickets: React.FC = () => {
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', ml: { xs: 0, md: '280px' }, mt: { xs: 60, md: 0 } }}>
         <DashboardHeader title="Registrants & Tickets" />
         <Container maxWidth="lg" sx={{ py: 4 }}>
-          <Tabs value={tabValue} onChange={(_, v) => setTabValue(v as number)} sx={{ mb: 3 }}>
-            <Tab label={`Registrants (${registrants.length})`} />
-            <Tab label={`Ticket Sales (${tickets.length})`} />
-          </Tabs>
-
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
               <CircularProgress />
             </Box>
           ) : (
-            <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
-              <FormControl size="small" sx={{ minWidth: 320 }}>
-                <InputLabel id="event-filter-label">Event</InputLabel>
-                <Select
-                  labelId="event-filter-label"
-                  value={selectedEventId}
-                  label="Event"
-                  onChange={(e) => setSelectedEventId(e.target.value as number | 'all')}
-                >
-                  <MenuItem value={'all'}>All events</MenuItem>
-                  {events.map((ev) => (
-                    <MenuItem key={ev.id} value={ev.id}>{ev.name} — {new Date(ev.date).toLocaleDateString()}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-          )}
-
-          {tabValue === 0 ? (
-            <Paper>
-              <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="h6">Event Registrants</Typography>
-                <Button startIcon={<FileDownloadIcon />} onClick={handleExportRegistrants} size="small">
-                  Export CSV
-                </Button>
-              </Box>
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: 'background.paper' }}>
-                      <TableCell>Name</TableCell>
-                      <TableCell>Email</TableCell>
-                      <TableCell>Phone</TableCell>
-                      <TableCell>Event</TableCell>
-                      <TableCell>Event Date</TableCell>
-                      <TableCell>Token</TableCell>
-                      <TableCell align="right">Action</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {registrants.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} align="center">
-                          <Typography color="textSecondary" sx={{ py: 3 }}>
-                            No registrants yet
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      registrants.map((r) => (
-                        <TableRow key={r.id}>
-                          <TableCell>{r.name}</TableCell>
-                          <TableCell>{r.email}</TableCell>
-                          <TableCell>{r.phone}</TableCell>
-                          <TableCell>{r.event_name}</TableCell>
-                          <TableCell>{new Date(r.event_date).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            <Chip label={r.token} size="small" variant="outlined" />
-                          </TableCell>
-                          <TableCell align="right">
-                            <Button
-                              startIcon={<QrCode2Icon />}
-                              size="small"
-                              onClick={() => {
-                                setSelectedQr(JSON.stringify({ eventId: r.event_id, token: r.token }))
-                                setQrDialogOpen(true)
-                              }}
-                            >
-                              QR
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
-          ) : (
-            <Paper>
-              <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Stack direction="row" spacing={2}>
-                  <Typography variant="h6">Ticket Sales</Typography>
-                  {tickets.length > 0 && (
-                    <Typography variant="subtitle2" color="success.main">
-                      Total Revenue: $
-                      {tickets.reduce((sum, t) => sum + (t.amount || 0), 0).toFixed(2)}
-                    </Typography>
-                  )}
+            <>
+              <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                <FormControl size="small" sx={{ minWidth: 320 }}>
+                  <InputLabel id="event-filter-label">Event</InputLabel>
+                  <Select
+                    labelId="event-filter-label"
+                    value={selectedEventId}
+                    label="Event"
+                    onChange={(e) => setSelectedEventId(e.target.value as number | 'all')}
+                  >
+                    <MenuItem value={'all'}>All events</MenuItem>
+                    {events.map((ev) => (
+                      <MenuItem key={ev.id} value={ev.id}>{ev.name} - {new Date(ev.date).toLocaleDateString()}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Stack direction="row" spacing={1}>
+                  <Chip clickable color={attendeeType === 'all' ? 'primary' : 'default'} label={`All (${unifiedAttendees.length})`} onClick={() => setAttendeeType('all')} />
+                  <Chip clickable color={attendeeType === 'registration' ? 'primary' : 'default'} label={`Registrations (${registrants.length})`} onClick={() => setAttendeeType('registration')} />
+                  <Chip clickable color={attendeeType === 'ticket' ? 'primary' : 'default'} label={`Ticket Sales (${tickets.length})`} onClick={() => setAttendeeType('ticket')} />
                 </Stack>
-                <Button startIcon={<FileDownloadIcon />} onClick={handleExportTickets} size="small">
-                  Export CSV
-                </Button>
               </Box>
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: 'background.paper' }}>
-                      <TableCell>Buyer</TableCell>
-                      <TableCell>Email</TableCell>
-                      <TableCell>Event</TableCell>
-                      <TableCell>Ticket Type</TableCell>
-                      <TableCell align="center">Qty</TableCell>
-                      <TableCell align="right">Amount</TableCell>
-                      <TableCell>Payment</TableCell>
-                      <TableCell align="center">Verified</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {tickets.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} align="center">
-                          <Typography color="textSecondary" sx={{ py: 3 }}>
-                            No ticket sales yet
-                          </Typography>
-                        </TableCell>
+
+              <Paper>
+                <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Stack direction="row" spacing={2}>
+                    <Typography variant="h6">Attendees</Typography>
+                    {tickets.length > 0 && (
+                      <Typography variant="subtitle2" color="success.main">
+                        Revenue: ${tickets.reduce((sum, t) => sum + (t.amount || 0), 0).toFixed(2)}
+                      </Typography>
+                    )}
+                  </Stack>
+                  <Button startIcon={<FileDownloadIcon />} onClick={handleExport} size="small">
+                    Export CSV
+                  </Button>
+                </Box>
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: 'background.paper' }}>
+                        <TableCell>Name</TableCell>
+                        <TableCell>Email</TableCell>
+                        <TableCell>Event</TableCell>
+                        <TableCell>Type</TableCell>
+                        <TableCell>Details</TableCell>
+                        <TableCell>Payment</TableCell>
+                        <TableCell>Status / Token</TableCell>
+                        <TableCell>Event Date</TableCell>
+                        <TableCell align="right">Action</TableCell>
                       </TableRow>
-                    ) : (
-                      tickets.map((t) => (
-                        <TableRow key={t.id}>
-                          <TableCell>{t.buyer_name}</TableCell>
-                          <TableCell>{t.buyer_email}</TableCell>
-                          <TableCell>{t.event_name}</TableCell>
-                          <TableCell>{t.ticket_type}</TableCell>
-                          <TableCell align="center">{t.quantity}</TableCell>
-                          <TableCell align="right">${t.amount.toFixed(2)}</TableCell>
-                          <TableCell>
-                            <Chip label={t.payment_method} size="small" variant="outlined" />
-                          </TableCell>
-                          <TableCell align="center">
-                            {t.validated ? (
-                              <Chip label="Verified" color="success" size="small" />
-                            ) : (
-                              <Chip label="Pending" color="warning" size="small" />
-                            )}
+                    </TableHead>
+                    <TableBody>
+                      {filteredAttendees.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={9} align="center">
+                            <Typography color="textSecondary" sx={{ py: 3 }}>
+                              No attendees found
+                            </Typography>
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
+                      ) : (
+                        filteredAttendees.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell>{item.name}</TableCell>
+                            <TableCell>{item.email}</TableCell>
+                            <TableCell>{item.eventName}</TableCell>
+                            <TableCell>
+                              <Chip
+                                size="small"
+                                color={item.type === 'registration' ? 'info' : 'secondary'}
+                                label={item.type === 'registration' ? 'Registration' : 'Ticket'}
+                              />
+                            </TableCell>
+                            <TableCell>{item.details}</TableCell>
+                            <TableCell>
+                              {item.type === 'ticket' ? `$${(item.amount || 0).toFixed(2)} - ${item.paymentMethod || '-'}` : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {item.type === 'registration' ? (
+                                <Chip label={item.token || '-'} size="small" variant="outlined" />
+                              ) : item.validated ? (
+                                <Chip label="Verified" color="success" size="small" />
+                              ) : (
+                                <Chip label="Pending" color="warning" size="small" />
+                              )}
+                            </TableCell>
+                            <TableCell>{new Date(item.eventDate).toLocaleDateString()}</TableCell>
+                            <TableCell align="right">
+                              {item.type === 'registration' ? (
+                                <Button
+                                  startIcon={<QrCode2Icon />}
+                                  size="small"
+                                  onClick={() => {
+                                    setSelectedQr(JSON.stringify({ eventId: item.eventId, token: item.token }))
+                                    setQrDialogOpen(true)
+                                  }}
+                                >
+                                  QR
+                                </Button>
+                              ) : (
+                                '-'
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Paper>
+            </>
           )}
         </Container>
       </Box>

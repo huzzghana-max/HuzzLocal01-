@@ -161,6 +161,7 @@ const AdminServiceApproval: React.FC = () => {
           userRole={currentUser.role}
           userName={currentUser.name}
           userEmail={currentUser.email}
+          userImage={currentUser.profile_image}
           onLogout={() => {
             localStorage.removeItem('token')
             localStorage.removeItem('user')
