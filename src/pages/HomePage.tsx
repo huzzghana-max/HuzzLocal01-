@@ -9,8 +9,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material'
-import { useTheme } from '@mui/material/styles'
-import { keyframes } from '@mui/system'
+import { alpha, useTheme } from '@mui/material/styles'
 import EventIcon from '@mui/icons-material/Event'
 import PeopleIcon from '@mui/icons-material/People'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
@@ -21,149 +20,152 @@ import CateringIcon from '@mui/icons-material/Restaurant'
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
 import MusicNoteIcon from '@mui/icons-material/MusicNote'
 import LocalFloristIcon from '@mui/icons-material/LocalFlorist'
-
-// Animation keyframes
-const fadeInUp = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`
-
-const fadeInDown = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`
-
-const pulse = keyframes`
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-`
+import EditCalendarIcon from '@mui/icons-material/EditCalendar'
+import TravelExploreIcon from '@mui/icons-material/TravelExplore'
+import TaskAltIcon from '@mui/icons-material/TaskAlt'
+import CelebrationIcon from '@mui/icons-material/Celebration'
+import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded'
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate()
-  const muiTheme = useTheme()
+  const theme = useTheme()
+
+  const features = [
+    {
+      icon: EventIcon,
+      title: 'Planning Workspace',
+      description: 'Create events and keep vendors, tasks, and updates in one streamlined timeline.',
+      image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=80',
+    },
+    {
+      icon: PeopleIcon,
+      title: 'Trusted Providers',
+      description: 'Browse vetted vendors with transparent reviews and services that fit your event goals.',
+      image: 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1200&q=80',
+    },
+    {
+      icon: CheckCircleIcon,
+      title: 'Execution Control',
+      description: 'Track bookings, status changes, and communications from planning to event day.',
+      image: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=1200&q=80',
+    },
+  ]
+
+  const steps = [
+    {
+      icon: EditCalendarIcon,
+      title: 'Create Event',
+      description: 'Define your date, budget, and service requirements.',
+    },
+    {
+      icon: TravelExploreIcon,
+      title: 'Compare Options',
+      description: 'Evaluate providers by portfolio, rates, and ratings.',
+    },
+    {
+      icon: TaskAltIcon,
+      title: 'Book Confidently',
+      description: 'Confirm availability and secure your preferred team.',
+    },
+    {
+      icon: CelebrationIcon,
+      title: 'Deliver Smoothly',
+      description: 'Manage updates and execute the event without chaos.',
+    },
+  ]
+
+  const categories = [
+    { icon: CateringIcon, title: 'Catering' },
+    { icon: PhotoCameraIcon, title: 'Photography' },
+    { icon: MusicNoteIcon, title: 'Entertainment' },
+    { icon: LocalFloristIcon, title: 'Decor' },
+  ]
+
+  const trust = [
+    { icon: SecurityIcon, title: 'Secure Payments', desc: 'Protected transactions and reliable billing flows.' },
+    { icon: VerifiedIcon, title: 'Verified Vendors', desc: 'Provider vetting for safer event collaborations.' },
+    { icon: PaymentIcon, title: 'Clear Refund Logic', desc: 'Transparent terms for safer booking decisions.' },
+  ]
 
   return (
-    <Box sx={{ background: muiTheme.palette.background.default }}>
-      {/* Hero Section */}
+    <Box sx={{ backgroundColor: 'background.default' }}>
       <Box
         sx={{
-          backgroundImage: `linear-gradient(135deg, rgba(31, 77, 92, 0.85) 0%, rgba(1, 22, 29, 0.69) 100%), url('https://i.pinimg.com/1200x/43/ee/75/43ee757d7a791045e4168cb1bcc7b7d3.jpg')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundColor: muiTheme.palette.primary.main,
-          py: { xs: 20, md: 24 },
-          color: 'white',
-          textAlign: 'center',
+          pt: { xs: 12, md: 16 },
+          pb: { xs: 10, md: 14 },
           position: 'relative',
           overflow: 'hidden',
+          background:
+            `radial-gradient(circle at 10% -20%, ${alpha(theme.palette.secondary.main, 0.22)} 0%, transparent 38%),` +
+            `linear-gradient(145deg, ${alpha(theme.palette.primary.main, 0.9)} 0%, ${alpha(theme.palette.primary.dark, 0.96)} 55%, ${theme.palette.primary.dark} 100%)`,
+          color: theme.palette.common.white,
         }}
       >
-        <Container maxWidth="lg">
-          <Stack spacing={4} alignItems="center" justifyContent="center">
+        <Box
+          sx={{
+            position: 'absolute',
+            right: -120,
+            top: -80,
+            width: 340,
+            height: 340,
+            borderRadius: '50%',
+            background: alpha(theme.palette.secondary.main, 0.2),
+            filter: 'blur(8px)',
+          }}
+        />
+        <Container maxWidth="lg" sx={{ position: 'relative' }}>
+          <Stack spacing={3.2} sx={{ maxWidth: 760 }}>
+            <Typography sx={{ fontWeight: 800, fontSize: { xs: '0.84rem', md: '0.92rem' }, letterSpacing: 0.9, opacity: 0.9 }}>
+              MODERN EVENT OPERATIONS
+            </Typography>
             <Typography
               variant="h1"
               sx={{
                 fontWeight: 900,
-                fontSize: { xs: '2.5rem', sm: '3.2rem', md: '4rem' },
-                lineHeight: 1.15,
-                color: '#ffffff',
-                letterSpacing: '-0.5px',
-                animation: `${fadeInDown} 0.8s ease-out`,
+                fontSize: { xs: '2.3rem', sm: '3rem', md: '4rem' },
+                lineHeight: 1.08,
               }}
             >
-              Plan Your Perfect Event
+              Plan, book, and run events with professional precision.
             </Typography>
-            <Typography
-              sx={{
-                fontSize: { xs: '1.1rem', md: '1.3rem' },
-                lineHeight: 1.7,
-                opacity: 0.95,
-                maxWidth: '600px',
-                fontWeight: 400,
-                animation: `${fadeInUp} 0.8s ease-out 0.2s both`,
-              }}
-            >
-              Connect with trusted vendors and manage every aspect of your event seamlessly
+            <Typography sx={{ fontSize: { xs: '1rem', md: '1.18rem' }, opacity: 0.92, maxWidth: 640, lineHeight: 1.65 }}>
+              HUZZ helps organizers and providers collaborate through one modern platform for bookings, messaging, and execution.
             </Typography>
-            <Stack 
-              direction={{ xs: 'column', sm: 'row' }} 
-              spacing={3}
-              sx={{ animation: `${fadeInUp} 0.8s ease-out 0.4s both` }}
-            >
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.6}>
               <Button
                 variant="contained"
-                size="large"
+                endIcon={<ArrowForwardRoundedIcon />}
                 onClick={() => navigate('/signup')}
                 sx={{
-                  backgroundColor: muiTheme.palette.secondary.main,
-                  color: muiTheme.palette.primary.main,
+                  py: 1.15,
+                  px: 3.2,
+                  borderRadius: 999,
+                  backgroundColor: theme.palette.secondary.main,
+                  color: '#142420',
                   fontWeight: 800,
-                  padding: '14px 40px',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  boxShadow: '0 12px 24px rgba(0, 0, 0, 0.25)',
-                  transition: 'all 0.3s ease',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    width: 0,
-                    height: 0,
-                    borderRadius: '50%',
-                    background: 'rgba(255, 255, 255, 0.3)',
-                    transform: 'translate(-50%, -50%)',
-                    transition: 'width 0.6s, height 0.6s',
-                  },
+                  border: `1px solid ${alpha('#142420', 0.22)}`,
+                  boxShadow: `0 10px 24px ${alpha(theme.palette.common.black, 0.26)}`,
                   '&:hover': {
-                    backgroundColor: muiTheme.palette.secondary.light,
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 16px 32px rgba(0, 0, 0, 0.35)',
-                    '&::before': {
-                      width: 300,
-                      height: 300,
-                    }
+                    backgroundColor: alpha(theme.palette.secondary.main, 0.92),
+                    boxShadow: `0 14px 28px ${alpha(theme.palette.common.black, 0.34)}`,
                   },
                 }}
               >
-                Get Started
+                Start Free
               </Button>
               <Button
                 variant="outlined"
-                size="large"
                 onClick={() => navigate('/browse-vendors')}
                 sx={{
-                  borderColor: 'white',
-                  color: 'white',
-                  fontWeight: 800,
-                  padding: '14px 40px',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  borderWidth: 2,
-                  transition: 'all 0.3s ease',
+                  py: 1.15,
+                  px: 3.2,
+                  borderRadius: 999,
+                  color: theme.palette.common.white,
+                  borderColor: alpha(theme.palette.common.white, 0.62),
+                  backgroundColor: alpha(theme.palette.common.white, 0.04),
                   '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    borderColor: muiTheme.palette.secondary.main,
-                    color: muiTheme.palette.secondary.main,
-                    transform: 'translateY(-2px)',
+                    borderColor: theme.palette.common.white,
+                    backgroundColor: alpha(theme.palette.common.white, 0.12),
                   },
                 }}
               >
@@ -174,136 +176,41 @@ const HomePage: React.FC = () => {
         </Container>
       </Box>
 
-      {/* Features Section */}
-      <Container maxWidth="lg" sx={{ py: { xs: 12, md: 18 } }}>
-        <Stack spacing={12}>
-          <Stack 
-            spacing={2} 
-            sx={{ 
-              textAlign: 'center',
-              animation: `${fadeInUp} 0.8s ease-out`,
-            }}
-          >
-            <Typography
-              variant="h3"
-              sx={{
-                fontWeight: 900,
-                fontSize: { xs: '2rem', md: '2.8rem' },
-                color: muiTheme.palette.primary.main,
-              }}
-            >
-              Why Choose Us
+      <Container maxWidth="lg" sx={{ py: { xs: 8, md: 12 } }}>
+        <Stack spacing={5}>
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="h3" sx={{ fontWeight: 850, fontSize: { xs: '1.8rem', md: '2.5rem' }, mb: 1.2 }}>
+              Why Teams Choose HUZZ
             </Typography>
-            <Box sx={{textAlign : 'center'}}>
-              <Typography
-                sx={{
-                  fontSize: '1.1rem',
-                  color: muiTheme.palette.text.secondary,
-                  maxWidth: '500px',
-                  mx: 'auto',
-                  textAlign:'center' 
-              }}
-              >
-              Everything you need for seamless event planning
-              </Typography>
-            </Box>
-          </Stack>
-          <Grid container spacing={4}>
-            {[
-              {
-                icon: EventIcon,
-                title: 'Easy Event Planning',
-                description: 'Create and manage events with an intuitive interface designed for everyone.',
-                image: 'https://i.pinimg.com/1200x/05/b9/0a/05b90ac7017405a5ce3dd968b5d1da19.jpg',
-              },
-              {
-                icon: PeopleIcon,
-                title: 'Connect with Vendors',
-                description: 'Find and book trusted service providers tailored to your needs.',
-                image: 'https://i.pinimg.com/736x/dc/6f/62/dc6f626eed0546beb9c3a99efc48e635.jpg',
-              },
-              {
-                icon: CheckCircleIcon,
-                title: 'Seamless Management',
-                description: 'Coordinate all details in one place with real-time updates.',
-                image: 'https://i.pinimg.com/1200x/65/8e/8f/658e8fe6f6fde5656c959b6e1db2bc47.jpg',
-              },
-            ].map((feature, index) => (
-              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
-                <Card
-                  sx={{
-                    height: '100%',
-                    borderRadius: '12px',
-                    border: `2px solid ${muiTheme.palette.divider}`,
-                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                    animation: `${fadeInUp} 0.8s ease-out ${0.1 * (index + 1)}s both`,
-                    overflow: 'hidden',
-                    '&:hover': {
-                      transform: 'translateY(-8px)',
-                      borderColor: muiTheme.palette.secondary.main,
-                      boxShadow: `0 20px 50px ${muiTheme.palette.secondary.main}20`,
-                    },
-                  }}
-                >
-                  <Box
-                    sx={{
-                      height: 200,
-                      background: `url(${feature.image}) center/cover`,
-                      position: 'relative',
-                      overflow: 'hidden',
-                      '&::after': {
-                        content: '""',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: `linear-gradient(135deg, ${muiTheme.palette.primary.main}80 0%, ${muiTheme.palette.secondary.main}60 100%)`,
-                        opacity: 0.3,
-                      }
-                    }}
-                  />
-                  <CardContent sx={{ p: 4, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', height: '100%' }}>
+            <Typography sx={{ color: 'text.secondary', maxWidth: 620, mx: 'auto' }}>
+              Built for clarity, speed, and reliability across event planning workflows.
+            </Typography>
+          </Box>
+          <Grid container spacing={2.5}>
+            {features.map((feature) => (
+              <Grid key={feature.title} size={{ xs: 12, md: 4 }}>
+                <Card sx={{ height: '100%', borderRadius: 3, overflow: 'hidden', boxShadow: 'none' }}>
+                  <Box sx={{ height: 190, background: `url(${feature.image}) center/cover` }} />
+                  <CardContent sx={{ p: 2.5 }}>
                     <Box
                       sx={{
-                        width: 70,
-                        height: 70,
-                        mx: 'auto',
-                        mb: 2,
-                        borderRadius: '12px',
-                        background: `linear-gradient(135deg, ${muiTheme.palette.secondary.main}20 0%, ${muiTheme.palette.secondary.main}05 100%)`,
+                        width: 44,
+                        height: 44,
+                        borderRadius: 1.8,
+                        backgroundColor: alpha(theme.palette.primary.main, 0.12),
+                        color: 'primary.main',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        transition: 'all 0.3s ease',
-                        flexShrink: 0,
+                        mb: 1.4,
                       }}
                     >
-                      <feature.icon
-                        sx={{
-                          fontSize: 40,
-                          color: muiTheme.palette.secondary.main,
-                        }}
-                      />
+                      <feature.icon />
                     </Box>
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        fontWeight: 700,
-                        mb: 1.5,
-                        fontSize: '1.2rem',
-                      }}
-                    >
+                    <Typography sx={{ fontWeight: 800, fontSize: '1.08rem', mb: 1 }}>
                       {feature.title}
                     </Typography>
-                    <Typography
-                      sx={{
-                        color: muiTheme.palette.text.secondary,
-                        lineHeight: 1.6,
-                      }}
-                    >
-                      {feature.description}
-                    </Typography>
+                    <Typography sx={{ color: 'text.secondary', lineHeight: 1.6 }}>{feature.description}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
@@ -312,529 +219,78 @@ const HomePage: React.FC = () => {
         </Stack>
       </Container>
 
-      {/* Statistics Section */}
-      <Box
-        sx={{
-          background: `linear-gradient(135deg, ${muiTheme.palette.primary.main} 0%, ${muiTheme.palette.primary.dark} 100%)`,
-          color: 'white',
-          py: { xs: 12, md: 16 },
-          position: 'relative',
-          overflow: 'hidden',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: '-50%',
-            right: '-10%',
-            width: '500px',
-            height: '500px',
-            borderRadius: '50%',
-            background: `radial-gradient(circle, ${muiTheme.palette.secondary.main}15 0%, transparent 70%)`,
-            pointerEvents: 'none',
-          }
-        }}
-      >
-        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
-          <Grid container spacing={6}>
-            {[
-              { number: '500+', label: 'Events Planned' },
-              { number: '1000+', label: 'Trusted Vendors' },
-              { number: '10K+', label: 'Happy Clients' },
-            ].map((stat, index) => (
-              <Grid 
-                size={{ xs: 12, sm: 4 }} 
-                key={index} 
-                sx={{ 
-                  textAlign: 'center',
-                  animation: `${fadeInUp} 0.8s ease-out ${0.1 * (index + 1)}s both`,
-                }}
-              >
-                <Box sx={{ animation: `${pulse} 3s ease-in-out infinite` }}>
-                  <Typography
-                    sx={{
-                      fontSize: { xs: '2.5rem', md: '3.2rem' },
-                      fontWeight: 900,
-                      mb: 1,
-                      background: `linear-gradient(135deg, ${muiTheme.palette.secondary.main} 0%, #fff 100%)`,
-                      backgroundClip: 'text',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                    }}
-                  >
-                    {stat.number}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontSize: '1.1rem',
-                      fontWeight: 500,
-                      opacity: 0.9,
-                    }}
-                  >
-                    {stat.label}
-                  </Typography>
-                </Box>
-              </Grid>
-            ))}
-          </Grid>
-        </Container>
-      </Box>
-
-      {/* How It Works - Simple & Clean */}
-      <Container maxWidth="lg" sx={{ py: { xs: 10, md: 16 } }}>
-        <Stack spacing={10}>
-          {/* Header */}
-          <Stack spacing={2} sx={{ textAlign: 'center' }}>
-            <Typography
-              variant="h3"
-              sx={{
-                fontWeight: 900,
-                fontSize: { xs: '2rem', md: '2.8rem' },
-                color: muiTheme.palette.text.primary,
-              }}
-            >
+      <Container maxWidth="lg" sx={{ pb: { xs: 8, md: 12 } }}>
+        <Stack spacing={5}>
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="h3" sx={{ fontWeight: 850, fontSize: { xs: '1.8rem', md: '2.5rem' }, mb: 1.2 }}>
               How It Works
             </Typography>
-            <Box sx={{textAlign:'center'}}>
-              <Typography
-                sx={{
-                  fontSize: '1.1rem',
-                  color: muiTheme.palette.text.secondary,
-                  maxWidth: '500px',
-                  mx: 'auto',
-                }}
-              >
-                Four simple steps to plan your perfect event
-              </Typography>
-            </Box>
-          </Stack>
-
-          {/* Steps */}
-          <Grid container spacing={3}>
-            {[
-              { icon: '📅', title: 'Create Event', description: 'Set up your event details and requirements' },
-              { icon: '🔍', title: 'Browse Vendors', description: 'Explore trusted vendors in your area' },
-              { icon: '✅', title: 'Book Services', description: 'Reserve your selected vendors easily' },
-              { icon: '🎉', title: 'Manage & Enjoy', description: 'Coordinate seamlessly on the day' },
-            ].map((item, index) => (
-              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
+            <Typography sx={{ color: 'text.secondary', maxWidth: 640, mx: 'auto' }}>
+              A practical flow designed for busy event teams.
+            </Typography>
+          </Box>
+          <Grid container spacing={2.5}>
+            {steps.map((step, index) => (
+              <Grid key={step.title} size={{ xs: 12, sm: 6, md: 3 }}>
                 <Box
                   sx={{
-                    p: 3,
-                    borderRadius: '16px',
-                    background: muiTheme.palette.background.paper,
-                    border: `1.5px solid ${muiTheme.palette.divider}`,
-                    textAlign: 'center',
-                    transition: 'all 0.3s ease',
+                    p: 2.8,
+                    borderRadius: 3,
+                    backgroundColor: 'background.paper',
+                    border: `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
+                    minHeight: 212,
+                    transition: 'all 0.2s ease',
                     '&:hover': {
-                      transform: 'translateY(-8px)',
-                      borderColor: muiTheme.palette.primary.main,
-                      boxShadow: `0 12px 30px ${muiTheme.palette.primary.main}15`,
+                      transform: 'translateY(-6px)',
+                      boxShadow: `0 16px 34px ${alpha(theme.palette.primary.main, 0.18)}`,
                     },
                   }}
                 >
-                  {/* Step Number Badge */}
                   <Box
                     sx={{
-                      width: '50px',
-                      height: '50px',
+                      width: 32,
+                      height: 32,
                       borderRadius: '50%',
-                      background: `linear-gradient(135deg, ${muiTheme.palette.primary.main} 0%, ${muiTheme.palette.secondary.main} 100%)`,
+                      mb: 1.8,
+                      fontWeight: 800,
+                      fontSize: '0.86rem',
+                      backgroundColor: alpha(theme.palette.secondary.main, 0.2),
+                      color: 'secondary.main',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: 'white',
-                      fontWeight: 700,
-                      fontSize: '1.25rem',
-                      mx: 'auto',
-                      mb: 2,
                     }}
                   >
                     {index + 1}
                   </Box>
-
-                  {/* Icon */}
-                  <Typography sx={{ fontSize: '2.5rem', mb: 1.5 }}>
-                    {item.icon}
-                  </Typography>
-
-                  {/* Title */}
-                  <Typography
-                    sx={{
-                      fontWeight: 700,
-                      fontSize: '1.1rem',
-                      mb: 1,
-                      color: muiTheme.palette.text.primary,
-                    }}
-                  >
-                    {item.title}
-                  </Typography>
-
-                  {/* Description */}
-                  <Typography
-                    sx={{
-                      fontSize: '0.95rem',
-                      color: muiTheme.palette.text.secondary,
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    {item.description}
+                  <step.icon sx={{ color: 'primary.main', mb: 1.2 }} />
+                  <Typography sx={{ fontWeight: 800, fontSize: '1rem', mb: 0.8 }}>{step.title}</Typography>
+                  <Typography sx={{ color: 'text.secondary', fontSize: '0.92rem', lineHeight: 1.55 }}>
+                    {step.description}
                   </Typography>
                 </Box>
               </Grid>
             ))}
           </Grid>
-
-          {/* CTA */}
-          <Stack sx={{ alignItems: 'center' }}>
-            <Button
-              onClick={() => navigate('/browse-vendors')}
-              sx={{
-                px: 5,
-                py: 1.5,
-                fontSize: '1rem',
-                fontWeight: 700,
-                background: `linear-gradient(135deg, ${muiTheme.palette.primary.main} 0%, ${muiTheme.palette.secondary.main} 100%)`,
-                color: 'white',
-                borderRadius: '50px',
-                textTransform: 'none',
-                boxShadow: `0 10px 25px ${muiTheme.palette.primary.main}30`,
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-3px)',
-                  boxShadow: `0 15px 35px ${muiTheme.palette.primary.main}40`,
-                },
-              }}
-            >
-              Start Planning Now →
-            </Button>
-          </Stack>
         </Stack>
       </Container>
 
-      {/* Categories Section */}
-      <Container maxWidth="lg" sx={{ py: { xs: 12, md: 18 } }}>
-        <Stack spacing={12}>
-          <Stack 
-            spacing={2} 
-            sx={{ 
-              textAlign: 'center',
-              animation: `${fadeInUp} 0.8s ease-out`,
-            }}
-          >
-            <Typography
-              variant="h3"
-              sx={{
-                fontWeight: 900,
-                fontSize: { xs: '2rem', md: '2.8rem' },
-                color: muiTheme.palette.primary.main,
-              }}
-            >
-              Popular Categories
-            </Typography>
-            <Box sx={{textAlign : 'center'}}>
-              <Typography
-                sx={{
-                  fontSize: '1.1rem',
-                  color: muiTheme.palette.text.secondary,
-                  maxWidth: '500px',
-                  mx: 'auto',
-                }}
-              >
-                Find vendors for every aspect of your event
-              </Typography>
-            </Box>
-          </Stack>
-          <Grid container spacing={4}>
-            {[
-              { 
-                icon: CateringIcon, 
-                title: 'Catering',
-                image: 'https://i.pinimg.com/1200x/6d/32/30/6d32307ec0ca4f85bd33e191f0a51b00.jpg'
-              },
-              { 
-                icon: PhotoCameraIcon, 
-                title: 'Photography',
-                image: 'https://i.pinimg.com/1200x/80/59/a3/8059a3d683e09c0a7b7d760767c3af4d.jpg'
-              },
-              { 
-                icon: MusicNoteIcon, 
-                title: 'Entertainment',
-                image: 'https://i.pinimg.com/1200x/0c/5c/9d/0c5c9d91ab33adf9b3e6f6662b413096.jpg'
-              },
-              { 
-                icon: LocalFloristIcon, 
-                title: 'Decorations',
-                image: 'https://i.pinimg.com/736x/bf/bc/31/bfbc310dc4b6b0982d28be0c9b4ee59b.jpg'
-              },
-            ].map((cat, index) => (
-              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
-                <Card
-                  sx={{
-                    height: '100%',
-                    borderRadius: '12px',
-                    border: `2px solid ${muiTheme.palette.divider}`,
-                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                    cursor: 'pointer',
-                    animation: `${fadeInUp} 0.8s ease-out ${0.1 * (index + 1)}s both`,
-                    overflow: 'hidden',
-                    '&:hover': {
-                      transform: 'translateY(-8px)',
-                      borderColor: muiTheme.palette.secondary.main,
-                      boxShadow: `0 20px 50px ${muiTheme.palette.secondary.main}20`,
-                    },
-                  }}
-                >
-                  <Box
-                    sx={{
-                      height: 180,
-                      background: `url(${cat.image}) center/cover`,
-                      position: 'relative',
-                      transition: 'transform 0.4s ease',
-                      '&::after': {
-                        content: '""',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: `linear-gradient(135deg, ${muiTheme.palette.primary.main}70 0%, ${muiTheme.palette.secondary.main}50 100%)`,
-                        opacity: 0.4,
-                        transition: 'opacity 0.3s ease',
-                      }
-                    }}
-                  />
-                  <CardContent sx={{ p: 3, textAlign: 'center', background: muiTheme.palette.background.default, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                    <cat.icon
-                      sx={{
-                        fontSize: 40,
-                        color: muiTheme.palette.secondary.main,
-                        mb: 1,
-                      }}
-                    />
-                    <Typography
-                      sx={{
-                        fontWeight: 700,
-                        fontSize: '1.1rem',
-                      }}
-                    >
-                      {cat.title}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Stack>
-      </Container>
-
-      {/* Testimonials Section */}
-      {/*<Container maxWidth="lg" sx={{ py: { xs: 12, md: 18 } }}>
-        <Stack spacing={12}>
-          <Stack 
-            spacing={2} 
-            sx={{ 
-              textAlign: 'center',
-              animation: `${fadeInUp} 0.8s ease-out`,
-            }}
-          >
-            <Typography
-              variant="h3"
-              sx={{
-                fontWeight: 900,
-                fontSize: { xs: '2rem', md: '2.8rem' },
-                color: muiTheme.palette.primary.main,
-              }}
-            >
-              What Our Clients Say
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: '1.1rem',
-                color: muiTheme.palette.text.secondary,
-                maxWidth: '500px',
-                mx: 'auto',
-              }}
-            >
-              Real feedback from real customers
-            </Typography>
-          </Stack>
-          <Grid container spacing={4}>
-            {[
-              {
-                name: 'Sarah Johnson',
-                role: 'Event Organizer',
-                rating: 5,
-                text: 'HUZZ made planning my wedding so easy. The vendor selection was amazing!',
-                image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
-              },
-              {
-                name: 'Michael Chen',
-                role: 'Corporate Event Manager',
-                rating: 5,
-                text: 'Best event planning platform. Everything was organized and professional.',
-                image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
-              },
-              {
-                name: 'Emma Davis',
-                role: 'Party Planner',
-                rating: 5,
-                text: 'Highly recommend! Found all vendors in one place and saved so much time.',
-                image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop',
-              },
-            ].map((testimonial, index) => (
-              <Grid size={{ xs: 12, md: 4 }} key={index}>
-                <Card
-                  sx={{
-                    height: '100%',
-                    borderRadius: '16px',
-                    border: `2px solid ${muiTheme.palette.divider}`,
-                    p: 4,
-                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                    animation: `${fadeInUp} 0.8s ease-out ${0.1 * (index + 1)}s both`,
-                    position: 'relative',
-                    '&::before': {
-                      content: '"💬"',
-                      position: 'absolute',
-                      top: '-15px',
-                      left: '20px',
-                      fontSize: '2.5rem',
-                      opacity: 0.2,
-                    },
-                    '&:hover': {
-                      transform: 'translateY(-8px)',
-                      borderColor: muiTheme.palette.secondary.main,
-                      boxShadow: `0 20px 50px ${muiTheme.palette.secondary.main}20`,
-                    },
-                  }}
-                >
-                  <CardContent sx={{ p: 0 }}>
-                    <Stack spacing={3} alignItems="flex-start" justifyContent="flex-start">
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-                        <Avatar
-                          src={testimonial.image}
-                          sx={{
-                            width: 60,
-                            height: 60,
-                            border: `3px solid ${muiTheme.palette.secondary.main}`,
-                            flexShrink: 0,
-                          }}
-                        />
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography sx={{ fontWeight: 700, fontSize: '1rem', textAlign: 'left' }}>
-                            {testimonial.name}
-                          </Typography>
-                          <Typography sx={{ fontSize: '0.85rem', color: muiTheme.palette.text.secondary, textAlign: 'left' }}>
-                            {testimonial.role}
-                          </Typography>
-                        </Box>
-                      </Box>
-                      <Box sx={{ display: 'flex' }}>
-                        <Rating value={testimonial.rating} readOnly size="small" />
-                      </Box>
-                      <Typography
-                        sx={{
-                          fontStyle: 'italic',
-                          color: muiTheme.palette.text.secondary,
-                          lineHeight: 1.7,
-                          fontSize: '0.95rem',
-                          textAlign: 'left',
-                        }}
-                      >
-                        "{testimonial.text}"
-                      </Typography>
-                    </Stack>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Stack>
-      </Container>*/}
-
-      {/* Trust Section */}
-      <Box
-        sx={{
-          bg: muiTheme.palette.mode === 'dark' ? muiTheme.palette.background.paper : '#f8f9fa',
-          py: { xs: 12, md: 18 },
-        }}
-      >
+      <Box sx={{ py: { xs: 8, md: 11 }, backgroundColor: alpha(theme.palette.primary.main, theme.palette.mode === 'light' ? 0.04 : 0.12) }}>
         <Container maxWidth="lg">
-          <Stack spacing={12}>
-            <Stack 
-              spacing={2} 
-              sx={{ 
-                textAlign: 'center',
-                animation: `${fadeInUp} 0.8s ease-out`,
-              }}
-            >
-              <Typography
-                variant="h3"
-                sx={{
-                  fontWeight: 900,
-                  fontSize: { xs: '2rem', md: '2.8rem' },
-                  color: muiTheme.palette.primary.main,
-                }}
-              >
-                Trusted & Secure
+          <Stack spacing={4.2}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="h3" sx={{ fontWeight: 850, fontSize: { xs: '1.8rem', md: '2.5rem' }, mb: 1.2 }}>
+                Popular Categories
               </Typography>
-              <Box sx={{textAlign : 'center'}}>
-                <Typography
-                  sx={{
-                    textAlign:'center',
-                    fontSize: '1.1rem',
-                    color: muiTheme.palette.text.secondary,
-                    maxWidth: '500px',
-                    mx: 'auto',
-                  }}
-                >
-                  Your data and transactions are protected
-                </Typography>
-              </Box>
-            </Stack>
-            <Grid container spacing={4}>
-              {[
-                { icon: SecurityIcon, title: 'Secure Payments', desc: 'SSL encrypted transactions' },
-                { icon: VerifiedIcon, title: 'Verified Vendors', desc: 'All vendors thoroughly vetted' },
-                { icon: PaymentIcon, title: 'Money Back', desc: '100% satisfaction guaranteed' },
-              ].map((trust, index) => (
-                <Grid size={{ xs: 12, md: 4 }} key={index}>
-                  <Card
-                    sx={{
-                      height: '100%',
-                      borderRadius: '12px',
-                      border: `2px solid ${muiTheme.palette.divider}`,
-                      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                      animation: `${fadeInUp} 0.8s ease-out ${0.1 * (index + 1)}s both`,
-                      '&:hover': {
-                        transform: 'translateY(-8px)',
-                        borderColor: muiTheme.palette.secondary.main,
-                        boxShadow: `0 20px 50px ${muiTheme.palette.secondary.main}20`,
-                      },
-                    }}
-                  >
-                    <CardContent sx={{ p: 4, textAlign: 'center' }}>
-                      <trust.icon
-                        sx={{
-                          fontSize: 56,
-                          color: muiTheme.palette.secondary.main,
-                          mb: 2,
-                        }}
-                      />
-                      <Typography
-                        sx={{
-                          fontWeight: 700,
-                          fontSize: '1.2rem',
-                          mb: 1,
-                        }}
-                      >
-                        {trust.title}
-                      </Typography>
-                      <Typography
-                        sx={{
-                          color: muiTheme.palette.text.secondary,
-                        }}
-                      >
-                        {trust.desc}
-                      </Typography>
+              <Typography sx={{ color: 'text.secondary' }}>Discover providers across core event service categories.</Typography>
+            </Box>
+            <Grid container spacing={2.2}>
+              {categories.map((cat) => (
+                <Grid key={cat.title} size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Card sx={{ borderRadius: 3, boxShadow: 'none', textAlign: 'center' }}>
+                    <CardContent sx={{ py: 3.2 }}>
+                      <cat.icon sx={{ fontSize: 40, color: 'secondary.main', mb: 0.8 }} />
+                      <Typography sx={{ fontWeight: 800 }}>{cat.title}</Typography>
                     </CardContent>
                   </Card>
                 </Grid>
@@ -844,104 +300,60 @@ const HomePage: React.FC = () => {
         </Container>
       </Box>
 
-      {/* CTA Section */}
+      <Container maxWidth="lg" sx={{ py: { xs: 8, md: 12 } }}>
+        <Grid container spacing={2.5}>
+          {trust.map((item) => (
+            <Grid key={item.title} size={{ xs: 12, md: 4 }}>
+              <Card sx={{ borderRadius: 3, height: '100%', boxShadow: 'none' }}>
+                <CardContent sx={{ p: 2.6 }}>
+                  <item.icon sx={{ color: 'secondary.main', fontSize: 36, mb: 1 }} />
+                  <Typography sx={{ fontWeight: 800, mb: 0.8 }}>{item.title}</Typography>
+                  <Typography sx={{ color: 'text.secondary', lineHeight: 1.6 }}>{item.desc}</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Container>
+
       <Box
         sx={{
-          background: `linear-gradient(135deg, ${muiTheme.palette.primary.main} 0%, ${muiTheme.palette.primary.dark} 100%)`,
-          color: 'white',
-          py: { xs: 12, md: 16 },
-          textAlign: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: '-50%',
-            left: '-10%',
-            width: '500px',
-            height: '500px',
-            borderRadius: '50%',
-            background: `radial-gradient(circle, ${muiTheme.palette.secondary.main}15 0%, transparent 70%)`,
-            pointerEvents: 'none',
-          }
+          py: { xs: 9, md: 12 },
+          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+          color: theme.palette.common.white,
         }}
       >
-        <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
-          <Stack spacing={4} sx={{ animation: `${fadeInUp} 0.8s ease-out` }}>
-            <Typography
-              variant="h3"
+        <Container maxWidth="md">
+          <Stack spacing={2.2} alignItems="center" textAlign="center">
+            <Typography variant="h3" sx={{ fontWeight: 900, fontSize: { xs: '2rem', md: '2.6rem' } }}>
+              Ready to run your next event like a pro?
+            </Typography>
+            <Typography sx={{ opacity: 0.9, maxWidth: 680 }}>
+              Join organizers and providers already using HUZZ to simplify planning and deliver better events.
+            </Typography>
+            <Button
+              variant="contained"
+              endIcon={<ArrowForwardRoundedIcon />}
+              onClick={() => navigate('/signup')}
               sx={{
-                fontWeight: 900,
-                fontSize: { xs: '2rem', md: '2.8rem' },
+                mt: 1,
+                px: 3.2,
+                py: 1.1,
+                borderRadius: 999,
+                backgroundColor: theme.palette.secondary.main,
+                color: '#142420',
+                fontWeight: 800,
+                border: `1px solid ${alpha('#142420', 0.22)}`,
+                boxShadow: `0 10px 24px ${alpha(theme.palette.common.black, 0.26)}`,
+                '&:hover': {
+                  backgroundColor: alpha(theme.palette.secondary.main, 0.92),
+                  boxShadow: `0 14px 28px ${alpha(theme.palette.common.black, 0.34)}`,
+                },
               }}
             >
-              Ready to Plan Your Event?
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: '1.1rem',
-                opacity: 0.95,
-              }}
-            >
-              Join thousands of happy customers who have successfully planned their events with HUZZ
-            </Typography>
-            <Box sx ={{alignItems:'center'}}>
-              <Button
-                variant="contained"
-                size="large"
-                onClick={() => navigate('/signup')}
-                sx={{
-                  backgroundColor: muiTheme.palette.secondary.main,
-                  color: muiTheme.palette.primary.main,
-                  fontWeight: 800,
-                  padding: '14px 40px',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  width: 'fit-content',
-                  mx: 'auto',
-                  boxShadow: '0 12px 24px rgba(0, 0, 0, 0.25)',
-                  transition: 'all 0.3s ease',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    width: 0,
-                    height: 0,
-                    borderRadius: '50%',
-                    background: 'rgba(255, 255, 255, 0.3)',
-                    transform: 'translate(-50%, -50%)',
-                    transition: 'width 0.6s, height 0.6s',
-                  },
-                  '&:hover': {
-                    backgroundColor: muiTheme.palette.secondary.light,
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 16px 32px rgba(0, 0, 0, 0.35)',
-                    '&::before': {
-                      width: 300,
-                      height: 300,
-                    }
-                  },
-                }}
-              >
-                Get Started Today
-              </Button>
-            </Box>
-            
+              Create Account
+            </Button>
           </Stack>
-          <br />
-          <Box sx={{alignItems: 'center'}}>
-            <Typography
-              sx={{
-                  fontSize: '1.1rem',
-                  opacity: 0.30,
-              }}
-            >
-              All Copyright reserved | Built in 2026 
-            </Typography>
-          </Box>
         </Container>
       </Box>
     </Box>

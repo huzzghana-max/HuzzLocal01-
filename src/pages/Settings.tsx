@@ -36,8 +36,10 @@ import {
   CardContent,
   ToggleButton,
   ToggleButtonGroup,
+  Chip,
+  Stack,
 } from '@mui/material'
-import { alpha } from '@mui/material/styles'
+import { alpha, useTheme } from '@mui/material/styles'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useTheme as useAppTheme } from '../themes/ThemeContext'
@@ -74,6 +76,7 @@ const TabPanel = (props: TabPanelProps) => {
 
 const Settings: React.FC = () => {
   const navigate = useNavigate()
+  const theme = useTheme()
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [tabValue, setTabValue] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -360,24 +363,44 @@ const Settings: React.FC = () => {
 
       {/* Main Content */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', ml: { xs: 0, md: '280px' }, width: '100%', overflow: 'hidden' }}>
-        <Box sx={{ p: { xs: 2, md: 4 }, flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
+        <Box sx={{ p: { xs: 2, md: 4 }, flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', gap: 2 }}>
         <Paper
           elevation={0}
           sx={{
-            mb: 2,
-            p: { xs: 2, md: 2.5 },
-            borderRadius: 3,
-            backgroundColor: 'background.paper',
+            position: 'relative',
+            overflow: 'hidden',
+            p: { xs: 2.4, md: 3.2 },
+            borderRadius: 4,
             border: '1px solid',
-            borderColor: 'divider',
+            borderColor: alpha(theme.palette.primary.main, 0.22),
+            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, theme.palette.mode === 'light' ? 0.14 : 0.24)} 0%, ${alpha(theme.palette.background.paper, 0.98)} 58%)`,
           }}
         >
-          <Typography variant="h4" sx={{ fontWeight: 700, fontSize: { xs: '1.5rem', md: '1.8rem' }, color: 'text.primary' }}>
-            Settings
-          </Typography>
-          <Typography sx={{ mt: 0.6, color: 'text.secondary', fontSize: { xs: '0.9rem', md: '0.95rem' } }}>
-            Manage your profile, account security, notifications, and privacy preferences.
-          </Typography>
+          <Box
+            sx={{
+              position: 'absolute',
+              top: -70,
+              right: -60,
+              width: 220,
+              height: 220,
+              borderRadius: '50%',
+              background: alpha(theme.palette.secondary.main, 0.18),
+              filter: 'blur(8px)',
+            }}
+          />
+          <Box sx={{ position: 'relative' }}>
+            <Typography variant="h4" sx={{ fontWeight: 800, fontSize: { xs: '1.55rem', md: '2rem' }, color: 'text.primary' }}>
+              Account Settings
+            </Typography>
+            <Typography sx={{ mt: 0.8, color: 'text.secondary', fontSize: { xs: '0.92rem', md: '0.98rem' }, maxWidth: 720 }}>
+              Update your identity, security preferences, notifications, and profile visibility in one place.
+            </Typography>
+            <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap', rowGap: 1 }}>
+              <Chip size="small" label={mode === 'dark' ? 'Dark theme' : 'Light theme'} color="primary" variant="filled" />
+              <Chip size="small" label={currentUser?.role ? `${currentUser.role} account` : 'Account'} variant="outlined" />
+              <Chip size="small" label="Secure profile controls" variant="outlined" />
+            </Stack>
+          </Box>
         </Paper>
           {successMessage && (
             <Alert severity="success" sx={{ mb: 2, borderRadius: 2.5 }}>
@@ -393,14 +416,14 @@ const Settings: React.FC = () => {
           <Paper
             elevation={0}
             sx={{
-              borderRadius: 3,
+              borderRadius: 4,
               border: '1px solid',
-              borderColor: 'divider',
-              boxShadow: (theme) =>
-                theme.palette.mode === 'light'
-                  ? `0 8px 24px ${alpha(theme.palette.primary.main, 0.12)}`
-                  : `0 8px 24px ${alpha(theme.palette.primary.main, 0.3)}`,
-              backgroundColor: 'background.paper',
+              borderColor: alpha(theme.palette.primary.main, 0.16),
+              boxShadow: theme.palette.mode === 'light'
+                ? `0 16px 36px ${alpha(theme.palette.primary.main, 0.12)}`
+                : `0 16px 36px ${alpha(theme.palette.common.black, 0.4)}`,
+              backgroundColor: alpha(theme.palette.background.paper, 0.92),
+              backdropFilter: 'blur(6px)',
               overflow: 'hidden',
             }}
           >
@@ -411,29 +434,30 @@ const Settings: React.FC = () => {
               variant="scrollable"
               scrollButtons="auto"
               sx={{
-                px: { xs: 1, sm: 2 },
-                pt: 1,
-                borderBottom: '1px solid',
-                borderColor: 'divider',
+                px: { xs: 1.2, sm: 2.2 },
+                py: 1.1,
+                borderBottom: `1px solid ${alpha(theme.palette.primary.main, 0.14)}`,
+                backgroundColor: alpha(theme.palette.primary.main, theme.palette.mode === 'light' ? 0.05 : 0.12),
                 '& .MuiTab-root': {
                   minHeight: 52,
                   textTransform: 'none',
-                  fontSize: '0.95rem',
-                  fontWeight: 600,
+                  fontSize: '0.92rem',
+                  fontWeight: 700,
                   color: 'text.secondary',
-                  borderRadius: '12px 12px 0 0',
+                  borderRadius: 2,
                   mx: 0.4,
-                  px: 1.8,
+                  px: 2,
                   gap: 0.8,
                   transition: 'all 0.2s ease',
                 },
                 '& .MuiTab-root.Mui-selected': {
                   color: 'text.primary',
-                  backgroundColor: (theme) => alpha(theme.palette.primary.main, theme.palette.mode === 'light' ? 0.08 : 0.2),
+                  backgroundColor: alpha(theme.palette.background.paper, 0.9),
+                  boxShadow: `0 6px 18px ${alpha(theme.palette.primary.main, 0.18)}`,
                 },
                 '& .MuiTabs-indicator': {
-                  backgroundColor: 'primary.main',
-                  height: 3,
+                  backgroundColor: theme.palette.secondary.main,
+                  height: 2,
                   borderRadius: 3,
                 },
               }}
@@ -445,214 +469,134 @@ const Settings: React.FC = () => {
 
             {/* Account Tab */}
             <TabPanel value={tabValue} index={0}>
-              <Box sx={{ maxWidth: 680 }}>
-                {/* Profile Picture */}
-                <Box sx={{ mb: 4, display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, gap: 3 }}>
-                  <Avatar
-                    src={profileImagePreview}
-                    alt={profileData.name}
-                    sx={{ 
-                      width: 104,
-                      height: 104,
-                      backgroundColor: 'primary.main',
-                      fontSize: '2.2rem',
-                      fontWeight: 700,
-                      color: 'primary.contrastText',
-                      boxShadow: (theme) =>
-                        theme.palette.mode === 'light'
-                          ? `0 6px 14px ${alpha(theme.palette.primary.main, 0.24)}`
-                          : `0 6px 14px ${alpha(theme.palette.primary.main, 0.36)}`,
-                      border: '2px solid',
-                      borderColor: 'divider',
-                    }}
-                  >
-                    {profileData.name.charAt(0).toUpperCase()}
-                  </Avatar>
-                  <Box>
-                    <input
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                      id="profile-image-input"
-                      type="file"
-                      onChange={handleProfileImageSelect}
-                    />
-                    <label htmlFor="profile-image-input">
-                      <Button
-                        variant="outlined"
-                        component="span"
-                        startIcon={<CameraAltIcon />}
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '300px 1fr' }, gap: 3 }}>
+                <Card
+                  sx={{
+                    borderRadius: 3,
+                    border: '1px solid',
+                    borderColor: alpha(theme.palette.primary.main, 0.18),
+                    boxShadow: 'none',
+                    height: 'fit-content',
+                    backgroundColor: alpha(theme.palette.primary.main, theme.palette.mode === 'light' ? 0.05 : 0.1),
+                  }}
+                >
+                  <CardContent sx={{ p: 2.5 }}>
+                    <Typography sx={{ fontSize: '0.82rem', letterSpacing: 0.5, textTransform: 'uppercase', fontWeight: 700, color: 'text.secondary', mb: 1.8 }}>
+                      Profile Photo
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.8 }}>
+                      <Avatar
+                        src={profileImagePreview}
+                        alt={profileData.name}
                         sx={{
-                          borderColor: 'primary.main',
-                          color: 'primary.main',
-                          textTransform: 'none',
-                          fontWeight: 600,
-                          px: 1.8,
-                          '&:hover': {
-                            borderColor: 'secondary.main',
-                            backgroundColor: (theme) => alpha(theme.palette.primary.main, theme.palette.mode === 'light' ? 0.08 : 0.2),
-                          },
+                          width: 114,
+                          height: 114,
+                          backgroundColor: 'primary.main',
+                          fontSize: '2.2rem',
+                          fontWeight: 700,
+                          color: 'primary.contrastText',
+                          border: `3px solid ${alpha(theme.palette.background.paper, 0.95)}`,
+                          boxShadow: `0 12px 28px ${alpha(theme.palette.primary.main, 0.24)}`,
                         }}
                       >
-                        Upload New Photo
-                      </Button>
-                    </label>
-                    <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary', mt: 1 }}>
-                      JPG, PNG, GIF (Max 5MB)
+                        {profileData.name.charAt(0).toUpperCase()}
+                      </Avatar>
+                      <input
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        id="profile-image-input"
+                        type="file"
+                        onChange={handleProfileImageSelect}
+                      />
+                      <label htmlFor="profile-image-input">
+                        <Button
+                          variant="outlined"
+                          component="span"
+                          startIcon={<CameraAltIcon />}
+                          sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2 }}
+                        >
+                          Change Photo
+                        </Button>
+                      </label>
+                      <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary', textAlign: 'center' }}>
+                        JPG, PNG, GIF up to 5MB
+                      </Typography>
+                    </Box>
+                    <Divider sx={{ my: 2.2 }} />
+                    <Typography sx={{ fontSize: '0.82rem', letterSpacing: 0.5, textTransform: 'uppercase', fontWeight: 700, color: 'text.secondary', mb: 1 }}>
+                      Appearance
                     </Typography>
-                  </Box>
-                </Box>
-
-                <Divider sx={{ my: 3 }} />
-
-                {/* Profile Information */}
-                <Box sx={{ mb: 3 }}>
-                  <Typography 
-                    variant="subtitle1" 
-                    sx={{ 
-                      fontWeight: 800, 
-                      mb: 3,
-                      fontSize: '1.1rem',
-                      color: 'text.primary',
-                    }}
-                  >
-                    Profile Information
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    label="Full Name"
-                    name="name"
-                    value={profileData.name}
-                    onChange={handleProfileChange}
-                    sx={{ mb: 2 }}
-                  />
-                  <TextField
-                    fullWidth
-                    label="Email Address"
-                    name="email"
-                    type="email"
-                    value={profileData.email}
-                    onChange={handleProfileChange}
-                    sx={{ mb: 2 }}
-                  />
-                  <TextField
-                    fullWidth
-                    label="Phone Number"
-                    name="phone"
-                    value={profileData.phone}
-                    onChange={handleProfileChange}
-                  />
-                </Box>
-
-                <Divider sx={{ my: 3 }} />
-
-                {/* Appearance (theme) */}
-                <Box sx={{ mb: 3 }}>
-                  <Typography 
-                    variant="subtitle1" 
-                    sx={{ 
-                      fontWeight: 800, 
-                      mb: 3,
-                      fontSize: '1.1rem',
-                      color: 'text.primary',
-                    }}
-                  >
-                    Appearance
-                  </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                    <Typography sx={{ fontWeight: 600 }}>{mode === 'light' ? 'Light' : 'Dark'}</Typography>
                     <FormControlLabel
                       control={
                         <Switch
                           checked={mode === 'dark'}
                           onChange={handleToggleTheme}
-                          sx={{ 
+                          sx={{
                             '& .MuiSwitch-switchBase.Mui-checked': { color: 'primary.main' },
-                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.5) },
+                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: alpha(theme.palette.primary.main, 0.5) },
                           }}
                         />
                       }
                       label={mode === 'dark' ? 'Dark mode' : 'Light mode'}
-                      sx={{ '& .MuiTypography-root': { fontWeight: 600 } }}
+                      sx={{ m: 0, '& .MuiTypography-root': { fontWeight: 600 } }}
                     />
+                  </CardContent>
+                </Card>
+
+                <Box sx={{ display: 'grid', gap: 2.2 }}>
+                  <Card sx={{ borderRadius: 3, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
+                    <CardContent sx={{ p: { xs: 2, md: 2.5 } }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2.2, fontSize: '1.05rem' }}>
+                        Profile Information
+                      </Typography>
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.8 }}>
+                        <TextField fullWidth label="Full Name" name="name" value={profileData.name} onChange={handleProfileChange} />
+                        <TextField fullWidth label="Phone Number" name="phone" value={profileData.phone} onChange={handleProfileChange} />
+                        <Box sx={{ gridColumn: { xs: 'auto', sm: '1 / -1' } }}>
+                          <TextField fullWidth label="Email Address" name="email" type="email" value={profileData.email} onChange={handleProfileChange} />
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+
+                  <Card sx={{ borderRadius: 3, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
+                    <CardContent sx={{ p: { xs: 2, md: 2.5 } }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2.2, fontSize: '1.05rem' }}>
+                        Security
+                      </Typography>
+                      <Box sx={{ display: 'grid', gap: 1.8 }}>
+                        <TextField fullWidth label="Current Password" name="currentPassword" type="password" value={passwordData.currentPassword} onChange={handlePasswordChange} />
+                        <TextField fullWidth label="New Password" name="newPassword" type="password" value={passwordData.newPassword} onChange={handlePasswordChange} />
+                        <TextField fullWidth label="Confirm New Password" name="confirmPassword" type="password" value={passwordData.confirmPassword} onChange={handlePasswordChange} />
+                      </Box>
+                    </CardContent>
+                  </Card>
+
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button
+                      variant="contained"
+                      startIcon={<SaveIcon />}
+                      onClick={handleSaveProfile}
+                      disabled={saving}
+                      sx={{
+                        textTransform: 'none',
+                        fontWeight: 700,
+                        px: 3,
+                        py: 1.1,
+                        borderRadius: 2.2,
+                        boxShadow: `0 10px 22px ${alpha(theme.palette.primary.main, 0.28)}`,
+                      }}
+                    >
+                      {saving ? 'Saving...' : 'Save Changes'}
+                    </Button>
                   </Box>
-                  <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
-                    Toggle between light and dark themes. Preference is saved to your browser.
-                  </Typography>
                 </Box>
-
-                <Divider sx={{ my: 3 }} />
-
-                {/* Change Password */}
-                <Box sx={{ mb: 3 }}>
-                  <Typography 
-                    variant="subtitle1" 
-                    sx={{ 
-                      fontWeight: 800, 
-                      mb: 3,
-                      fontSize: '1.1rem',
-                      color: 'text.primary',
-                    }}
-                  >
-                    Change Password
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    label="Current Password"
-                    name="currentPassword"
-                    type="password"
-                    value={passwordData.currentPassword}
-                    onChange={handlePasswordChange}
-                    sx={{ mb: 2 }}
-                  />
-                  <TextField
-                    fullWidth
-                    label="New Password"
-                    name="newPassword"
-                    type="password"
-                    value={passwordData.newPassword}
-                    onChange={handlePasswordChange}
-                    sx={{ mb: 2 }}
-                  />
-                  <TextField
-                    fullWidth
-                    label="Confirm New Password"
-                    name="confirmPassword"
-                    type="password"
-                    value={passwordData.confirmPassword}
-                    onChange={handlePasswordChange}
-                  />
-                </Box>
-
-                <Button
-                  variant="contained"
-                  startIcon={<SaveIcon />}
-                  onClick={handleSaveProfile}
-                  disabled={saving}
-                  sx={{
-                    backgroundColor: 'primary.main',
-                    color: 'primary.contrastText',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    px: 3,
-                    py: 1.1,
-                    borderRadius: 2,
-                    boxShadow: (theme) =>
-                      theme.palette.mode === 'light'
-                        ? `0 4px 14px ${alpha(theme.palette.primary.main, 0.22)}`
-                        : `0 4px 14px ${alpha(theme.palette.primary.main, 0.32)}`,
-                    '&:hover:not(:disabled)': {
-                      backgroundColor: 'primary.dark',
-                    },
-                  }}
-                >
-                  {saving ? 'Saving...' : 'Save Changes'}
-                </Button>
               </Box>
             </TabPanel>
 
             {/* Notifications Tab */}
             <TabPanel value={tabValue} index={1}>
-              <Box sx={{ maxWidth: 680 }}>
+              <Box sx={{ maxWidth: 860 }}>
                 <Card sx={{ 
                   mb: 3, 
                   borderRadius: 2.5,
@@ -832,7 +776,7 @@ const Settings: React.FC = () => {
 
             {/* Privacy Tab */}
             <TabPanel value={tabValue} index={2}>
-              <Box sx={{ maxWidth: 680 }}>
+              <Box sx={{ maxWidth: 860 }}>
                 <Card sx={{ 
                   borderRadius: 3, 
                   boxShadow: 'none',

@@ -1,10 +1,17 @@
 import React from 'react'
 import { Box, Tooltip } from '@mui/material'
 import { Brightness4 as DarkModeIcon, Brightness7 as LightModeIcon } from '@mui/icons-material'
+import { alpha, useTheme as useMuiTheme } from '@mui/material/styles'
 import { useTheme } from './ThemeContext'
 
-export const ThemeToggle: React.FC = () => {
+interface ThemeToggleProps {
+  size?: 'small' | 'medium' | 'large'
+}
+
+export const ThemeToggle: React.FC<ThemeToggleProps> = ({ size = 'medium' }) => {
   const { mode, toggleTheme } = useTheme()
+  const muiTheme = useMuiTheme()
+  const dims = size === 'small' ? { w: 48, h: 26, knob: 20 } : size === 'large' ? { w: 62, h: 32, knob: 24 } : { w: 56, h: 30, knob: 22 }
 
   return (
     <Tooltip title={mode === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}>
@@ -15,24 +22,25 @@ export const ThemeToggle: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          width: '56px',
-          height: '28px',
-          borderRadius: '20px',
-          backgroundColor: mode === 'light' ? '#E8F4F0' : '#0F2B1F',
-          border: `2px solid ${mode === 'light' ? '#B8E3C5' : '#1B5E3C'}`,
+          width: dims.w,
+          height: dims.h,
+          borderRadius: 999,
+          backgroundColor: mode === 'light'
+            ? alpha(muiTheme.palette.primary.main, 0.12)
+            : alpha(muiTheme.palette.primary.main, 0.2),
+          border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.35)}`,
           padding: '2px',
           position: 'relative',
-          transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: 'all 0.25s ease',
           '&:hover': {
-            boxShadow: `0 4px 12px ${mode === 'light' ? 'rgba(14, 59, 38, 0.15)' : 'rgba(184, 227, 197, 0.15)'}`,
-            transform: 'translateY(-1px)',
+            boxShadow: `0 4px 12px ${alpha(muiTheme.palette.primary.main, 0.2)}`,
           },
         }}
       >
         <LightModeIcon
           sx={{
-            fontSize: '14px',
-            color: mode === 'light' ? '#F5A623' : '#6B7280',
+            fontSize: size === 'large' ? 16 : 14,
+            color: mode === 'light' ? muiTheme.palette.secondary.main : muiTheme.palette.text.disabled,
             zIndex: 1,
             marginLeft: '4px',
             transition: 'color 0.3s ease',
@@ -42,30 +50,30 @@ export const ThemeToggle: React.FC = () => {
         <Box
           sx={{
             position: 'absolute',
-            left: mode === 'light' ? '2px' : 'calc(100% - 26px)',
-            width: '24px',
-            height: '24px',
+            left: mode === 'light' ? '2px' : `calc(100% - ${dims.knob + 2}px)`,
+            width: dims.knob,
+            height: dims.knob,
             borderRadius: '18px',
-            backgroundColor: mode === 'light' ? '#B8E3C5' : '#B8E3C5',
-            boxShadow: '0 2px 6px rgba(0, 0, 0, 0.12)',
+            backgroundColor: muiTheme.palette.background.paper,
+            boxShadow: `0 2px 8px ${alpha(muiTheme.palette.common.black, 0.2)}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            transition: 'left 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+            transition: 'left 0.25s ease',
             zIndex: 2,
           }}
         >
           {mode === 'light' ? (
-            <LightModeIcon sx={{ fontSize: '12px', color: '#0E3B26' }} />
+            <LightModeIcon sx={{ fontSize: size === 'large' ? 14 : 12, color: muiTheme.palette.secondary.main }} />
           ) : (
-            <DarkModeIcon sx={{ fontSize: '12px', color: '#0E3B26' }} />
+            <DarkModeIcon sx={{ fontSize: size === 'large' ? 14 : 12, color: muiTheme.palette.primary.main }} />
           )}
         </Box>
 
         <DarkModeIcon
           sx={{
-            fontSize: '14px',
-            color: mode === 'dark' ? '#94A3B8' : '#6B7280',
+            fontSize: size === 'large' ? 16 : 14,
+            color: mode === 'dark' ? muiTheme.palette.primary.main : muiTheme.palette.text.disabled,
             zIndex: 1,
             marginRight: '4px',
             transition: 'color 0.3s ease',

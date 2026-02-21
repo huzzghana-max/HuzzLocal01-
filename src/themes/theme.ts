@@ -3,27 +3,39 @@ import { alpha, createTheme } from '@mui/material/styles'
 const fontFamily = '"Manrope", "Plus Jakarta Sans", "Avenir Next", "Segoe UI", sans-serif'
 
 const lightTokens = {
-  primary: '#0E5A3B',
-  primaryDark: '#0A422B',
-  secondary: '#C97A19',
-  bg: '#F3F7F4',
+  primary: '#145A45',
+  primaryDark: '#0F4333',
+  onPrimary: '#F8FCFA',
+  secondary: '#D08A1B',
+  onSecondary: '#1E1A12',
+  bg: '#F4F7F9',
   paper: '#FFFFFF',
-  text: '#16211B',
-  textMuted: '#5F6F66',
-  border: '#DDE8E1',
-  shadow: '0 10px 30px rgba(14, 38, 26, 0.10)',
+  text: '#142420',
+  textMuted: '#5B6A65',
+  border: '#D8E2DE',
+  shadow: '0 12px 34px rgba(16, 45, 34, 0.12)',
+  success: '#1D9D66',
+  warning: '#D8891A',
+  error: '#CC4242',
+  info: '#1E7FA8',
 }
 
 const darkTokens = {
-  primary: '#7DE2B8',
-  primaryDark: '#59C998',
-  secondary: '#F3B35B',
-  bg: '#0B1712',
-  paper: '#12211A',
-  text: '#EAF3EE',
-  textMuted: '#9DB2A6',
-  border: '#2D4338',
-  shadow: '0 12px 32px rgba(0, 0, 0, 0.38)',
+  primary: '#7CE2BE',
+  primaryDark: '#56C99E',
+  onPrimary: '#0C1815',
+  secondary: '#F4BD62',
+  onSecondary: '#1B150A',
+  bg: '#0C1815',
+  paper: '#14241E',
+  text: '#EAF4F0',
+  textMuted: '#A1B6AC',
+  border: '#2E463C',
+  shadow: '0 14px 36px rgba(0, 0, 0, 0.42)',
+  success: '#44CC8A',
+  warning: '#F2B64E',
+  error: '#F27474',
+  info: '#67BCE1',
 }
 
 const baseComponents = (tokens: typeof lightTokens) => ({
@@ -32,8 +44,9 @@ const baseComponents = (tokens: typeof lightTokens) => ({
       body: {
         fontFamily,
         background:
-          `radial-gradient(circle at 18% -10%, ${alpha(tokens.primary, 0.12)} 0%, transparent 42%),` +
-          `radial-gradient(circle at 90% 0%, ${alpha(tokens.secondary, 0.1)} 0%, transparent 35%),` +
+          `radial-gradient(circle at 14% -8%, ${alpha(tokens.primary, 0.16)} 0%, transparent 40%),` +
+          `radial-gradient(circle at 90% 0%, ${alpha(tokens.secondary, 0.12)} 0%, transparent 34%),` +
+          `radial-gradient(circle at 45% 120%, ${alpha(tokens.primaryDark, 0.09)} 0%, transparent 46%),` +
           tokens.bg,
       },
       '#root': {
@@ -51,7 +64,7 @@ const baseComponents = (tokens: typeof lightTokens) => ({
       },
       contained: {
         background: `linear-gradient(135deg, ${tokens.primary} 0%, ${tokens.primaryDark} 100%)`,
-        color: tokens.bg,
+        color: tokens.onPrimary,
         boxShadow: tokens.shadow,
         padding: '10px 20px',
         '&:hover': {
@@ -59,6 +72,9 @@ const baseComponents = (tokens: typeof lightTokens) => ({
           boxShadow: tokens.shadow,
           transform: 'translateY(-1px)',
         },
+      },
+      containedSecondary: {
+        color: tokens.onSecondary,
       },
       outlined: {
         border: `1px solid ${alpha(tokens.primary, 0.35)}`,
@@ -140,11 +156,23 @@ export const lightTheme = createTheme({
     primary: {
       main: lightTokens.primary,
       dark: lightTokens.primaryDark,
-      contrastText: '#FFFFFF',
+      contrastText: lightTokens.onPrimary,
     },
     secondary: {
       main: lightTokens.secondary,
-      contrastText: '#FFFFFF',
+      contrastText: lightTokens.onSecondary,
+    },
+    success: {
+      main: lightTokens.success,
+    },
+    warning: {
+      main: lightTokens.warning,
+    },
+    error: {
+      main: lightTokens.error,
+    },
+    info: {
+      main: lightTokens.info,
     },
     background: {
       default: lightTokens.bg,
@@ -177,11 +205,23 @@ export const darkTheme = createTheme({
     primary: {
       main: darkTokens.primary,
       dark: darkTokens.primaryDark,
-      contrastText: darkTokens.bg,
+      contrastText: darkTokens.onPrimary,
     },
     secondary: {
       main: darkTokens.secondary,
-      contrastText: darkTokens.bg,
+      contrastText: darkTokens.onSecondary,
+    },
+    success: {
+      main: darkTokens.success,
+    },
+    warning: {
+      main: darkTokens.warning,
+    },
+    error: {
+      main: darkTokens.error,
+    },
+    info: {
+      main: darkTokens.info,
     },
     background: {
       default: darkTokens.bg,
