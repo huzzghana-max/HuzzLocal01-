@@ -2,6 +2,7 @@ import React from 'react'
 import { Box, Container, Typography, Grid, Card, CardContent } from '@mui/material'
 import { alpha, useTheme } from '@mui/material/styles'
 import { Event as EventIcon, People as PeopleIcon, Handshake as HandshakeIcon, Insights as InsightsIcon } from '@mui/icons-material'
+import MarketingHero from '../components/MarketingHero'
 
 const About: React.FC = () => {
   const theme = useTheme()
@@ -32,23 +33,12 @@ const About: React.FC = () => {
   return (
     <Container maxWidth="lg">
       <Box sx={{ py: { xs: 6, md: 10 }, display: 'grid', gap: 4 }}>
-        <Box
-          sx={{
-            p: { xs: 2.4, md: 3.2 },
-            borderRadius: 4,
-            border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-            background:
-              `radial-gradient(circle at 85% -20%, ${alpha(theme.palette.secondary.main, 0.2)} 0%, transparent 38%),` +
-              alpha(theme.palette.primary.main, theme.palette.mode === 'light' ? 0.06 : 0.16),
-          }}
-        >
-          <Typography variant="h2" sx={{ fontWeight: 850, mb: 1, fontSize: { xs: '2rem', md: '3rem' } }}>
-            About HUZZ
-          </Typography>
-          <Typography sx={{ fontSize: '1.05rem', color: 'text.secondary', maxWidth: 760, lineHeight: 1.65 }}>
-            HUZZ is a modern event operations platform built to help organizers and providers plan, coordinate, and execute memorable events with less friction.
-          </Typography>
-        </Box>
+        <MarketingHero
+          badge="ABOUT HUZZ"
+          title="Professional event operations, built for modern teams."
+          subtitle="HUZZ helps organizers and providers plan, coordinate, and execute events with fewer handoffs and higher delivery confidence."
+          imageUrl="https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1400&q=80"
+        />
 
         <Grid container spacing={2.2}>
           {pillars.map((pillar) => (

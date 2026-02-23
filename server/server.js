@@ -37,6 +37,7 @@ try {
 const multer = require('multer')
 const bcrypt = require('bcryptjs')
 const rateLimit = require('express-rate-limit')
+const { sendMail } = require('./mailer')
 const { getPool, initializeDatabase, registerUser, loginUser } = require('./db')
 
 
@@ -58,6 +59,81 @@ function getPoolOrThrow() {
     throw new Error('Database is not initialized. Please ensure MySQL is running on port 3306.')
   }
   return pool
+}
+
+let servicesOwnerColumnCache = null
+let serviceBookingsOwnerColumnCache = null
+
+async function getServicesOwnerColumn(pool) {
+  if (servicesOwnerColumnCache) return servicesOwnerColumnCache
+  const [vendorColumn] = await pool.execute("SHOW COLUMNS FROM services LIKE 'vendor_id'")
+  servicesOwnerColumnCache = vendorColumn.length > 0 ? 'vendor_id' : 'provider_id'
+  return servicesOwnerColumnCache
+}
+
+async function getServiceBookingsOwnerColumn(pool) {
+  if (serviceBookingsOwnerColumnCache) return serviceBookingsOwnerColumnCache
+  const [vendorColumn] = await pool.execute("SHOW COLUMNS FROM service_bookings LIKE 'vendor_id'")
+  serviceBookingsOwnerColumnCache = vendorColumn.length > 0 ? 'vendor_id' : 'provider_id'
+  return serviceBookingsOwnerColumnCache
+}
+
+async function sendTicketPurchaseEmail({
+  pool,
+  buyerId,
+  eventId,
+  ticket,
+  quantity,
+  amount,
+  paymentMethod,
+  transactionId,
+  saleId,
+  qrDataUrl,
+}) {
+  const [users] = await pool.execute('SELECT name, email FROM users WHERE id = ? LIMIT 1', [buyerId])
+  if (!users || users.length === 0 || !users[0].email) return
+
+  const [events] = await pool.execute('SELECT name, date, location FROM events WHERE id = ? LIMIT 1', [eventId])
+  if (!events || events.length === 0) return
+
+  const user = users[0]
+  const event = events[0]
+  const eventDateTime = event.date ? new Date(event.date).toLocaleString() : 'TBD'
+  const unitPrice = parseFloat(ticket.price || 0)
+  const finalAmount = parseFloat(amount || 0)
+  const methodLabel = paymentMethod || 'offline'
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #222;">
+      <h2 style="margin: 0 0 12px; color: #145A45;">Your Ticket Purchase Is Confirmed</h2>
+      <p>Hi ${user.name || 'Attendee'},</p>
+      <p>Thanks for your purchase. Here are your ticket details:</p>
+
+      <div style="background:#f6f8f7;border:1px solid #d8e2de;border-radius:10px;padding:14px;margin:14px 0;">
+        <p><strong>Event:</strong> ${event.name}</p>
+        <p><strong>Date & Time:</strong> ${eventDateTime}</p>
+        <p><strong>Location:</strong> ${event.location || 'TBD'}</p>
+        <p><strong>Ticket Type:</strong> ${ticket.ticket_type || 'General Admission'}</p>
+        <p><strong>Quantity:</strong> ${quantity}</p>
+        <p><strong>Unit Price:</strong> ${unitPrice.toFixed(2)}</p>
+        <p><strong>Total Paid:</strong> ${finalAmount.toFixed(2)}</p>
+        <p><strong>Payment Method:</strong> ${methodLabel}</p>
+        <p><strong>Transaction ID:</strong> ${transactionId}</p>
+        <p><strong>Ticket Sale ID:</strong> ${saleId}</p>
+      </div>
+
+      ${qrDataUrl ? `<p><strong>Your Ticket QR:</strong><br/><img src="${qrDataUrl}" alt="Ticket QR code" style="max-width:240px;border:1px solid #d8e2de;border-radius:8px;padding:6px;background:white;" /></p>` : ''}
+
+      <p>Please keep this email and present your QR code at check-in.</p>
+      <p style="color:#5b6a65;">Huzz Ticketing</p>
+    </div>
+  `
+
+  await sendMail({
+    to: user.email,
+    subject: `Ticket Confirmation - ${event.name}`,
+    html,
+  })
 }
 
 
@@ -92,7 +168,6 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 // Initialize database on startup only when explicitly requested.
 // Running the initializer drops and recreates the database (used for tests/seeds).
 // To avoid wiping data on accidental server restarts, require DB_INIT=1 to run it.
-process.env.DB_INIT=1;
 
 if (process.env.DB_INIT === '1' || process.env.DB_INIT === 'true') {
   initializeDatabase().catch(err => {
@@ -253,6 +328,7 @@ app.get('/api/dashboard/provider-stats', verifyToken, async (req, res) => {
   try {
     const pool = getPoolOrThrow()
     const userId = req.userId
+    const bookingOwnerColumn = await getServiceBookingsOwnerColumn(pool)
 
     // Get profile completion percentage
     const [provider] = await pool.execute(
@@ -262,25 +338,32 @@ app.get('/api/dashboard/provider-stats', verifyToken, async (req, res) => {
 
     // Get pending service requests
     const [pending] = await pool.execute(
-      "SELECT COUNT(*) AS pendingRequests FROM bookings WHERE provider_id = ? AND status = 'pending'",
+      `SELECT COUNT(*) AS pendingRequests FROM service_bookings WHERE ${bookingOwnerColumn} = ? AND status = 'pending'`,
       [userId]
     )
 
     // Get completed bookings
     const [completed] = await pool.execute(
-      "SELECT COUNT(*) AS completedBookings FROM bookings WHERE provider_id = ? AND status = 'completed'",
+      `SELECT COUNT(*) AS completedBookings FROM service_bookings WHERE ${bookingOwnerColumn} = ? AND status = 'completed'`,
       [userId]
     )
 
-    // Get total earnings from completed bookings
+    // Get total earnings from completed bookings (price comes from services table)
     const [earnings] = await pool.execute(
-      "SELECT COALESCE(SUM(total_cost), 0) AS totalEarnings FROM bookings WHERE provider_id = ? AND status = 'completed'",
+      `SELECT COALESCE(SUM(s.price), 0) AS totalEarnings
+       FROM service_bookings sb
+       JOIN services s ON sb.service_id = s.id
+       WHERE sb.${bookingOwnerColumn} = ? AND sb.status = 'completed'`,
       [userId]
     )
 
     // Get recent bookings
     const [bookings] = await pool.execute(
-      'SELECT id, event_id, total_cost, status, created_at FROM bookings WHERE provider_id = ? ORDER BY created_at DESC LIMIT 10',
+      `SELECT id, service_id, booking_date, status, created_at
+       FROM service_bookings
+       WHERE ${bookingOwnerColumn} = ?
+       ORDER BY created_at DESC
+       LIMIT 10`,
       [userId]
     )
 
@@ -537,10 +620,11 @@ app.get('/api/vendors', async (req, res) => {
 app.get('/api/approved-services', async (req, res) => {
   try {
     const pool = getPoolOrThrow()
+    const serviceOwnerColumn = await getServicesOwnerColumn(pool)
     const [services] = await pool.execute(`
       SELECT 
         s.id, 
-        s.vendor_id, 
+        s.${serviceOwnerColumn} as vendor_id, 
         s.title, 
         s.description, 
         s.category, 
@@ -558,7 +642,7 @@ app.get('/api/approved-services', async (req, res) => {
         u.name as vendor_name, 
         u.email as vendor_email
       FROM services s
-      JOIN users u ON s.vendor_id = u.id
+      JOIN users u ON s.${serviceOwnerColumn} = u.id
       WHERE s.is_approved = TRUE
       ORDER BY s.created_at DESC
     `)
@@ -661,10 +745,14 @@ app.get('/api/vendor/services', verifyToken, async (req, res) => {
   try {
     const pool = getPoolOrThrow()
     const userId = req.userId
+    const serviceOwnerColumn = await getServicesOwnerColumn(pool)
     console.log('Fetching services for user:', userId)
 
     const [results] = await pool.query(
-      'SELECT id, title, description, category, price, image, phone, location, latitude, longitude, duration, availability, is_approved, approval_status FROM services WHERE vendor_id = ? ORDER BY created_at DESC',
+      `SELECT id, title, description, category, price, image, phone, location, latitude, longitude, duration, availability, is_approved, approval_status
+       FROM services
+       WHERE ${serviceOwnerColumn} = ?
+       ORDER BY created_at DESC`,
       [userId]
     )
     console.log('Services found:', results?.length || 0)
@@ -680,6 +768,7 @@ app.post('/api/vendor/services', verifyToken, upload.single('image'), async (req
   try {
     const pool = getPoolOrThrow()
     const userId = req.userId
+    const serviceOwnerColumn = await getServicesOwnerColumn(pool)
     const { title, description, category, price, duration, availability, phone, location, latitude, longitude } = req.body
     console.log('Create service - body fields:', { title, description, category, price, duration, availability, phone, location, latitude, longitude })
     console.log('Create service - uploaded file:', req.file ? { filename: req.file.filename, mimetype: req.file.mimetype, size: req.file.size } : null)
@@ -691,7 +780,8 @@ app.post('/api/vendor/services', verifyToken, upload.single('image'), async (req
     const imageUrl = req.file ? `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}` : null
 
     const [result] = await pool.query(
-      'INSERT INTO services (vendor_id, title, description, category, price, image, phone, location, latitude, longitude, duration, availability, is_approved, approval_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE, ?, NOW())',
+      `INSERT INTO services (${serviceOwnerColumn}, title, description, category, price, image, phone, location, latitude, longitude, duration, availability, is_approved, approval_status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE, ?, NOW())`,
       [userId, title, description, category, price, imageUrl, phone || null, location || null, latitude || null, longitude || null, duration, availability, 'pending']
     )
     
@@ -723,6 +813,7 @@ app.put('/api/vendor/services/:id', verifyToken, upload.single('image'), async (
   try {
     const pool = getPoolOrThrow()
     const userId = req.userId
+    const serviceOwnerColumn = await getServicesOwnerColumn(pool)
     const serviceId = parseInt(req.params.id)
     const { title, description, category, price, duration, availability, phone, location, latitude, longitude } = req.body
     console.log('Update service id=', serviceId, '- body fields:', { title, description, category, price, duration, availability, phone, location, latitude, longitude })
@@ -733,11 +824,11 @@ app.put('/api/vendor/services/:id', verifyToken, upload.single('image'), async (
     }
 
     // Check ownership
-    const [results] = await pool.query('SELECT vendor_id FROM services WHERE id = ?', [serviceId])
+    const [results] = await pool.query(`SELECT ${serviceOwnerColumn} as service_owner_id FROM services WHERE id = ?`, [serviceId])
     if (results.length === 0) {
       return res.status(404).json({ message: 'Service not found' })
     }
-    if (results[0].vendor_id !== userId) {
+    if (results[0].service_owner_id !== userId) {
       return res.status(403).json({ message: 'Unauthorized' })
     }
 
@@ -783,14 +874,15 @@ app.delete('/api/vendor/services/:id', verifyToken, async (req, res) => {
   try {
     const pool = getPoolOrThrow()
     const userId = req.userId
+    const serviceOwnerColumn = await getServicesOwnerColumn(pool)
     const serviceId = parseInt(req.params.id)
 
     // Check ownership
-    const [results] = await pool.query('SELECT vendor_id FROM services WHERE id = ?', [serviceId])
+    const [results] = await pool.query(`SELECT ${serviceOwnerColumn} as service_owner_id FROM services WHERE id = ?`, [serviceId])
     if (results.length === 0) {
       return res.status(404).json({ message: 'Service not found' })
     }
-    if (results[0].vendor_id !== userId) {
+    if (results[0].service_owner_id !== userId) {
       return res.status(403).json({ message: 'Unauthorized' })
     }
 
@@ -1073,15 +1165,19 @@ app.put('/api/settings/profile', verifyToken, upload.single('profileImage'), asy
 
     await pool.execute(updateQuery, updateParams)
 
+    // Always return persisted profile_image so frontend does not overwrite it with undefined.
+    const [updatedRows] = await pool.execute(
+      'SELECT id, name, email, phone, profile_image, role FROM users WHERE id = ? LIMIT 1',
+      [userId]
+    )
+
+    if (!updatedRows || updatedRows.length === 0) {
+      return res.status(404).json({ message: 'User not found after update' })
+    }
+
     res.json({
       message: 'Profile updated successfully',
-      user: {
-        id: userId,
-        name,
-        email,
-        phone: phone || '',
-        profile_image: req.file ? `/uploads/${req.file.filename}` : undefined,
-      },
+      user: updatedRows[0],
     })
   } catch (error) {
     console.error('Settings profile error:', error.stack || error.message)
@@ -1134,12 +1230,13 @@ app.get('/api/admin/pending-services', verifyToken, async (req, res) => {
     }
 
     const pool = getPoolOrThrow()
+    const serviceOwnerColumn = await getServicesOwnerColumn(pool)
     const [services] = await pool.execute(
-      `SELECT s.id, s.vendor_id, s.title, s.description, s.category, s.price, 
+      `SELECT s.id, s.${serviceOwnerColumn} as vendor_id, s.title, s.description, s.category, s.price, 
               s.image, s.duration, s.availability, s.phone, s.location, s.created_at, s.is_approved,
               u.name as vendor_name, u.email as vendor_email
        FROM services s
-       JOIN users u ON s.vendor_id = u.id
+       JOIN users u ON s.${serviceOwnerColumn} = u.id
        WHERE s.is_approved = FALSE
        ORDER BY s.created_at DESC`
     )
@@ -1212,8 +1309,9 @@ app.get('/api/vendor-services/:vendorId', async (req, res) => {
   try {
     const { vendorId } = req.params
     const pool = getPoolOrThrow()
+    const serviceOwnerColumn = await getServicesOwnerColumn(pool)
     const [services] = await pool.execute(
-      'SELECT * FROM services WHERE vendor_id = ? AND approval_status = ? ORDER BY created_at DESC',
+      `SELECT * FROM services WHERE ${serviceOwnerColumn} = ? AND approval_status = ? ORDER BY created_at DESC`,
       [vendorId, 'approved']
     )
     res.json(services)
@@ -1350,11 +1448,9 @@ app.post('/api/events/:eventId/register-public', registerLimiter, async (req, re
       console.error('QR generation failed for attendee:', qrErr.message)
     }
 
-    // send confirmation email via Resend if API key configured
+    // send confirmation email via Mailpit SMTP
     let mailResult = null
     try {
-      const { Resend } = require('resend')
-      const resend = new Resend(process.env.RESEND_API_KEY)
       const event = rows[0]
       const html = `
         <p>Hi ${name || 'Attendee'},</p>
@@ -1363,19 +1459,173 @@ app.post('/api/events/:eventId/register-public', registerLimiter, async (req, re
         ${qrDataUrl ? `<p><img src="${qrDataUrl}" alt="QR code" style="max-width:240px"/></p>` : ''}
         <p>Show this email at check-in.</p>
       `
-      mailResult = await resend.emails.send({
-        from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+      mailResult = await sendMail({
         to: email,
         subject: `Registration confirmation - ${event.name}`,
         html
       })
     } catch (mailErr) {
-      console.warn('Mail send skipped or failed (Resend):', mailErr && mailErr.message ? mailErr.message : mailErr)
+      console.warn('Mail send skipped or failed (Mailpit SMTP):', mailErr && mailErr.message ? mailErr.message : mailErr)
     }
 
     res.status(201).json({ message: 'Registered (public)', token, qr: qrDataUrl, mailSent: !!mailResult })
   } catch (err) {
     console.error('Public event register error:', err.message)
+    res.status(500).json({ message: err.message })
+  }
+})
+
+// Unified attend endpoint: register-only OR ticket purchase in one flow.
+// - If ticket_id is provided: requires authenticated user and performs purchase.
+// - If ticket_id is omitted: performs attendee registration (public or authenticated).
+app.post('/api/events/:eventId/attend', registerLimiter, async (req, res) => {
+  try {
+    const { eventId } = req.params
+    let { name, email, phone, ticket_id, quantity, payment_method } = req.body
+    const pool = getPoolOrThrow()
+
+    // Optional auth (needed for ticket purchase; also used as fallback for registration details)
+    let authUserId = null
+    const authHeader = req.headers.authorization
+    if (authHeader) {
+      try {
+        const token = authHeader.split(' ')[1]
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-this')
+        authUserId = decoded?.id || null
+      } catch {
+        authUserId = null
+      }
+    }
+
+    // Ensure event exists
+    const [eventRows] = await pool.execute('SELECT id, name, date, location FROM events WHERE id = ? LIMIT 1', [eventId])
+    if (eventRows.length === 0) return res.status(404).json({ message: 'Event not found' })
+    const event = eventRows[0]
+
+    // Purchase path (ticket + attendance)
+    if (ticket_id) {
+      if (!authUserId) return res.status(401).json({ message: 'Login required to purchase ticket' })
+      if (!quantity || Number(quantity) <= 0) {
+        return res.status(400).json({ message: 'Positive quantity is required for ticket purchase' })
+      }
+
+      const [tickets] = await pool.execute('SELECT * FROM tickets WHERE id = ? AND event_id = ? LIMIT 1', [ticket_id, eventId])
+      if (tickets.length === 0) return res.status(404).json({ message: 'Ticket not found' })
+      const ticket = tickets[0]
+
+      const qty = parseInt(quantity, 10)
+      const available = (ticket.quantity || 0) - (ticket.sold || 0)
+      if (available < qty) return res.status(400).json({ message: 'Not enough tickets available' })
+
+      await pool.execute('UPDATE tickets SET sold = sold + ? WHERE id = ?', [qty, ticket_id])
+
+      const amount = (parseFloat(ticket.price || 0) * qty) || 0
+      const transactionId = `tx_${Date.now()}_${Math.round(Math.random() * 1e6)}`
+      const [saleResult] = await pool.execute(
+        'INSERT INTO ticket_sales (ticket_id, buyer_id, quantity, amount, payment_method, transaction_id, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [ticket_id, authUserId, qty, amount, payment_method || 'offline', transactionId, 'completed']
+      )
+      const saleId = saleResult.insertId
+
+      let qrDataUrl = null
+      try {
+        qrDataUrl = await QRCode.toDataURL(JSON.stringify({ saleId, transactionId }))
+        await pool.execute('UPDATE ticket_sales SET qr_code = ? WHERE id = ?', [qrDataUrl, saleId])
+      } catch (qrErr) {
+        console.error('QR generation failed:', qrErr.message)
+      }
+
+      try {
+        await sendTicketPurchaseEmail({
+          pool,
+          buyerId: authUserId,
+          eventId: parseInt(eventId, 10),
+          ticket,
+          quantity: qty,
+          amount,
+          paymentMethod: payment_method || 'offline',
+          transactionId,
+          saleId,
+          qrDataUrl,
+        })
+      } catch (mailErr) {
+        console.warn('Ticket purchase email failed:', mailErr && mailErr.message ? mailErr.message : mailErr)
+      }
+
+      return res.status(201).json({
+        mode: 'ticket',
+        message: 'Ticket purchased and attendance confirmed',
+        saleId,
+        transactionId,
+        amount,
+        qr: qrDataUrl,
+      })
+    }
+
+    // Registration-only path
+    if (authUserId && (!email || !name)) {
+      const [users] = await pool.execute('SELECT name, email FROM users WHERE id = ? LIMIT 1', [authUserId])
+      if (users.length > 0) {
+        name = name || users[0].name
+        email = email || users[0].email
+      }
+    }
+
+    email = (email || '').trim().toLowerCase()
+    name = (name || '').trim()
+    phone = (phone || '').trim()
+
+    if (!email) return res.status(400).json({ message: 'Email is required' })
+    if (!name) return res.status(400).json({ message: 'Name is required' })
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) return res.status(400).json({ message: 'Invalid email format' })
+
+    const [existing] = await pool.execute(
+      'SELECT id FROM event_attendees WHERE event_id = ? AND email = ? LIMIT 1',
+      [eventId, email]
+    )
+    if (existing.length > 0) return res.status(409).json({ message: 'This email is already registered for this event' })
+
+    const token = `TK-${Date.now()}-${Math.round(Math.random() * 1e6)}`
+    await pool.execute(
+      'INSERT INTO event_attendees (event_id, name, email, phone, token) VALUES (?, ?, ?, ?, ?)',
+      [eventId, name || null, email, phone || null, token]
+    )
+
+    let qrDataUrl = null
+    try {
+      qrDataUrl = await QRCode.toDataURL(JSON.stringify({ eventId, token }))
+    } catch (qrErr) {
+      console.error('QR generation failed for attendee:', qrErr.message)
+    }
+
+    let mailResult = null
+    try {
+      const html = `
+        <p>Hi ${name || 'Attendee'},</p>
+        <p>Thanks for registering for <strong>${event.name}</strong> on ${new Date(event.date).toLocaleString()} at ${event.location || ''}.</p>
+        <p>Your ticket token: <strong>${token}</strong></p>
+        ${qrDataUrl ? `<p><img src="${qrDataUrl}" alt="QR code" style="max-width:240px"/></p>` : ''}
+        <p>Show this email at check-in.</p>
+      `
+      mailResult = await sendMail({
+        to: email,
+        subject: `Registration confirmation - ${event.name}`,
+        html,
+      })
+    } catch (mailErr) {
+      console.warn('Registration email failed:', mailErr && mailErr.message ? mailErr.message : mailErr)
+    }
+
+    return res.status(201).json({
+      mode: 'registration',
+      message: 'Registered (public)',
+      token,
+      qr: qrDataUrl,
+      mailSent: !!mailResult,
+    })
+  } catch (err) {
+    console.error('Attend event error:', err.message)
     res.status(500).json({ message: err.message })
   }
 })
@@ -1598,6 +1848,24 @@ app.post('/api/events/:eventId/purchase', verifyToken, async (req, res) => {
       console.error('QR generation failed:', qrErr.message)
     }
 
+    // Send ticket purchase confirmation email (non-blocking)
+    try {
+      await sendTicketPurchaseEmail({
+        pool,
+        buyerId: buyer_id,
+        eventId: parseInt(eventId, 10),
+        ticket,
+        quantity: parseInt(quantity, 10),
+        amount,
+        paymentMethod: payment_method || 'offline',
+        transactionId,
+        saleId,
+        qrDataUrl,
+      })
+    } catch (mailErr) {
+      console.warn('Ticket purchase email failed:', mailErr && mailErr.message ? mailErr.message : mailErr)
+    }
+
     res.status(201).json({ message: 'Purchase successful', saleId, transactionId, amount, qr: qrDataUrl })
   } catch (error) {
     console.error('Purchase ticket error:', error.message)
@@ -1735,6 +2003,24 @@ app.post('/api/events/:eventId/confirm-payment', verifyToken, async (req, res) =
       console.error('QR generation failed:', qrErr.message)
     }
 
+    // Send ticket purchase confirmation email (non-blocking)
+    try {
+      await sendTicketPurchaseEmail({
+        pool,
+        buyerId: buyer_id,
+        eventId: parseInt(eventId, 10),
+        ticket,
+        quantity: parseInt(quantity, 10),
+        amount,
+        paymentMethod: 'stripe',
+        transactionId,
+        saleId,
+        qrDataUrl,
+      })
+    } catch (mailErr) {
+      console.warn('Ticket purchase email failed:', mailErr && mailErr.message ? mailErr.message : mailErr)
+    }
+
     res.json({ message: 'Payment confirmed and tickets issued', saleId, transactionId, qr: qrDataUrl, amount })
   } catch (err) {
     console.error('Confirm payment error:', err.message)
@@ -1753,21 +2039,23 @@ app.post('/api/service-bookings', verifyToken, async (req, res) => {
     }
 
     const pool = getPoolOrThrow()
+    const serviceOwnerColumn = await getServicesOwnerColumn(pool)
+    const serviceBookingOwnerColumn = await getServiceBookingsOwnerColumn(pool)
     
     // Get service details to find vendor_id
-    const [serviceData] = await pool.execute('SELECT vendor_id FROM services WHERE id = ?', [service_id])
+    const [serviceData] = await pool.execute(`SELECT ${serviceOwnerColumn} as service_owner_id FROM services WHERE id = ?`, [service_id])
     
     if (serviceData.length === 0) {
       return res.status(404).json({ message: 'Service not found' })
     }
 
-    const vendor_id = serviceData[0].vendor_id
+    const serviceOwnerId = serviceData[0].service_owner_id
 
     // Create booking
     const [result] = await pool.execute(
-      `INSERT INTO service_bookings (service_id, vendor_id, organizer_id, booking_date, notes, status) 
+      `INSERT INTO service_bookings (service_id, ${serviceBookingOwnerColumn}, organizer_id, booking_date, notes, status) 
        VALUES (?, ?, ?, ?, ?, 'pending')`,
-      [service_id, vendor_id, organizer_id, booking_date, notes || null]
+      [service_id, serviceOwnerId, organizer_id, booking_date, notes || null]
     )
 
     console.log(`Service booking created: ID ${result.insertId} for service ${service_id}`)
@@ -1786,6 +2074,7 @@ app.get('/api/my-bookings', verifyToken, async (req, res) => {
   try {
     const organizer_id = req.userId
     const pool = getPoolOrThrow()
+    const serviceBookingOwnerColumn = await getServiceBookingsOwnerColumn(pool)
     
     const [bookings] = await pool.execute(
       `SELECT 
@@ -1805,7 +2094,7 @@ app.get('/api/my-bookings', verifyToken, async (req, res) => {
         u.email as vendor_email
        FROM service_bookings sb
        JOIN services s ON sb.service_id = s.id
-       JOIN users u ON sb.vendor_id = u.id
+       JOIN users u ON sb.${serviceBookingOwnerColumn} = u.id
        WHERE sb.organizer_id = ?
        ORDER BY sb.booking_date DESC`,
       [organizer_id]
@@ -1823,6 +2112,7 @@ app.get('/api/provider-bookings', verifyToken, async (req, res) => {
   try {
     const vendor_id = req.userId
     const pool = getPoolOrThrow()
+    const serviceBookingOwnerColumn = await getServiceBookingsOwnerColumn(pool)
     
     const [bookings] = await pool.execute(
       `SELECT 
@@ -1841,7 +2131,7 @@ app.get('/api/provider-bookings', verifyToken, async (req, res) => {
        FROM service_bookings sb
        JOIN services s ON sb.service_id = s.id
        JOIN users u ON sb.organizer_id = u.id
-       WHERE sb.vendor_id = ?
+       WHERE sb.${serviceBookingOwnerColumn} = ?
        ORDER BY sb.booking_date DESC`,
       [vendor_id]
     )
@@ -2142,7 +2432,7 @@ app.post('/api/faqs/:faqId/helpful', verifyToken, async (req, res) => {
 const ticketManagementRoutes = require('./ticket-management-routes')
 ticketManagementRoutes(app, { getPoolOrThrow, verifyToken, isAdmin: (req) => req.user?.role === 'admin' })
 
-// Contact form submission endpoint - using Resend for email
+// Contact form submission endpoint - using Mailpit SMTP
 app.post('/api/contact', async (req, res) => {
   try {
     const { name, email, message } = req.body
@@ -2157,22 +2447,11 @@ app.post('/api/contact', async (req, res) => {
       return res.status(400).json({ message: 'Invalid email format' })
     }
 
-    // Check if Resend API key is configured
-    if (!process.env.RESEND_API_KEY) {
-      console.error('❌ RESEND_API_KEY not configured in .env file')
-      return res.status(503).json({
-        message: 'Email service is not configured. Please contact the administrator.'
-      })
-    }
-
-    const { Resend } = require('resend')
-    const resend = new Resend(process.env.RESEND_API_KEY)
-
     const adminEmail = process.env.ADMIN_EMAIL || 'jonathandraft02@gmail.com'
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@huzz.com'
+    const fromEmail = process.env.MAIL_FROM || 'noreply@huzz.local'
 
     // Send email to admin
-    await resend.emails.send({
+    await sendMail({
       from: fromEmail,
       to: adminEmail,
       subject: `New Contact Form Submission from ${name}`,
@@ -2192,7 +2471,7 @@ app.post('/api/contact', async (req, res) => {
     })
 
     // Send confirmation email to user
-    await resend.emails.send({
+    await sendMail({
       from: fromEmail,
       to: email,
       subject: '✓ We received your message - Huzz',

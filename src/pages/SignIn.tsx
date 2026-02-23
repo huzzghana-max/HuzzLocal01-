@@ -41,12 +41,16 @@ const SignIn: React.FC = () => {
         const cachedProfileImage = response.data.user.email
           ? localStorage.getItem(`profileImage:${response.data.user.email}`) || ''
           : ''
+        const normalizeProfileImage = (imagePath?: string) => {
+          if (!imagePath) return ''
+          if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) return imagePath
+          if (imagePath.startsWith('/uploads/')) return `${apiHost}${imagePath}`
+          if (imagePath.startsWith('uploads/')) return `${apiHost}/${imagePath}`
+          return imagePath
+        }
         const normalizedUser = {
           ...response.data.user,
-          profile_image:
-            response.data.user.profile_image && response.data.user.profile_image.startsWith('/uploads/')
-              ? `${apiHost}${response.data.user.profile_image}`
-              : response.data.user.profile_image || cachedProfileImage || '',
+          profile_image: normalizeProfileImage(response.data.user.profile_image) || cachedProfileImage || '',
         }
         localStorage.setItem('token', response.data.token)
         localStorage.setItem('user', JSON.stringify(normalizedUser))

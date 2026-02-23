@@ -8,307 +8,218 @@ import {
   Grid,
   Stack,
   Typography,
+  Avatar,
 } from '@mui/material'
 import { alpha, useTheme } from '@mui/material/styles'
-import EventIcon from '@mui/icons-material/Event'
-import PeopleIcon from '@mui/icons-material/People'
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import SecurityIcon from '@mui/icons-material/Security'
-import PaymentIcon from '@mui/icons-material/Payment'
-import VerifiedIcon from '@mui/icons-material/Verified'
-import CateringIcon from '@mui/icons-material/Restaurant'
-import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
-import MusicNoteIcon from '@mui/icons-material/MusicNote'
-import LocalFloristIcon from '@mui/icons-material/LocalFlorist'
-import EditCalendarIcon from '@mui/icons-material/EditCalendar'
-import TravelExploreIcon from '@mui/icons-material/TravelExplore'
-import TaskAltIcon from '@mui/icons-material/TaskAlt'
-import CelebrationIcon from '@mui/icons-material/Celebration'
+import { keyframes } from '@mui/system'
+import EventAvailableRoundedIcon from '@mui/icons-material/EventAvailableRounded'
+import VerifiedRoundedIcon from '@mui/icons-material/VerifiedRounded'
+import PaymentsRoundedIcon from '@mui/icons-material/PaymentsRounded'
+import ForumRoundedIcon from '@mui/icons-material/ForumRounded'
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded'
+import LinkedInIcon from '@mui/icons-material/LinkedIn'
+import XIcon from '@mui/icons-material/X'
+import InstagramIcon from '@mui/icons-material/Instagram'
+import GitHubIcon from '@mui/icons-material/GitHub'
+
+const floatX = keyframes`
+  0% { transform: translate3d(0,0,0); }
+  50% { transform: translate3d(12px,-10px,0); }
+  100% { transform: translate3d(0,0,0); }
+`
+
+const driftBg = keyframes`
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+`
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate()
   const theme = useTheme()
+  const currentYear = new Date().getFullYear()
+  const builtYear = 2026
 
-  const features = [
+  const pillars = [
     {
-      icon: EventIcon,
-      title: 'Planning Workspace',
-      description: 'Create events and keep vendors, tasks, and updates in one streamlined timeline.',
-      image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=80',
+      icon: EventAvailableRoundedIcon,
+      title: 'Operational Planning',
+      text: 'Build events with timelines, resources, and ownership in one workflow.',
     },
     {
-      icon: PeopleIcon,
-      title: 'Trusted Providers',
-      description: 'Browse vetted vendors with transparent reviews and services that fit your event goals.',
+      icon: VerifiedRoundedIcon,
+      title: 'Verified Providers',
+      text: 'Book trusted vendors with clear profiles, status, and approvals.',
+    },
+    {
+      icon: PaymentsRoundedIcon,
+      title: 'Ticketing + Registration',
+      text: 'Handle paid tickets and public attendance from one integrated flow.',
+    },
+    {
+      icon: ForumRoundedIcon,
+      title: 'Live Coordination',
+      text: 'Keep organizers and providers aligned with direct in-app messaging.',
+    },
+  ]
+
+  const spotlight = [
+    {
+      title: 'Conference Launch',
+      text: 'Multi-track event with ticket validation and provider coordination.',
       image: 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1200&q=80',
     },
     {
-      icon: CheckCircleIcon,
-      title: 'Execution Control',
-      description: 'Track bookings, status changes, and communications from planning to event day.',
-      image: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=1200&q=80',
-    },
-  ]
-
-  const steps = [
-    {
-      icon: EditCalendarIcon,
-      title: 'Create Event',
-      description: 'Define your date, budget, and service requirements.',
+      title: 'Private Gala',
+      text: 'Curated vendor stack, controlled guest lists, and premium setup.',
+      image: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1200&q=80',
     },
     {
-      icon: TravelExploreIcon,
-      title: 'Compare Options',
-      description: 'Evaluate providers by portfolio, rates, and ratings.',
+      title: 'Festival Weekend',
+      text: 'High-volume attendance managed with unified registration and check-in.',
+      image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=80',
     },
-    {
-      icon: TaskAltIcon,
-      title: 'Book Confidently',
-      description: 'Confirm availability and secure your preferred team.',
-    },
-    {
-      icon: CelebrationIcon,
-      title: 'Deliver Smoothly',
-      description: 'Manage updates and execute the event without chaos.',
-    },
-  ]
-
-  const categories = [
-    { icon: CateringIcon, title: 'Catering' },
-    { icon: PhotoCameraIcon, title: 'Photography' },
-    { icon: MusicNoteIcon, title: 'Entertainment' },
-    { icon: LocalFloristIcon, title: 'Decor' },
-  ]
-
-  const trust = [
-    { icon: SecurityIcon, title: 'Secure Payments', desc: 'Protected transactions and reliable billing flows.' },
-    { icon: VerifiedIcon, title: 'Verified Vendors', desc: 'Provider vetting for safer event collaborations.' },
-    { icon: PaymentIcon, title: 'Clear Refund Logic', desc: 'Transparent terms for safer booking decisions.' },
   ]
 
   return (
-    <Box sx={{ backgroundColor: 'background.default' }}>
-      <Box
-        sx={{
-          pt: { xs: 12, md: 16 },
-          pb: { xs: 10, md: 14 },
-          position: 'relative',
-          overflow: 'hidden',
-          background:
-            `radial-gradient(circle at 10% -20%, ${alpha(theme.palette.secondary.main, 0.22)} 0%, transparent 38%),` +
-            `linear-gradient(145deg, ${alpha(theme.palette.primary.main, 0.9)} 0%, ${alpha(theme.palette.primary.dark, 0.96)} 55%, ${theme.palette.primary.dark} 100%)`,
-          color: theme.palette.common.white,
-        }}
-      >
+    <Box sx={{ backgroundColor: 'background.default', pb: { xs: 8, md: 12 } }}>
+      <Container maxWidth="lg" sx={{ pt: { xs: 4, md: 6 } }}>
         <Box
           sx={{
-            position: 'absolute',
-            right: -120,
-            top: -80,
-            width: 340,
-            height: 340,
-            borderRadius: '50%',
-            background: alpha(theme.palette.secondary.main, 0.2),
-            filter: 'blur(8px)',
+            position: 'relative',
+            overflow: 'hidden',
+            borderRadius: { xs: 4, md: 5 },
+            background: `linear-gradient(130deg, ${alpha(theme.palette.background.paper, 0.98)} 0%, ${alpha(theme.palette.background.paper, 0.92)} 45%, ${alpha(theme.palette.primary.main, 0.08)} 100%)`,
+            border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
           }}
-        />
-        <Container maxWidth="lg" sx={{ position: 'relative' }}>
-          <Stack spacing={3.2} sx={{ maxWidth: 760 }}>
-            <Typography sx={{ fontWeight: 800, fontSize: { xs: '0.84rem', md: '0.92rem' }, letterSpacing: 0.9, opacity: 0.9 }}>
-              MODERN EVENT OPERATIONS
-            </Typography>
-            <Typography
-              variant="h1"
-              sx={{
-                fontWeight: 900,
-                fontSize: { xs: '2.3rem', sm: '3rem', md: '4rem' },
-                lineHeight: 1.08,
-              }}
-            >
-              Plan, book, and run events with professional precision.
-            </Typography>
-            <Typography sx={{ fontSize: { xs: '1rem', md: '1.18rem' }, opacity: 0.92, maxWidth: 640, lineHeight: 1.65 }}>
-              HUZZ helps organizers and providers collaborate through one modern platform for bookings, messaging, and execution.
-            </Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.6}>
-              <Button
-                variant="contained"
-                endIcon={<ArrowForwardRoundedIcon />}
-                onClick={() => navigate('/signup')}
-                sx={{
-                  py: 1.15,
-                  px: 3.2,
-                  borderRadius: 999,
-                  backgroundColor: theme.palette.secondary.main,
-                  color: '#142420',
-                  fontWeight: 800,
-                  border: `1px solid ${alpha('#142420', 0.22)}`,
-                  boxShadow: `0 10px 24px ${alpha(theme.palette.common.black, 0.26)}`,
-                  '&:hover': {
-                    backgroundColor: alpha(theme.palette.secondary.main, 0.92),
-                    boxShadow: `0 14px 28px ${alpha(theme.palette.common.black, 0.34)}`,
-                  },
-                }}
-              >
-                Start Free
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => navigate('/browse-vendors')}
-                sx={{
-                  py: 1.15,
-                  px: 3.2,
-                  borderRadius: 999,
-                  color: theme.palette.common.white,
-                  borderColor: alpha(theme.palette.common.white, 0.62),
-                  backgroundColor: alpha(theme.palette.common.white, 0.04),
-                  '&:hover': {
-                    borderColor: theme.palette.common.white,
-                    backgroundColor: alpha(theme.palette.common.white, 0.12),
-                  },
-                }}
-              >
-                Browse Vendors
-              </Button>
-            </Stack>
-          </Stack>
-        </Container>
-      </Box>
+        >
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              background: `radial-gradient(circle at 10% 25%, ${alpha(theme.palette.secondary.main, 0.15)}, transparent 45%), radial-gradient(circle at 80% 70%, ${alpha(theme.palette.primary.main, 0.14)}, transparent 48%)`,
+              backgroundSize: '140% 140%',
+              animation: `${driftBg} 22s ease-in-out infinite`,
+              pointerEvents: 'none',
+            }}
+          />
 
-      <Container maxWidth="lg" sx={{ py: { xs: 8, md: 12 } }}>
-        <Stack spacing={5}>
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="h3" sx={{ fontWeight: 850, fontSize: { xs: '1.8rem', md: '2.5rem' }, mb: 1.2 }}>
-              Why Teams Choose HUZZ
-            </Typography>
-            <Typography sx={{ color: 'text.secondary', maxWidth: 620, mx: 'auto' }}>
-              Built for clarity, speed, and reliability across event planning workflows.
-            </Typography>
-          </Box>
-          <Grid container spacing={2.5}>
-            {features.map((feature) => (
-              <Grid key={feature.title} size={{ xs: 12, md: 4 }}>
-                <Card sx={{ height: '100%', borderRadius: 3, overflow: 'hidden', boxShadow: 'none' }}>
-                  <Box sx={{ height: 190, background: `url(${feature.image}) center/cover` }} />
-                  <CardContent sx={{ p: 2.5 }}>
-                    <Box
-                      sx={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 1.8,
-                        backgroundColor: alpha(theme.palette.primary.main, 0.12),
-                        color: 'primary.main',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        mb: 1.4,
-                      }}
-                    >
-                      <feature.icon />
-                    </Box>
-                    <Typography sx={{ fontWeight: 800, fontSize: '1.08rem', mb: 1 }}>
-                      {feature.title}
-                    </Typography>
-                    <Typography sx={{ color: 'text.secondary', lineHeight: 1.6 }}>{feature.description}</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Stack>
-      </Container>
-
-      <Container maxWidth="lg" sx={{ pb: { xs: 8, md: 12 } }}>
-        <Stack spacing={5}>
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="h3" sx={{ fontWeight: 850, fontSize: { xs: '1.8rem', md: '2.5rem' }, mb: 1.2 }}>
-              How It Works
-            </Typography>
-            <Typography sx={{ color: 'text.secondary', maxWidth: 640, mx: 'auto' }}>
-              A practical flow designed for busy event teams.
-            </Typography>
-          </Box>
-          <Grid container spacing={2.5}>
-            {steps.map((step, index) => (
-              <Grid key={step.title} size={{ xs: 12, sm: 6, md: 3 }}>
-                <Box
+          <Grid container sx={{ position: 'relative' }}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Stack spacing={2.2} sx={{ p: { xs: 3, sm: 4, md: 6 }, pt: { xs: 4, md: 6 } }}>
+                <Typography
                   sx={{
-                    p: 2.8,
-                    borderRadius: 3,
-                    backgroundColor: 'background.paper',
-                    border: `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
-                    minHeight: 212,
-                    transition: 'all 0.2s ease',
-                    '&:hover': {
-                      transform: 'translateY(-6px)',
-                      boxShadow: `0 16px 34px ${alpha(theme.palette.primary.main, 0.18)}`,
-                    },
+                    fontWeight: 800,
+                    fontSize: '0.82rem',
+                    letterSpacing: 0.8,
+                    color: 'primary.main',
                   }}
                 >
+                  EVENT OPERATIONS PLATFORM
+                </Typography>
+                <Typography
+                  variant="h1"
+                  sx={{
+                    fontSize: { xs: '2.15rem', sm: '2.6rem', md: '3.25rem' },
+                    lineHeight: 1.06,
+                    fontWeight: 900,
+                    color: 'text.primary',
+                    maxWidth: 560,
+                  }}
+                >
+                  Plan, book, and run events with professional precision.
+                </Typography>
+                <Typography sx={{ color: 'text.secondary', fontSize: { xs: '0.98rem', md: '1.05rem' }, maxWidth: 520, lineHeight: 1.65 }}>
+                  A modern control center for organizers and providers: create events, manage tickets, coordinate services, and deliver reliable execution.
+                </Typography>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.2} sx={{ pt: 0.6 }}>
+                  <Button
+                    variant="contained"
+                    endIcon={<ArrowForwardRoundedIcon />}
+                    onClick={() => navigate('/signup')}
+                    sx={{
+                      py: 1.05,
+                      px: 3,
+                      borderRadius: 999,
+                      fontWeight: 800,
+                      textTransform: 'none',
+                      background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                    }}
+                  >
+                    Start now
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    onClick={() => navigate('/browse-vendors')}
+                    sx={{
+                      py: 1.05,
+                      px: 3,
+                      borderRadius: 999,
+                      fontWeight: 700,
+                      textTransform: 'none',
+                      borderColor: alpha(theme.palette.primary.main, 0.5),
+                      color: 'primary.main',
+                      '&:hover': { borderColor: theme.palette.primary.main },
+                    }}
+                  >
+                    Explore providers
+                  </Button>
+                </Stack>
+              </Stack>
+            </Grid>
+
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Box sx={{ p: { xs: 3, md: 4 }, pt: { xs: 0, md: 4 }, height: '100%' }}>
+                <Box
+                  sx={{
+                    height: { xs: 260, sm: 320, md: '100%' },
+                    minHeight: { md: 420 },
+                    borderRadius: { xs: 3, md: 4 },
+                    backgroundImage:
+                      'url(https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1400&q=80)',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    boxShadow: `0 24px 50px ${alpha(theme.palette.common.black, 0.22)}`,
+                    animation: `${floatX} 10s ease-in-out infinite`,
+                  }}
+                />
+              </Box>
+            </Grid>
+          </Grid>
+        </Box>
+      </Container>
+
+      <Container maxWidth="lg" sx={{ mt: { xs: 5, md: 7 } }}>
+        <Grid container spacing={2}>
+          {pillars.map((item) => (
+            <Grid key={item.title} size={{ xs: 12, sm: 6, md: 3 }}>
+              <Card
+                sx={{
+                  height: '100%',
+                  borderRadius: 3,
+                  boxShadow: 'none',
+                  border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
+                  backgroundColor: alpha(theme.palette.background.paper, 0.9),
+                }}
+              >
+                <CardContent sx={{ p: 2.4 }}>
                   <Box
                     sx={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: '50%',
-                      mb: 1.8,
-                      fontWeight: 800,
-                      fontSize: '0.86rem',
-                      backgroundColor: alpha(theme.palette.secondary.main, 0.2),
-                      color: 'secondary.main',
+                      width: 44,
+                      height: 44,
+                      borderRadius: 2,
+                      backgroundColor: alpha(theme.palette.primary.main, 0.12),
+                      color: 'primary.main',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      mb: 1.3,
                     }}
                   >
-                    {index + 1}
+                    <item.icon />
                   </Box>
-                  <step.icon sx={{ color: 'primary.main', mb: 1.2 }} />
-                  <Typography sx={{ fontWeight: 800, fontSize: '1rem', mb: 0.8 }}>{step.title}</Typography>
-                  <Typography sx={{ color: 'text.secondary', fontSize: '0.92rem', lineHeight: 1.55 }}>
-                    {step.description}
-                  </Typography>
-                </Box>
-              </Grid>
-            ))}
-          </Grid>
-        </Stack>
-      </Container>
-
-      <Box sx={{ py: { xs: 8, md: 11 }, backgroundColor: alpha(theme.palette.primary.main, theme.palette.mode === 'light' ? 0.04 : 0.12) }}>
-        <Container maxWidth="lg">
-          <Stack spacing={4.2}>
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="h3" sx={{ fontWeight: 850, fontSize: { xs: '1.8rem', md: '2.5rem' }, mb: 1.2 }}>
-                Popular Categories
-              </Typography>
-              <Typography sx={{ color: 'text.secondary' }}>Discover providers across core event service categories.</Typography>
-            </Box>
-            <Grid container spacing={2.2}>
-              {categories.map((cat) => (
-                <Grid key={cat.title} size={{ xs: 12, sm: 6, md: 3 }}>
-                  <Card sx={{ borderRadius: 3, boxShadow: 'none', textAlign: 'center' }}>
-                    <CardContent sx={{ py: 3.2 }}>
-                      <cat.icon sx={{ fontSize: 40, color: 'secondary.main', mb: 0.8 }} />
-                      <Typography sx={{ fontWeight: 800 }}>{cat.title}</Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          </Stack>
-        </Container>
-      </Box>
-
-      <Container maxWidth="lg" sx={{ py: { xs: 8, md: 12 } }}>
-        <Grid container spacing={2.5}>
-          {trust.map((item) => (
-            <Grid key={item.title} size={{ xs: 12, md: 4 }}>
-              <Card sx={{ borderRadius: 3, height: '100%', boxShadow: 'none' }}>
-                <CardContent sx={{ p: 2.6 }}>
-                  <item.icon sx={{ color: 'secondary.main', fontSize: 36, mb: 1 }} />
-                  <Typography sx={{ fontWeight: 800, mb: 0.8 }}>{item.title}</Typography>
-                  <Typography sx={{ color: 'text.secondary', lineHeight: 1.6 }}>{item.desc}</Typography>
+                  <Typography sx={{ fontWeight: 800, mb: 0.7 }}>{item.title}</Typography>
+                  <Typography sx={{ color: 'text.secondary', lineHeight: 1.6, fontSize: '0.93rem' }}>{item.text}</Typography>
                 </CardContent>
               </Card>
             </Grid>
@@ -316,44 +227,123 @@ const HomePage: React.FC = () => {
         </Grid>
       </Container>
 
+      <Container maxWidth="lg" sx={{ mt: { xs: 6, md: 8 } }}>
+        <Stack spacing={1} sx={{ textAlign: 'center', mb: 3 }}>
+          <Typography sx={{ color: 'primary.main', fontWeight: 700, letterSpacing: 0.6, fontSize: '0.82rem' }}>
+            RECENT EXECUTION SPOTLIGHT
+          </Typography>
+          <Typography sx={{ fontSize: { xs: '1.8rem', md: '2.2rem' }, fontWeight: 900 }}>
+            Outcomes Teams Can Trust
+          </Typography>
+        </Stack>
+        <Grid container spacing={2.4}>
+          {spotlight.map((card) => (
+            <Grid key={card.title} size={{ xs: 12, md: 4 }}>
+              <Card sx={{ borderRadius: 3, overflow: 'hidden', boxShadow: 'none', border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}` }}>
+                <Box sx={{ height: 210, background: `url(${card.image}) center/cover` }} />
+                <CardContent sx={{ p: 2.2 }}>
+                  <Typography sx={{ fontWeight: 800, mb: 0.6 }}>{card.title}</Typography>
+                  <Typography sx={{ color: 'text.secondary', fontSize: '0.93rem', lineHeight: 1.55 }}>{card.text}</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Container>
+
+      <Container maxWidth="lg" sx={{ mt: { xs: 6, md: 8 } }}>
+        <Grid
+          container
+          sx={{
+            borderRadius: 4,
+            overflow: 'hidden',
+            border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+            backgroundColor: alpha(theme.palette.primary.main, theme.palette.mode === 'light' ? 0.045 : 0.12),
+          }}
+        >
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Stack spacing={2} sx={{ p: { xs: 3, md: 5 } }}>
+              <Typography sx={{ color: 'primary.main', fontWeight: 700, letterSpacing: 0.6, fontSize: '0.82rem' }}>
+                OPERATIONAL CONFIDENCE
+              </Typography>
+              <Typography sx={{ fontSize: { xs: '1.75rem', md: '2.2rem' }, fontWeight: 900, lineHeight: 1.15 }}>
+                Built for professional teams, not spreadsheet chaos.
+              </Typography>
+              <Typography sx={{ color: 'text.secondary', lineHeight: 1.65 }}>
+                HUZZ consolidates planning, provider booking, registrations, and ticket sales into one execution layer.
+                Your team works faster, your stakeholders stay informed, and event delivery becomes repeatable.
+              </Typography>
+              <Stack direction="row" spacing={1.2} alignItems="center">
+                <Avatar sx={{ width: 34, height: 34, bgcolor: 'primary.main', color: 'primary.contrastText', fontWeight: 800 }}>H</Avatar>
+                <Typography sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>Trusted by organizers, providers, and event operators.</Typography>
+              </Stack>
+            </Stack>
+          </Grid>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Box
+              sx={{
+                minHeight: { xs: 260, md: '100%' },
+                backgroundImage:
+                  'url(https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=1400&q=80)',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+            />
+          </Grid>
+        </Grid>
+      </Container>
+
       <Box
         sx={{
-          py: { xs: 9, md: 12 },
-          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-          color: theme.palette.common.white,
+          mt: { xs: 6, md: 8 },
+          height: { xs: 18, md: 22 },
+          background: `linear-gradient(90deg, ${alpha(theme.palette.primary.main, 0.95)} 0%, ${alpha(theme.palette.secondary.main, 0.9)} 50%, ${alpha(theme.palette.primary.dark, 0.95)} 100%)`,
+          boxShadow: `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.2)}`,
+        }}
+      />
+
+      <Box
+        sx={{
+          py: { xs: 4, md: 5 },
+          backgroundColor: alpha(theme.palette.primary.dark, 0.95),
+          color: 'white',
         }}
       >
-        <Container maxWidth="md">
-          <Stack spacing={2.2} alignItems="center" textAlign="center">
-            <Typography variant="h3" sx={{ fontWeight: 900, fontSize: { xs: '2rem', md: '2.6rem' } }}>
-              Ready to run your next event like a pro?
-            </Typography>
-            <Typography sx={{ opacity: 0.9, maxWidth: 680 }}>
-              Join organizers and providers already using HUZZ to simplify planning and deliver better events.
-            </Typography>
-            <Button
-              variant="contained"
-              endIcon={<ArrowForwardRoundedIcon />}
-              onClick={() => navigate('/signup')}
-              sx={{
-                mt: 1,
-                px: 3.2,
-                py: 1.1,
-                borderRadius: 999,
-                backgroundColor: theme.palette.secondary.main,
-                color: '#142420',
-                fontWeight: 800,
-                border: `1px solid ${alpha('#142420', 0.22)}`,
-                boxShadow: `0 10px 24px ${alpha(theme.palette.common.black, 0.26)}`,
-                '&:hover': {
-                  backgroundColor: alpha(theme.palette.secondary.main, 0.92),
-                  boxShadow: `0 14px 28px ${alpha(theme.palette.common.black, 0.34)}`,
-                },
-              }}
-            >
-              Create Account
-            </Button>
-          </Stack>
+        <Container maxWidth="lg">
+          <Grid container spacing={2.4} alignItems="center">
+            <Grid size={{ xs: 12, md: 5 }}>
+              <Typography sx={{ fontWeight: 800, mb: 0.6 }}>HUZZ</Typography>
+              <Typography sx={{ opacity: 0.9, fontSize: '0.92rem' }}>
+                Built by Huzz Labs. Professional event operations platform for organizers and providers.
+              </Typography>
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Stack direction="row" spacing={1}>
+                <Button size="small" startIcon={<LinkedInIcon />} sx={{ color: 'white', textTransform: 'none' }}>
+                  LinkedIn
+                </Button>
+                <Button size="small" startIcon={<XIcon />} sx={{ color: 'white', textTransform: 'none' }}>
+                  X
+                </Button>
+                <Button size="small" startIcon={<InstagramIcon />} sx={{ color: 'white', textTransform: 'none' }}>
+                  Instagram
+                </Button>
+                <Button size="small" startIcon={<GitHubIcon />} sx={{ color: 'white', textTransform: 'none' }}>
+                  GitHub
+                </Button>
+              </Stack>
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <Stack spacing={0.4} sx={{ textAlign: { xs: 'left', md: 'right' } }}>
+                <Typography sx={{ fontSize: '0.9rem', opacity: 0.92 }}>
+                  Copyright © {currentYear} HUZZ
+                </Typography>
+                <Typography sx={{ fontSize: '0.84rem', opacity: 0.8 }}>
+                  App built in {builtYear}
+                </Typography>
+              </Stack>
+            </Grid>
+          </Grid>
         </Container>
       </Box>
     </Box>

@@ -9,6 +9,7 @@ import {
   DesignServices as DesignIcon,
   SupportAgent as SupportIcon,
 } from '@mui/icons-material'
+import MarketingHero from '../components/MarketingHero'
 
 const Services: React.FC = () => {
   const theme = useTheme()
@@ -25,23 +26,12 @@ const Services: React.FC = () => {
   return (
     <Container maxWidth="lg">
       <Box sx={{ py: { xs: 6, md: 10 }, display: 'grid', gap: 4 }}>
-        <Box
-          sx={{
-            p: { xs: 2.4, md: 3.2 },
-            borderRadius: 4,
-            border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-            background:
-              `radial-gradient(circle at -10% 10%, ${alpha(theme.palette.primary.main, 0.2)} 0%, transparent 38%),` +
-              alpha(theme.palette.secondary.main, theme.palette.mode === 'light' ? 0.08 : 0.2),
-          }}
-        >
-          <Typography variant="h2" sx={{ fontWeight: 850, mb: 1, fontSize: { xs: '2rem', md: '3rem' } }}>
-            Services
-          </Typography>
-          <Typography sx={{ fontSize: '1.05rem', color: 'text.secondary', maxWidth: 760, lineHeight: 1.65 }}>
-            A curated service ecosystem that helps event teams move from planning to execution with confidence.
-          </Typography>
-        </Box>
+        <MarketingHero
+          badge="SERVICE CATALOG"
+          title="Everything your event needs, in one coordinated ecosystem."
+          subtitle="From planning and catering to media and support, HUZZ connects teams with dependable providers and consistent service delivery."
+          imageUrl="https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1400&q=80"
+        />
 
         <Grid container spacing={2.2}>
           {services.map((service) => (

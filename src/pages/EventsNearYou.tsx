@@ -18,6 +18,8 @@ import {
   TextField,
   Snackbar,
   Alert,
+  Select,
+  MenuItem,
 } from '@mui/material'
 import api from '../api'
 import { useNavigate } from 'react-router-dom'
@@ -53,20 +55,27 @@ const EventsNearYou: React.FC = () => {
   const [snack, setSnack] = useState<{ open: boolean; message?: string; severity?: 'success' | 'error' | 'info' }>(
     { open: false }
   )
-  const [ticketDialog, setTicketDialog] = useState<{
-    open: boolean
-    event: EventItem | null
-    quantity: number
-    loading: boolean
-  }>({ open: false, event: null, quantity: 1, loading: false })
-  const [registerDialog, setRegisterDialog] = useState<{
+  const [attendDialog, setAttendDialog] = useState<{
     open: boolean
     event: EventItem | null
     name: string
     email: string
     phone: string
+    tickets: Array<{ id: number; ticket_type: string; price: number; quantity: number; sold: number }>
+    selectedTicketId: number | ''
+    quantity: number
     loading: boolean
-  }>({ open: false, event: null, name: '', email: '', phone: '', loading: false })
+  }>({
+    open: false,
+    event: null,
+    name: '',
+    email: '',
+    phone: '',
+    tickets: [],
+    selectedTicketId: '',
+    quantity: 1,
+    loading: false,
+  })
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -129,45 +138,57 @@ const EventsNearYou: React.FC = () => {
     })
   }, [enriched])
 
-  const handleOpenTicketDialog = (ev: EventItem) => {
-    setTicketDialog({ open: true, event: ev, quantity: 1, loading: false })
-  }
-
-  const handleRegister = (ev: EventItem) => {
-    // open dialog to collect name/email/phone
-    setRegisterDialog({ open: true, event: ev, name: '', email: '', phone: '', loading: false })
-  }
-
-  const submitRegister = async () => {
-    if (!registerDialog.event) return
+  const handleAttend = async (ev: EventItem) => {
+    let tickets: Array<{ id: number; ticket_type: string; price: number; quantity: number; sold: number }> = []
     try {
-      setRegisterDialog((s) => ({ ...s, loading: true }))
-      const resp = await api.post(`/events/${registerDialog.event.id}/register-public`, {
-        name: registerDialog.name,
-        email: registerDialog.email,
-        phone: registerDialog.phone,
-      })
-      setRegisterDialog({ open: false, event: null, name: '', email: '', phone: '', loading: false })
-      setSnack({ open: true, message: resp.data?.message || 'Registered', severity: 'success' })
-    } catch (err) {
-      console.error(err)
-      setSnack({ open: true, message: 'Registration failed', severity: 'error' })
-      setRegisterDialog((s) => ({ ...s, loading: false }))
+      const resp = await api.get(`/events/${ev.id}/tickets`)
+      tickets = Array.isArray(resp.data) ? resp.data : []
+    } catch {
+      tickets = []
     }
+    const firstAvailable = tickets.find((t) => (t.quantity || 0) - (t.sold || 0) > 0)
+    setAttendDialog({
+      open: true,
+      event: ev,
+      name: '',
+      email: '',
+      phone: '',
+      tickets,
+      selectedTicketId: firstAvailable ? firstAvailable.id : '',
+      quantity: 1,
+      loading: false,
+    })
   }
 
-  const handlePurchase = async () => {
-    if (!ticketDialog.event) return
+  const submitAttend = async () => {
+    if (!attendDialog.event) return
     try {
-      setTicketDialog((s) => ({ ...s, loading: true }))
-      const id = ticketDialog.event.id
-      await api.post(`/events/${id}/purchase`, { quantity: ticketDialog.quantity })
-      setTicketDialog({ open: false, event: null, quantity: 1, loading: false })
-      setSnack({ open: true, message: 'Purchase successful', severity: 'success' })
-    } catch (err) {
+      setAttendDialog((s) => ({ ...s, loading: true }))
+      const resp = await api.post(`/events/${attendDialog.event.id}/attend`, {
+        name: attendDialog.name,
+        email: attendDialog.email,
+        phone: attendDialog.phone,
+        ticket_id: attendDialog.selectedTicketId || undefined,
+        quantity: attendDialog.quantity,
+        payment_method: 'offline',
+      })
+      setAttendDialog((s) => ({ ...s, open: false, loading: false }))
+      setSnack({
+        open: true,
+        message:
+          resp.data?.mode === 'ticket'
+            ? `Ticket purchased successfully (${resp.data?.transactionId || 'tx created'})`
+            : resp.data?.message || 'Registered',
+        severity: 'success',
+      })
+    } catch (err: any) {
       console.error(err)
-      setSnack({ open: true, message: 'Purchase failed', severity: 'error' })
-      setTicketDialog((s) => ({ ...s, loading: false }))
+      setSnack({
+        open: true,
+        message: err?.response?.data?.message || 'Unable to complete request',
+        severity: 'error',
+      })
+      setAttendDialog((s) => ({ ...s, loading: false }))
     }
   }
 
@@ -316,7 +337,7 @@ const EventsNearYou: React.FC = () => {
                     <Button
                       variant="outlined"
                       size="small"
-                      onClick={() => handleOpenTicketDialog(ev)}
+                      onClick={() => handleAttend(ev)}
                       sx={{
                         borderColor: '#0E3B26',
                         color: '#0E3B26',
@@ -331,23 +352,7 @@ const EventsNearYou: React.FC = () => {
                         },
                       }}
                     >
-                      Buy Ticket
-                    </Button>
-                    <Button
-                      variant="text"
-                      size="small"
-                      onClick={() => handleRegister(ev)}
-                      sx={{
-                        color: '#0E3B26',
-                        fontWeight: 600,
-                        textTransform: 'none',
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          backgroundColor: 'rgba(14, 59, 38, 0.08)',
-                        },
-                      }}
-                    >
-                      Register
+                      Attend Event
                     </Button>
                   </Box>
                 </CardContent>
@@ -387,55 +392,58 @@ const EventsNearYou: React.FC = () => {
             </Button>
           </Box>
         )}
-      
-      <Dialog open={ticketDialog.open} onClose={() => setTicketDialog((s) => ({ ...s, open: false }))} fullWidth maxWidth="sm">
-        <DialogTitle>Buy Ticket</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 1 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-              {ticketDialog.event?.name}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {ticketDialog.event?.location}
-            </Typography>
-            <TextField
-              label="Quantity"
-              type="number"
-              value={ticketDialog.quantity}
-              inputProps={{ min: 1 }}
-              onChange={(e) => setTicketDialog((s) => ({ ...s, quantity: Math.max(1, Number(e.target.value) || 1) }))}
-              fullWidth
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setTicketDialog((s) => ({ ...s, open: false }))}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={handlePurchase}
-            disabled={ticketDialog.loading}
-          >
-            {ticketDialog.loading ? 'Processing…' : 'Purchase'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={registerDialog.open} onClose={() => setRegisterDialog((s) => ({ ...s, open: false }))} fullWidth maxWidth="sm">
-        <DialogTitle>Register for event</DialogTitle>
+      <Dialog open={attendDialog.open} onClose={() => setAttendDialog((s) => ({ ...s, open: false }))} fullWidth maxWidth="sm">
+        <DialogTitle>Attend Event</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 1, display: 'grid', gap: 2 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-              {registerDialog.event?.name}
+              {attendDialog.event?.name}
             </Typography>
-            <TextField label="Name" value={registerDialog.name} onChange={(e) => setRegisterDialog((s) => ({ ...s, name: e.target.value }))} fullWidth />
-            <TextField label="Email" value={registerDialog.email} onChange={(e) => setRegisterDialog((s) => ({ ...s, email: e.target.value }))} fullWidth />
-            <TextField label="Phone" value={registerDialog.phone} onChange={(e) => setRegisterDialog((s) => ({ ...s, phone: e.target.value }))} fullWidth />
+            {attendDialog.tickets.length > 0 && (
+              <>
+                <Typography variant="body2" color="text.secondary">
+                  Choose a ticket to buy (requires sign-in), or choose register-only.
+                </Typography>
+                <Select
+                  value={attendDialog.selectedTicketId}
+                  onChange={(e) => setAttendDialog((s) => ({ ...s, selectedTicketId: e.target.value as number | '' }))}
+                  fullWidth
+                >
+                  <MenuItem value="">Register only (no ticket)</MenuItem>
+                  {attendDialog.tickets.map((t) => {
+                    const available = Math.max(0, (t.quantity || 0) - (t.sold || 0))
+                    return (
+                      <MenuItem key={t.id} value={t.id} disabled={available <= 0}>
+                        {t.ticket_type} - ${t.price} ({available} left)
+                      </MenuItem>
+                    )
+                  })}
+                </Select>
+                {attendDialog.selectedTicketId && (
+                  <TextField
+                    label="Quantity"
+                    type="number"
+                    value={attendDialog.quantity}
+                    inputProps={{ min: 1 }}
+                    onChange={(e) => setAttendDialog((s) => ({ ...s, quantity: Math.max(1, Number(e.target.value) || 1) }))}
+                    fullWidth
+                  />
+                )}
+              </>
+            )}
+            {!attendDialog.selectedTicketId && (
+              <>
+                <TextField label="Name" value={attendDialog.name} onChange={(e) => setAttendDialog((s) => ({ ...s, name: e.target.value }))} fullWidth />
+                <TextField label="Email" value={attendDialog.email} onChange={(e) => setAttendDialog((s) => ({ ...s, email: e.target.value }))} fullWidth />
+                <TextField label="Phone" value={attendDialog.phone} onChange={(e) => setAttendDialog((s) => ({ ...s, phone: e.target.value }))} fullWidth />
+              </>
+            )}
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setRegisterDialog((s) => ({ ...s, open: false }))}>Cancel</Button>
-          <Button variant="contained" onClick={submitRegister} disabled={registerDialog.loading}>
-            {registerDialog.loading ? 'Processing…' : 'Register'}
+          <Button onClick={() => setAttendDialog((s) => ({ ...s, open: false }))}>Cancel</Button>
+          <Button variant="contained" onClick={submitAttend} disabled={attendDialog.loading}>
+            {attendDialog.loading ? 'Processing...' : attendDialog.selectedTicketId ? 'Buy & Attend' : 'Register'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -451,3 +459,4 @@ const EventsNearYou: React.FC = () => {
 }
 
 export default EventsNearYou
+

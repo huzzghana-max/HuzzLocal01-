@@ -14,6 +14,7 @@ import {
 import { alpha, useTheme } from '@mui/material/styles'
 import { Email as EmailIcon, Phone as PhoneIcon, LocationOn as LocationIcon } from '@mui/icons-material'
 import api from '../api'
+import MarketingHero from '../components/MarketingHero'
 
 const Contact: React.FC = () => {
   const [formData, setFormData] = useState({ name: '', email: '', message: '' })
@@ -54,23 +55,12 @@ const Contact: React.FC = () => {
   return (
     <Container maxWidth="lg">
       <Box sx={{ py: { xs: 6, md: 10 }, display: 'grid', gap: 4 }}>
-        <Box
-          sx={{
-            p: { xs: 2.4, md: 3.2 },
-            borderRadius: 4,
-            border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-            background:
-              `radial-gradient(circle at 100% 0%, ${alpha(theme.palette.secondary.main, 0.2)} 0%, transparent 36%),` +
-              alpha(theme.palette.primary.main, theme.palette.mode === 'light' ? 0.05 : 0.16),
-          }}
-        >
-          <Typography variant="h2" sx={{ fontWeight: 850, mb: 1, fontSize: { xs: '2rem', md: '3rem' } }}>
-            Contact
-          </Typography>
-          <Typography sx={{ fontSize: '1.05rem', color: 'text.secondary', maxWidth: 760, lineHeight: 1.65 }}>
-            Questions, partnerships, or support needs. Send a message and our team will respond promptly.
-          </Typography>
-        </Box>
+        <MarketingHero
+          badge="CONTACT & SUPPORT"
+          title="Start a conversation with the HUZZ team."
+          subtitle="For support requests, partnerships, or product questions, send us a message and we will reply quickly."
+          imageUrl="https://images.unsplash.com/photo-1556740758-90de374c12ad?auto=format&fit=crop&w=1400&q=80"
+        />
 
         <Grid container spacing={2.4}>
           <Grid size={{ xs: 12, md: 5 }}>

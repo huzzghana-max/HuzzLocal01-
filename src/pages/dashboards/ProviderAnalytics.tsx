@@ -6,6 +6,7 @@ import {
   Typography,
   Paper,
   Alert,
+  Chip,
 } from '@mui/material'
 import {
   ResponsiveContainer,
@@ -19,6 +20,8 @@ import {
   YAxis,
   CartesianGrid,
   Legend,
+  LineChart,
+  Line,
 } from 'recharts'
 import { useNavigate } from 'react-router-dom'
 import AssignmentIcon from '@mui/icons-material/Assignment'
@@ -118,6 +121,8 @@ const ProviderAnalytics: React.FC = () => {
         key: `${date.getFullYear()}-${date.getMonth()}`,
         month: date.toLocaleString('default', { month: 'short' }),
         bookings: 0,
+        completed: 0,
+        earnings: 0,
       }
     })
     const monthIndex = new Map(months.map((month) => [month.key, month]))
@@ -127,7 +132,13 @@ const ProviderAnalytics: React.FC = () => {
       if (Number.isNaN(date.getTime())) return
       const key = `${date.getFullYear()}-${date.getMonth()}`
       const bucket = monthIndex.get(key)
-      if (bucket) bucket.bookings += 1
+      if (bucket) {
+        bucket.bookings += 1
+        if ((booking.status || '').toLowerCase() === 'completed') {
+          bucket.completed += 1
+          bucket.earnings += Number(booking.amount || 0) || 0
+        }
+      }
     })
 
     return months
@@ -147,15 +158,26 @@ const ProviderAnalytics: React.FC = () => {
 
   const stats = useMemo(() => {
     const pendingRequests = bookings.filter((booking) => booking.status === 'pending').length
+    const confirmedJobs = bookings.filter((booking) => booking.status === 'confirmed').length
     const completedJobs = bookings.filter((booking) => booking.status === 'completed').length
+    const rejectedJobs = bookings.filter((booking) => booking.status === 'rejected').length
     const totalEarnings = bookings
       .filter((booking) => booking.status === 'completed')
       .reduce((sum, booking) => sum + Number(booking.amount || 0), 0)
+    const openDecisions = pendingRequests + confirmedJobs + completedJobs + rejectedJobs
+    const acceptanceRate = openDecisions > 0 ? Math.round(((confirmedJobs + completedJobs) / openDecisions) * 100) : 0
+    const completionRate = bookings.length > 0 ? Math.round((completedJobs / bookings.length) * 100) : 0
+    const avgJobValue = completedJobs > 0 ? (totalEarnings / completedJobs).toFixed(2) : '0.00'
 
     return {
       pendingRequests,
+      confirmedJobs,
       completedJobs,
       totalEarnings: totalEarnings.toFixed(2),
+      acceptanceRate,
+      completionRate,
+      avgJobValue,
+      activePipeline: pendingRequests + confirmedJobs,
     }
   }, [bookings])
 
@@ -188,6 +210,10 @@ const ProviderAnalytics: React.FC = () => {
                 <StatCard title="Pending Requests" value={stats?.pendingRequests || 0} icon={<PendingIcon />} color="warning" />
                 <StatCard title="Completed Jobs" value={stats?.completedJobs || 0} icon={<CheckCircleIcon />} color="success" />
                 <StatCard title="Total Earnings" value={`$${stats?.totalEarnings || 0}`} icon={<PaymentIcon />} color="secondary" />
+                <StatCard title="Active Pipeline" value={stats?.activePipeline || 0} icon={<PendingIcon />} color="info" />
+                <StatCard title="Acceptance Rate" value={`${stats?.acceptanceRate || 0}%`} icon={<CheckCircleIcon />} color="primary" />
+                <StatCard title="Completion Rate" value={`${stats?.completionRate || 0}%`} icon={<CheckCircleIcon />} color="success" />
+                <StatCard title="Avg Job Value" value={`$${stats?.avgJobValue || '0.00'}`} icon={<PaymentIcon />} color="warning" />
               </Box>
 
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 3, mb: 3 }}>
@@ -239,6 +265,37 @@ const ProviderAnalytics: React.FC = () => {
                   </ResponsiveContainer>
                 </Box>
               </Paper>
+
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 3, mt: 3 }}>
+                <Paper sx={{ p: 2.5, borderRadius: 2 }}>
+                  <Typography sx={{ fontWeight: 700, mb: 2 }}>Earnings Trend (6 Months)</Typography>
+                  <Box sx={{ height: 300 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={monthlyBookingData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line type="monotone" dataKey="earnings" stroke="#2E7D32" strokeWidth={2.5} name="Earnings ($)" />
+                        <Line type="monotone" dataKey="completed" stroke="#0E3B26" strokeWidth={2.5} name="Completed Jobs" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </Box>
+                </Paper>
+
+                <Paper sx={{ p: 2.5, borderRadius: 2 }}>
+                  <Typography sx={{ fontWeight: 700, mb: 2 }}>Top Service Demand Snapshot</Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {topServicesData.length === 0 && (
+                      <Typography variant="body2" color="text.secondary">No service demand data available.</Typography>
+                    )}
+                    {topServicesData.map((service) => (
+                      <Chip key={service.name} label={`${service.name} (${service.total})`} color="primary" variant="outlined" />
+                    ))}
+                  </Box>
+                </Paper>
+              </Box>
             </>
           )}
         </Container>

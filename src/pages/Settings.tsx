@@ -255,14 +255,24 @@ const Settings: React.FC = () => {
 
       // Update localStorage (normalize any relative image paths)
       const apiHost = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').replace(/\/api$/, '')
-      const updatedUserRaw = { ...currentUser, ...response.data.user }
-      const updatedUser = { ...updatedUserRaw,
-        profile_image: updatedUserRaw.profile_image && updatedUserRaw.profile_image.startsWith('/uploads/')
-          ? `${apiHost}${updatedUserRaw.profile_image}`
-          : updatedUserRaw.profile_image || ''
+      const normalizeProfileImage = (imagePath?: string) => {
+        if (!imagePath) return ''
+        if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) return imagePath
+        if (imagePath.startsWith('/uploads/')) return `${apiHost}${imagePath}`
+        if (imagePath.startsWith('uploads/')) return `${apiHost}/${imagePath}`
+        return imagePath
+      }
+      const persistedProfileImage =
+        response.data?.user?.profile_image ??
+        currentUser?.profile_image ??
+        ''
+      const updatedUserRaw = { ...currentUser, ...response.data.user, profile_image: persistedProfileImage }
+      const updatedUser = {
+        ...updatedUserRaw,
+        profile_image: normalizeProfileImage(updatedUserRaw.profile_image),
       }
       localStorage.setItem('user', JSON.stringify(updatedUser))
-      if (updatedUser.email) {
+      if (updatedUser.email && updatedUser.profile_image) {
         localStorage.setItem(`profileImage:${updatedUser.email}`, updatedUser.profile_image || '')
       }
       setCurrentUser(updatedUser)

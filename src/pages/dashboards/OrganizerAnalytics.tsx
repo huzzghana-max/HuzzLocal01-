@@ -6,6 +6,7 @@ import {
   Typography,
   Paper,
   Alert,
+  Chip,
 } from '@mui/material'
 import {
   ResponsiveContainer,
@@ -19,12 +20,15 @@ import {
   YAxis,
   CartesianGrid,
   Legend,
+  LineChart,
+  Line,
 } from 'recharts'
 import { useNavigate } from 'react-router-dom'
 import EventIcon from '@mui/icons-material/Event'
 import PendingIcon from '@mui/icons-material/Pending'
 import PeopleIcon from '@mui/icons-material/People'
 import ReceiptIcon from '@mui/icons-material/Receipt'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import DashboardSidebar from '../../components/DashboardSidebar'
 import { DashboardHeader, StatCard } from '../../components/DashboardComponents'
 import api from '../../api'
@@ -48,6 +52,10 @@ interface BookingItem {
   id: number
   status?: string
   booking_date?: string
+  price?: number | string
+  amount?: number | string
+  title?: string
+  service_title?: string
 }
 
 const CHART_COLORS = ['#0E3B26', '#F5A623', '#2E7D32', '#D32F2F', '#5C6BC0', '#78909C']
@@ -134,6 +142,8 @@ const OrganizerAnalytics: React.FC = () => {
         month: date.toLocaleString('default', { month: 'short' }),
         events: 0,
         bookings: 0,
+        completed: 0,
+        revenue: 0,
       }
     })
 
@@ -152,11 +162,52 @@ const OrganizerAnalytics: React.FC = () => {
       if (Number.isNaN(date.getTime())) return
       const key = `${date.getFullYear()}-${date.getMonth()}`
       const bucket = monthIndex.get(key)
-      if (bucket) bucket.bookings += 1
+      if (bucket) {
+        bucket.bookings += 1
+        if ((booking.status || '').toLowerCase() === 'completed') {
+          bucket.completed += 1
+          bucket.revenue += Number(booking.amount ?? booking.price ?? 0) || 0
+        }
+      }
     })
 
     return months
   }, [events, bookings])
+
+  const organizerMetrics = useMemo(() => {
+    const totalEvents = stats?.totalEvents || events.length
+    const totalBookings = bookings.length
+    const completed = bookings.filter((b) => (b.status || '').toLowerCase() === 'completed').length
+    const confirmed = bookings.filter((b) => (b.status || '').toLowerCase() === 'confirmed').length
+    const activeClosed = completed + confirmed
+    const completionRate = totalBookings > 0 ? Math.round((activeClosed / totalBookings) * 100) : 0
+    const avgBookingsPerEvent = totalEvents > 0 ? (totalBookings / totalEvents).toFixed(1) : '0.0'
+    const now = new Date()
+    const plus30 = new Date(now)
+    plus30.setDate(now.getDate() + 30)
+    const upcoming30 = events.filter((event) => {
+      const date = new Date(event.date)
+      return !Number.isNaN(date.getTime()) && date >= now && date <= plus30
+    }).length
+    return {
+      totalBookings,
+      completionRate,
+      avgBookingsPerEvent,
+      upcoming30,
+    }
+  }, [bookings, events, stats])
+
+  const topDemandServices = useMemo(() => {
+    const counts: Record<string, number> = {}
+    bookings.forEach((booking) => {
+      const key = booking.service_title || booking.title || 'Unknown Service'
+      counts[key] = (counts[key] || 0) + 1
+    })
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6)
+  }, [bookings])
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -187,6 +238,10 @@ const OrganizerAnalytics: React.FC = () => {
                 <StatCard title="Upcoming Events" value={stats?.upcomingEvents || 0} icon={<PendingIcon />} color="info" />
                 <StatCard title="Pending Bookings" value={stats?.pendingBookings || 0} icon={<ReceiptIcon />} color="warning" />
                 <StatCard title="Total Vendors" value={stats?.totalVendors || 0} icon={<PeopleIcon />} color="secondary" />
+                <StatCard title="Total Bookings" value={organizerMetrics.totalBookings} icon={<ReceiptIcon />} color="success" />
+                <StatCard title="Completion Rate" value={`${organizerMetrics.completionRate}%`} icon={<CheckCircleIcon />} color="info" />
+                <StatCard title="Avg Bookings/Event" value={organizerMetrics.avgBookingsPerEvent} icon={<PeopleIcon />} color="primary" />
+                <StatCard title="Next 30 Days" value={organizerMetrics.upcoming30} icon={<PendingIcon />} color="warning" />
               </Box>
 
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 3, mb: 3 }}>
@@ -240,6 +295,37 @@ const OrganizerAnalytics: React.FC = () => {
                   </ResponsiveContainer>
                 </Box>
               </Paper>
+
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 3, mt: 3 }}>
+                <Paper sx={{ p: 2.5, borderRadius: 2 }}>
+                  <Typography sx={{ fontWeight: 700, mb: 2 }}>Monthly Delivery Momentum</Typography>
+                  <Box sx={{ height: 300 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={monthlyVolumeData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis allowDecimals={false} />
+                        <Tooltip />
+                        <Legend />
+                        <Line type="monotone" dataKey="completed" stroke="#2E7D32" strokeWidth={2.5} name="Completed" />
+                        <Line type="monotone" dataKey="bookings" stroke="#0E3B26" strokeWidth={2.5} name="All Bookings" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </Box>
+                </Paper>
+
+                <Paper sx={{ p: 2.5, borderRadius: 2 }}>
+                  <Typography sx={{ fontWeight: 700, mb: 2 }}>Top Service Demand</Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {topDemandServices.length === 0 && (
+                      <Typography variant="body2" color="text.secondary">No service booking data yet.</Typography>
+                    )}
+                    {topDemandServices.map((item) => (
+                      <Chip key={item.name} label={`${item.name} (${item.value})`} color="primary" variant="outlined" />
+                    ))}
+                  </Box>
+                </Paper>
+              </Box>
             </>
           )}
         </Container>
