@@ -15,9 +15,11 @@
     "@fontsource/roboto": "^5.2.9",
     "@mui/icons-material": "^7.3.6",
     "@mui/material": "^7.3.6",
+    "@mui/x-charts": "^8.27.0",
     "axios": "^1.13.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-paystack": "^6.0.0",
     "react-router-dom": "^6.30.3",
     "recharts": "^3.7.0"
   },

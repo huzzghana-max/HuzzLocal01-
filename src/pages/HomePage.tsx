@@ -39,6 +39,7 @@ const HomePage: React.FC = () => {
   const theme = useTheme()
   const currentYear = new Date().getFullYear()
   const builtYear = 2026
+  const sectionSpacing = { xs: 7, md: 10 }
 
   const pillars = [
     {
@@ -82,8 +83,8 @@ const HomePage: React.FC = () => {
   ]
 
   return (
-    <Box sx={{ backgroundColor: 'background.default', pb: { xs: 8, md: 12 } }}>
-      <Container maxWidth="lg" sx={{ pt: { xs: 4, md: 6 } }}>
+    <Box sx={{ backgroundColor: 'background.default', pb: { xs: 10, md: 14 } }}>
+      <Container maxWidth="lg" sx={{ pt: { xs: 5, md: 7 } }}>
         <Box
           sx={{
             position: 'relative',
@@ -189,8 +190,8 @@ const HomePage: React.FC = () => {
         </Box>
       </Container>
 
-      <Container maxWidth="lg" sx={{ mt: { xs: 5, md: 7 } }}>
-        <Grid container spacing={2}>
+      <Container maxWidth="lg" sx={{ mt: sectionSpacing }}>
+        <Grid container spacing={2.4}>
           {pillars.map((item) => (
             <Grid key={item.title} size={{ xs: 12, sm: 6, md: 3 }}>
               <Card
@@ -227,7 +228,7 @@ const HomePage: React.FC = () => {
         </Grid>
       </Container>
 
-      <Container maxWidth="lg" sx={{ mt: { xs: 6, md: 8 } }}>
+      <Container maxWidth="lg" sx={{ mt: sectionSpacing }}>
         <Stack spacing={1} sx={{ textAlign: 'center', mb: 3 }}>
           <Typography sx={{ color: 'primary.main', fontWeight: 700, letterSpacing: 0.6, fontSize: '0.82rem' }}>
             RECENT EXECUTION SPOTLIGHT
@@ -251,7 +252,7 @@ const HomePage: React.FC = () => {
         </Grid>
       </Container>
 
-      <Container maxWidth="lg" sx={{ mt: { xs: 6, md: 8 } }}>
+      <Container maxWidth="lg" sx={{ mt: sectionSpacing }}>
         <Grid
           container
           sx={{
@@ -295,7 +296,7 @@ const HomePage: React.FC = () => {
 
       <Box
         sx={{
-          mt: { xs: 6, md: 8 },
+          mt: sectionSpacing,
           height: { xs: 18, md: 22 },
           background: `linear-gradient(90deg, ${alpha(theme.palette.primary.main, 0.95)} 0%, ${alpha(theme.palette.secondary.main, 0.9)} 50%, ${alpha(theme.palette.primary.dark, 0.95)} 100%)`,
           boxShadow: `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.2)}`,
@@ -336,7 +337,7 @@ const HomePage: React.FC = () => {
             <Grid size={{ xs: 12, md: 3 }}>
               <Stack spacing={0.4} sx={{ textAlign: { xs: 'left', md: 'right' } }}>
                 <Typography sx={{ fontSize: '0.9rem', opacity: 0.92 }}>
-                  Copyright © {currentYear} HUZZ
+                  Copyright (c) {currentYear} HUZZ
                 </Typography>
                 <Typography sx={{ fontSize: '0.84rem', opacity: 0.8 }}>
                   App built in {builtYear}
@@ -351,3 +352,4 @@ const HomePage: React.FC = () => {
 }
 
 export default HomePage
+

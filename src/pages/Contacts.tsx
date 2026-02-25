@@ -120,7 +120,7 @@ const Contacts: React.FC = () => {
           onLogout={() => {
             localStorage.removeItem('token')
             localStorage.removeItem('user')
-            navigate('/sign-in')
+            navigate('/signin')
           }}
         />
       )}

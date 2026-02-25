@@ -19,6 +19,8 @@ import { alpha, useTheme } from '@mui/material/styles'
 import MenuIcon from '@mui/icons-material/Menu'
 import { NavLink, useNavigate } from 'react-router-dom'
 import ThemeToggle from './themes/ThemeToggle'
+import { useAuth } from './contexts/AuthContext'
+import { normalizeImageUrl } from './utils/imageUtils'
 
 type NavState = 'default' | 'active' | 'alternate'
 
@@ -38,35 +40,18 @@ const navItems = [
 const Navbar: React.FC<NavbarProps> = ({ navState = 'default' }) => {
   const navigate = useNavigate()
   const theme = useTheme()
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [userName, setUserName] = useState('')
+  const { isLoggedIn, user, logout } = useAuth()
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const isAlternate = navState === 'alternate'
 
-  const userInitial = useMemo(() => userName?.charAt(0).toUpperCase() || 'U', [userName])
-
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    const userStr = localStorage.getItem('user')
-    if (token && userStr) {
-      try {
-        const user = JSON.parse(userStr)
-        setIsLoggedIn(true)
-        setUserName(user.name)
-      } catch {
-        setIsLoggedIn(false)
-      }
-    }
-  }, [])
+  const userInitial = useMemo(() => user?.name?.charAt(0).toUpperCase() || 'U', [user])
 
   const handleMenuClose = () => setMenuAnchor(null)
 
   const handleDashboard = () => {
-    const userStr = localStorage.getItem('user')
-    if (userStr) {
-      const user = JSON.parse(userStr)
+    if (user) {
       const path =
         user.role === 'provider'
           ? '/provider-dashboard'
@@ -79,10 +64,7 @@ const Navbar: React.FC<NavbarProps> = ({ navState = 'default' }) => {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    setIsLoggedIn(false)
-    setUserName('')
+    logout()
     handleMenuClose()
     navigate('/')
   }
@@ -243,7 +225,7 @@ const Navbar: React.FC<NavbarProps> = ({ navState = 'default' }) => {
                     display: { xs: 'none', sm: 'inline-flex' },
                   }}
                 >
-                  {userName}
+                  {user?.name}
                 </Button>
                 <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={handleMenuClose}>
                   <MenuItem onClick={handleDashboard}>Dashboard</MenuItem>

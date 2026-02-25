@@ -67,7 +67,7 @@ const TicketListPage: React.FC = () => {
   useEffect(() => {
     const userStr = localStorage.getItem('user')
     if (!userStr) {
-      navigate('/sign-in')
+      navigate('/signin')
       return
     }
 

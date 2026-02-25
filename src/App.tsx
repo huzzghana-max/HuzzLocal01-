@@ -24,11 +24,13 @@ import Messaging from './pages/Messaging'
 import Settings from './pages/Settings'
 import VendorServices from './pages/VendorServices'
 import Support from './pages/Support'
+import TicketListPage from './pages/TicketListPage'
 import TicketDetail from './pages/TicketDetail'
 import EventDetail from './pages/EventDetail'
 import EventRegistrantsAndTickets from './pages/EventRegistrantsAndTickets'
 import ProtectedRoute from './components/ProtectedRoute'
 import { ThemeProvider } from './themes/ThemeContext'
+import { AuthProvider } from './contexts/AuthContext'
 
 // Layout component with navbar
 const LayoutWithNavbar = ({ children }: { children: React.ReactNode }) => (
@@ -40,12 +42,13 @@ const LayoutWithNavbar = ({ children }: { children: React.ReactNode }) => (
 
 function App() {
   return (
-    <ThemeProvider>
-      <BrowserRouter future={{ v7_relativeSplatPath: true }}>
-        <Routes>
-          {/* Auth routes - no navbar */}
-          <Route path="/signin" element={<SignIn />} />
-          <Route path="/signup" element={<SignUp />} />
+    <AuthProvider>
+      <ThemeProvider>
+        <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+          <Routes>
+            {/* Auth routes - no navbar */}
+            <Route path="/signin" element={<SignIn />} />
+            <Route path="/signup" element={<SignUp />} />
 
           {/* Dashboard routes - role-based */}
           <Route
@@ -153,6 +156,14 @@ function App() {
             }
           />
           <Route
+            path="/support/tickets"
+            element={
+              <ProtectedRoute>
+                <TicketListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/support/tickets/:ticketId"
             element={
               <ProtectedRoute>
@@ -242,6 +253,7 @@ function App() {
         </Routes>
       </BrowserRouter>
     </ThemeProvider>
+    </AuthProvider>
   )
 }
 

@@ -101,7 +101,7 @@ const Support: React.FC = () => {
     if (userStr) {
       setUser(JSON.parse(userStr))
     } else {
-      navigate('/sign-in')
+      navigate('/signin')
       return
     }
 

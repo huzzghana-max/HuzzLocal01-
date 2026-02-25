@@ -20,10 +20,12 @@
   - Returns absolute/normalized image URLs for client consumption where possible.
   - Enforces server-side `approval_status` for services (important for security).
 */
-require('dotenv').config();
+const dotenv = require('dotenv')
+const path = require('path');
+dotenv.config()
+dotenv.config({ path: path.join(__dirname, '..', '.env') })
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
 const fs = require('fs')
 const jwt = require('jsonwebtoken')
 const QRCode = require('qrcode')
@@ -37,13 +39,32 @@ try {
 const multer = require('multer')
 const bcrypt = require('bcryptjs')
 const rateLimit = require('express-rate-limit')
-const { sendMail } = require('./mailer')
+const { sendMail, transporter } = require('./mailer')
 const { getPool, initializeDatabase, registerUser, loginUser } = require('./db')
 
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || '0.0.0.0';
+
+function logMailConfigStatus() {
+  const required = ['MAIL_HOST', 'MAIL_PORT', 'MAIL_USER', 'MAIL_PASS', 'MAIL_FROM']
+  const missing = required.filter((key) => !process.env[key] || String(process.env[key]).trim() === '')
+  if (missing.length > 0) {
+    console.warn(`Mail config warning: missing env vars -> ${missing.join(', ')}`)
+    return
+  }
+
+  transporter.verify((error) => {
+    if (error) {
+      console.error('SMTP verify failed:', error.message)
+    } else {
+      console.log(`SMTP ready: ${process.env.MAIL_HOST}:${process.env.MAIL_PORT}`)
+    }
+  })
+}
+
+logMailConfigStatus()
 
 
 // Ensure public/uploads directory exists
@@ -165,18 +186,12 @@ if (process.env.NODE_ENV === 'production') {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// Initialize database on startup only when explicitly requested.
-// Running the initializer drops and recreates the database (used for tests/seeds).
-// To avoid wiping data on accidental server restarts, require DB_INIT=1 to run it.
-
-if (process.env.DB_INIT === '1' || process.env.DB_INIT === 'true') {
-  initializeDatabase().catch(err => {
-    console.warn('⚠️  Database initialization warning:', err.message)
-    console.warn('Server will continue running without database. Authentication will fail.')
-  })
-} else {
-  console.log('DB initialization skipped (set DB_INIT=1 to initialize the database)')
-}
+// Always initialize database on startup.
+// initializeDatabase() is idempotent and ensures required tables exist.
+initializeDatabase().catch(err => {
+  console.warn('⚠️  Database initialization warning:', err.message)
+  console.warn('Server will continue running without database. Authentication will fail.')
+})
 
 // Middleware: Token verification
 const verifyToken = (req, res, next) => {
@@ -524,6 +539,28 @@ app.delete('/api/admin/users/:id', verifyToken, async (req, res) => {
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'Server is running' })
+})
+
+// Mail test endpoint (authenticated)
+app.post('/api/mail/test', verifyToken, async (req, res) => {
+  try {
+    const to = String(req.body?.to || '').trim() || String(req.body?.email || '').trim()
+    if (!to) {
+      return res.status(400).json({ message: 'Recipient email is required in body as "to" or "email"' })
+    }
+
+    await sendMail({
+      to,
+      subject: 'HUZZ Mail Test',
+      html: `<p>This is a test email from HUZZ at ${new Date().toISOString()}.</p>`,
+      text: `This is a test email from HUZZ at ${new Date().toISOString()}.`,
+    })
+
+    res.json({ message: 'Test email sent', to })
+  } catch (error) {
+    console.error('Mail test error:', error.message)
+    res.status(500).json({ message: error.message || 'Failed to send test email' })
+  }
 })
 
 // --- Reviews API ---
@@ -2819,6 +2856,12 @@ app.get('/api/faqs/categories', async (req, res) => {
     res.status(500).json({ message: error.message })
   }
 })
+
+// Import payment routes
+const paymentRoutes = require('./payment-routes')
+
+// Use payment routes
+app.use('/api/payments', paymentRoutes)
 
 app.listen(PORT, HOST, () => {
   console.log(`Server running on http://${HOST}:${PORT}`);

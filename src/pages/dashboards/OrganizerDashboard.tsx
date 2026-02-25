@@ -251,7 +251,7 @@ const OrganizerDashboard: React.FC = () => {
       const token = localStorage.getItem('token')
       if (!token) {
         setLoading(false)
-        navigate('/sign-in')
+        navigate('/signin')
         return
       }
       const response = await api.get('/dashboard/organizer-stats')
@@ -268,7 +268,7 @@ const OrganizerDashboard: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to fetch dashboard data:', error)
       if (error.response?.status === 401) {
-        navigate('/sign-in')
+        navigate('/signin')
       }
     } finally {
       //setLoading(false)

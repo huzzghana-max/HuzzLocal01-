@@ -120,7 +120,7 @@ const VendorServices: React.FC = () => {
       if (!token) {
         setErrorMessage('No authentication token found. Please log in again.')
         setLoading(false)
-        navigate('/sign-in')
+        navigate('/signin')
         return
       }
       const response = await api.get('/vendor/services')

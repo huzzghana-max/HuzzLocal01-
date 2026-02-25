@@ -3,37 +3,41 @@ import { alpha, createTheme } from '@mui/material/styles'
 const fontFamily = '"Manrope", "Plus Jakarta Sans", "Avenir Next", "Segoe UI", sans-serif'
 
 const lightTokens = {
-  primary: '#145A45',
-  primaryDark: '#0F4333',
-  onPrimary: '#F8FCFA',
-  secondary: '#D08A1B',
-  onSecondary: '#1E1A12',
-  bg: '#F4F7F9',
+  primary: '#3E8B20',
+  primaryDark: '#1F2D18',
+  onPrimary: '#F8F8F8',
+  secondary: '#5DD62C',
+  onSecondary: '#0F0F0F',
+  bg: '#F3F6F4',
   paper: '#FFFFFF',
-  text: '#142420',
-  textMuted: '#5B6A65',
-  border: '#D8E2DE',
-  shadow: '0 12px 34px rgba(16, 45, 34, 0.12)',
-  success: '#1D9D66',
-  warning: '#D8891A',
+  surface: '#ECF3EE',
+  text: '#101A13',
+  textMuted: '#4C5A52',
+  border: '#CFD9D3',
+  ring: '#5DD62C',
+  shadow: '0 14px 36px rgba(16, 26, 19, 0.12)',
+  success: '#5DD62C',
+  warning: '#B48416',
   error: '#CC4242',
-  info: '#1E7FA8',
+  info: '#2E7FA3',
 }
 
 const darkTokens = {
-  primary: '#7CE2BE',
-  primaryDark: '#56C99E',
-  onPrimary: '#0C1815',
-  secondary: '#F4BD62',
-  onSecondary: '#1B150A',
-  bg: '#0C1815',
-  paper: '#14241E',
-  text: '#EAF4F0',
-  textMuted: '#A1B6AC',
-  border: '#2E463C',
+  primary: '#6BE238',
+  primaryDark: '#3E8B20',
+  onPrimary: '#0F0F0F',
+  secondary: '#C8D7CE',
+  onSecondary: '#0F0F0F',
+  bg: '#0F0F0F',
+  paper: '#202020',
+  surface: '#171B18',
+  text: '#F2F6F3',
+  textMuted: '#B2C0B8',
+  border: '#314937',
+  ring: '#6BE238',
   shadow: '0 14px 36px rgba(0, 0, 0, 0.42)',
-  success: '#44CC8A',
-  warning: '#F2B64E',
+  success: '#5DD62C',
+  warning: '#E1A93B',
   error: '#F27474',
   info: '#67BCE1',
 }
@@ -44,10 +48,16 @@ const baseComponents = (tokens: typeof lightTokens) => ({
       body: {
         fontFamily,
         background:
-          `radial-gradient(circle at 14% -8%, ${alpha(tokens.primary, 0.16)} 0%, transparent 40%),` +
-          `radial-gradient(circle at 90% 0%, ${alpha(tokens.secondary, 0.12)} 0%, transparent 34%),` +
-          `radial-gradient(circle at 45% 120%, ${alpha(tokens.primaryDark, 0.09)} 0%, transparent 46%),` +
+          `radial-gradient(circle at 14% -8%, ${alpha(tokens.primary, 0.2)} 0%, transparent 40%),` +
+          `radial-gradient(circle at 92% 2%, ${alpha(tokens.secondary, 0.14)} 0%, transparent 34%),` +
+          `radial-gradient(circle at 45% 120%, ${alpha(tokens.primaryDark, 0.12)} 0%, transparent 46%),` +
           tokens.bg,
+        color: tokens.text,
+        WebkitFontSmoothing: 'antialiased',
+        MozOsxFontSmoothing: 'grayscale',
+      },
+      '::selection': {
+        backgroundColor: alpha(tokens.primary, 0.26),
       },
       '#root': {
         minHeight: '100vh',
@@ -61,6 +71,7 @@ const baseComponents = (tokens: typeof lightTokens) => ({
         letterSpacing: 0.2,
         textTransform: 'none' as const,
         borderRadius: 12,
+        transition: 'transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease',
       },
       contained: {
         background: `linear-gradient(135deg, ${tokens.primary} 0%, ${tokens.primaryDark} 100%)`,
@@ -85,6 +96,9 @@ const baseComponents = (tokens: typeof lightTokens) => ({
           borderColor: tokens.primary,
         },
       },
+      sizeSmall: {
+        padding: '7px 14px',
+      },
     },
   },
   MuiPaper: {
@@ -93,7 +107,7 @@ const baseComponents = (tokens: typeof lightTokens) => ({
         backgroundImage: 'none',
         borderRadius: 14,
         border: `1px solid ${alpha(tokens.border, 0.8)}`,
-        boxShadow: tokens.shadow,
+        boxShadow: `0 8px 28px ${alpha(tokens.primaryDark, 0.12)}`,
       },
     },
   },
@@ -102,7 +116,8 @@ const baseComponents = (tokens: typeof lightTokens) => ({
       root: {
         borderRadius: 14,
         border: `1px solid ${alpha(tokens.border, 0.85)}`,
-        boxShadow: tokens.shadow,
+        backgroundColor: alpha(tokens.surface, 0.8),
+        boxShadow: `0 10px 26px ${alpha(tokens.primaryDark, 0.14)}`,
       },
     },
   },
@@ -122,6 +137,7 @@ const baseComponents = (tokens: typeof lightTokens) => ({
       root: {
         fontWeight: 600,
         borderRadius: 10,
+        backdropFilter: 'blur(4px)',
       },
     },
   },
@@ -145,6 +161,67 @@ const baseComponents = (tokens: typeof lightTokens) => ({
     styleOverrides: {
       root: {
         borderRadius: 12,
+        backgroundColor: alpha(tokens.surface, 0.42),
+        transition: 'box-shadow 160ms ease, border-color 160ms ease',
+        '&.Mui-focused': {
+          boxShadow: `0 0 0 3px ${alpha(tokens.ring, 0.22)}`,
+        },
+      },
+      notchedOutline: {
+        borderColor: alpha(tokens.border, 0.95),
+      },
+    },
+  },
+  MuiTableCell: {
+    styleOverrides: {
+      head: {
+        fontWeight: 700,
+        letterSpacing: 0.15,
+        color: tokens.text,
+        backgroundColor: alpha(tokens.surface, 0.55),
+      },
+      body: {
+        borderBottom: `1px solid ${alpha(tokens.border, 0.65)}`,
+      },
+    },
+  },
+  MuiTableRow: {
+    styleOverrides: {
+      root: {
+        '&:hover': {
+          backgroundColor: alpha(tokens.primary, 0.06),
+        },
+      },
+    },
+  },
+  MuiIconButton: {
+    styleOverrides: {
+      root: {
+        borderRadius: 12,
+      },
+    },
+  },
+  MuiDialog: {
+    styleOverrides: {
+      paper: {
+        borderRadius: 18,
+        border: `1px solid ${alpha(tokens.border, 0.85)}`,
+      },
+    },
+  },
+  MuiDivider: {
+    styleOverrides: {
+      root: {
+        borderColor: alpha(tokens.border, 0.72),
+      },
+    },
+  },
+  MuiTooltip: {
+    styleOverrides: {
+      tooltip: {
+        borderRadius: 10,
+        fontSize: 12,
+        backgroundColor: alpha(tokens.primaryDark, 0.94),
       },
     },
   },
@@ -184,16 +261,24 @@ export const lightTheme = createTheme({
       disabled: alpha(lightTokens.textMuted, 0.7),
     },
     divider: lightTokens.border,
+    action: {
+      hover: alpha(lightTokens.primary, 0.08),
+      selected: alpha(lightTokens.primary, 0.14),
+      focus: alpha(lightTokens.primary, 0.2),
+    },
   },
   shape: { borderRadius: 14 },
   typography: {
     fontFamily,
-    h1: { fontWeight: 800, letterSpacing: -0.6 },
-    h2: { fontWeight: 800, letterSpacing: -0.5 },
-    h3: { fontWeight: 800, letterSpacing: -0.4 },
-    h4: { fontWeight: 800, letterSpacing: -0.3 },
-    h5: { fontWeight: 750, letterSpacing: -0.2 },
-    h6: { fontWeight: 750, letterSpacing: -0.1 },
+    h1: { fontWeight: 800, letterSpacing: -0.7, lineHeight: 1.08 },
+    h2: { fontWeight: 800, letterSpacing: -0.55, lineHeight: 1.12 },
+    h3: { fontWeight: 780, letterSpacing: -0.42, lineHeight: 1.14 },
+    h4: { fontWeight: 760, letterSpacing: -0.3, lineHeight: 1.18 },
+    h5: { fontWeight: 750, letterSpacing: -0.2, lineHeight: 1.2 },
+    h6: { fontWeight: 730, letterSpacing: -0.12, lineHeight: 1.24 },
+    subtitle1: { fontWeight: 600, letterSpacing: -0.08 },
+    body1: { lineHeight: 1.56 },
+    body2: { lineHeight: 1.5 },
     button: { fontWeight: 700 },
   },
   components: baseComponents(lightTokens),
@@ -233,16 +318,24 @@ export const darkTheme = createTheme({
       disabled: alpha(darkTokens.textMuted, 0.75),
     },
     divider: darkTokens.border,
+    action: {
+      hover: alpha(darkTokens.primary, 0.1),
+      selected: alpha(darkTokens.primary, 0.2),
+      focus: alpha(darkTokens.primary, 0.26),
+    },
   },
   shape: { borderRadius: 14 },
   typography: {
     fontFamily,
-    h1: { fontWeight: 800, letterSpacing: -0.6 },
-    h2: { fontWeight: 800, letterSpacing: -0.5 },
-    h3: { fontWeight: 800, letterSpacing: -0.4 },
-    h4: { fontWeight: 800, letterSpacing: -0.3 },
-    h5: { fontWeight: 750, letterSpacing: -0.2 },
-    h6: { fontWeight: 750, letterSpacing: -0.1 },
+    h1: { fontWeight: 800, letterSpacing: -0.7, lineHeight: 1.08 },
+    h2: { fontWeight: 800, letterSpacing: -0.55, lineHeight: 1.12 },
+    h3: { fontWeight: 780, letterSpacing: -0.42, lineHeight: 1.14 },
+    h4: { fontWeight: 760, letterSpacing: -0.3, lineHeight: 1.18 },
+    h5: { fontWeight: 750, letterSpacing: -0.2, lineHeight: 1.2 },
+    h6: { fontWeight: 730, letterSpacing: -0.12, lineHeight: 1.24 },
+    subtitle1: { fontWeight: 600, letterSpacing: -0.08 },
+    body1: { lineHeight: 1.56 },
+    body2: { lineHeight: 1.5 },
     button: { fontWeight: 700 },
   },
   components: baseComponents(darkTokens),

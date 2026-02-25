@@ -56,7 +56,7 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, change, icon, 
             >
               {title}
             </Typography>
-            <Typography sx={{ fontSize: '2.2rem', fontWeight: 800, mt: 1, color: theme.palette.primary.main }}>
+            <Typography sx={{ fontSize: '2.2rem', fontWeight: 800, mt: 1, color: `${color}.main` }}>
               {value}
             </Typography>
           </Box>
@@ -68,7 +68,7 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, change, icon, 
                 background: theme.palette.mode === 'light'
                   ? 'rgba(17,24,39,0.05)'
                   : 'rgba(148,163,184,0.15)',
-                color: theme.palette.primary.main,
+                color: `${color}.main`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -156,7 +156,7 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({ title, current, tota
             : 'rgba(148,163,184,0.2)',
           '& .MuiLinearProgress-bar': {
             borderRadius: 8,
-            background: theme.palette.primary.main,
+            background: `${color}.main`,
           },
         }}
       />

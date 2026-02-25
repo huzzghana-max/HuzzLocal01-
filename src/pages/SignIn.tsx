@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 import api from '../api'
 import {
   Box,
@@ -15,6 +16,8 @@ import {
   useTheme,
 } from '@mui/material'
 import LoginIcon from '@mui/icons-material/Login'
+import { normalizeImageUrl, cacheProfileImage } from '../utils/imageUtils'
+import { getErrorMessage, logError } from '../utils/errorHandler'
 
 const SignIn: React.FC = () => {
   const [email, setEmail] = useState('')
@@ -24,6 +27,7 @@ const SignIn: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(false)
   const navigate = useNavigate()
   const theme = useTheme()
+  const { login } = useAuth()
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,29 +41,20 @@ const SignIn: React.FC = () => {
       })
 
       if (response.data.token && response.data.user) {
-        const apiHost = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').replace(/\/api$/, '')
-        const cachedProfileImage = response.data.user.email
-          ? localStorage.getItem(`profileImage:${response.data.user.email}`) || ''
-          : ''
-        const normalizeProfileImage = (imagePath?: string) => {
-          if (!imagePath) return ''
-          if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) return imagePath
-          if (imagePath.startsWith('/uploads/')) return `${apiHost}${imagePath}`
-          if (imagePath.startsWith('uploads/')) return `${apiHost}/${imagePath}`
-          return imagePath
-        }
+        // Normalize user profile image URL
         const normalizedUser = {
           ...response.data.user,
-          profile_image: normalizeProfileImage(response.data.user.profile_image) || cachedProfileImage || '',
+          profile_image: response.data.user.profile_image 
+            ? normalizeImageUrl(response.data.user.profile_image)
+            : '',
         }
-        localStorage.setItem('token', response.data.token)
-        localStorage.setItem('user', JSON.stringify(normalizedUser))
+
+        // Use AuthContext to store auth data
+        login(normalizedUser, response.data.token, rememberMe)
+
+        // Cache profile image for faster loading
         if (normalizedUser.email && normalizedUser.profile_image) {
-          localStorage.setItem(`profileImage:${normalizedUser.email}`, normalizedUser.profile_image)
-        }
-        
-        if (rememberMe) {
-          localStorage.setItem('rememberMe', 'true')
+          cacheProfileImage(normalizedUser.email, normalizedUser.profile_image)
         }
 
         // Route based on user role
@@ -73,7 +68,9 @@ const SignIn: React.FC = () => {
         }
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.')
+      const errorMessage = getErrorMessage(err)
+      setError(errorMessage)
+      logError(err, 'SignIn')
     } finally {
       setLoading(false)
     }
