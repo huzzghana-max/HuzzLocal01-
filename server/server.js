@@ -597,20 +597,30 @@ app.post('/api/mail/test', verifyToken, async (req, res) => {
 // Submit a review for a completed booking
 app.post('/api/reviews', verifyToken, async (req, res) => {
   try {
-    const { booking_id, provider_id, rating, comment } = req.body
+    const { booking_id, rating, comment } = req.body
     const reviewer_id = req.userId
-    if (!booking_id || !provider_id || !rating) {
+    const parsedRating = Number(rating)
+    if (!booking_id || !parsedRating) {
       return res.status(400).json({ message: 'Missing required fields' })
     }
+    if (!Number.isInteger(parsedRating) || parsedRating < 1 || parsedRating > 5) {
+      return res.status(400).json({ message: 'Rating must be an integer between 1 and 5' })
+    }
+
     const pool = getPoolOrThrow()
+    const serviceBookingOwnerColumn = await getServiceBookingsOwnerColumn(pool)
     // Check if booking is completed and belongs to this user
     const [bookings] = await pool.execute(
-      'SELECT * FROM service_bookings WHERE id = ? AND organizer_id = ? AND status = ? LIMIT 1',
+      `SELECT id, ${serviceBookingOwnerColumn} as provider_id
+       FROM service_bookings
+       WHERE id = ? AND organizer_id = ? AND status = ? LIMIT 1`,
       [booking_id, reviewer_id, 'completed']
     )
     if (bookings.length === 0) {
       return res.status(403).json({ message: 'You can only review completed bookings you own.' })
     }
+    const provider_id = bookings[0].provider_id
+
     // Check if review already exists
     const [existing] = await pool.execute(
       'SELECT * FROM reviews WHERE booking_id = ? AND reviewer_id = ?',
@@ -620,13 +630,59 @@ app.post('/api/reviews', verifyToken, async (req, res) => {
       return res.status(409).json({ message: 'You have already reviewed this booking.' })
     }
     // Insert review
-    await pool.execute(
+    const [insertResult] = await pool.execute(
       'INSERT INTO reviews (booking_id, reviewer_id, provider_id, rating, comment) VALUES (?, ?, ?, ?, ?)',
-      [booking_id, reviewer_id, provider_id, rating, comment || null]
+      [booking_id, reviewer_id, provider_id, parsedRating, (comment || '').trim() || null]
     )
-    res.status(201).json({ message: 'Review submitted successfully.' })
+
+    // Update aggregate provider rating.
+    const [ratingRows] = await pool.execute(
+      `SELECT COALESCE(AVG(rating), 0) as avg_rating, COUNT(*) as total_ratings
+       FROM reviews
+       WHERE provider_id = ?`,
+      [provider_id],
+    )
+    const avgRating = Number(ratingRows[0]?.avg_rating || 0)
+    const totalRatings = Number(ratingRows[0]?.total_ratings || 0)
+    await pool.execute(
+      `UPDATE service_providers
+       SET rating = ?, total_ratings = ?
+       WHERE user_id = ?`,
+      [avgRating, totalRatings, provider_id],
+    )
+
+    res.status(201).json({
+      message: 'Review submitted successfully.',
+      reviewId: insertResult.insertId,
+      provider: {
+        id: provider_id,
+        rating: avgRating,
+        totalRatings,
+      },
+    })
   } catch (error) {
     console.error('Submit review error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+// Fetch reviews written by current user
+app.get('/api/reviews/by-reviewer', verifyToken, async (req, res) => {
+  try {
+    const reviewerId = req.userId
+    const pool = getPoolOrThrow()
+    const [reviews] = await pool.execute(
+      `SELECT r.id, r.booking_id, r.provider_id, r.rating, r.comment, r.created_at,
+              u.name as provider_name
+       FROM reviews r
+       LEFT JOIN users u ON r.provider_id = u.id
+       WHERE r.reviewer_id = ?
+       ORDER BY r.created_at DESC`,
+      [reviewerId],
+    )
+    res.json(reviews)
+  } catch (error) {
+    console.error('Fetch reviewer reviews error:', error.message)
     res.status(500).json({ message: error.message })
   }
 })
@@ -704,11 +760,14 @@ app.get('/api/approved-services', async (req, res) => {
         s.availability, 
         s.is_approved,
         s.created_at,
+        sp.rating as vendor_rating,
+        sp.total_ratings as vendor_total_ratings,
         u.id as user_id,
         u.name as vendor_name, 
         u.email as vendor_email
       FROM services s
       JOIN users u ON s.${serviceOwnerColumn} = u.id
+      LEFT JOIN service_providers sp ON sp.user_id = u.id
       WHERE s.is_approved = TRUE
       ORDER BY s.created_at DESC
     `)

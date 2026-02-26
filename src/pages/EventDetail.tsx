@@ -24,6 +24,8 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import LocationOnIcon from '@mui/icons-material/LocationOn'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
 import DescriptionIcon from '@mui/icons-material/Description'
+import ShareIcon from '@mui/icons-material/Share'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 
 interface EventData {
   id: number
@@ -50,6 +52,8 @@ const EventDetail: React.FC = () => {
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null)
   const [paymentAmount, setPaymentAmount] = useState(0)
   const [currentUser, setCurrentUser] = useState<any>(null)
+  const [shareNotice, setShareNotice] = useState('')
+  const publicEventLink = eventId ? `${window.location.origin}/events/public/${encodeURIComponent(eventId)}` : ''
 
   const fetchEventDetails = async () => {
     try {
@@ -141,6 +145,35 @@ const EventDetail: React.FC = () => {
     }
   }
 
+  const handleCopyLink = async () => {
+    if (!publicEventLink) return
+    try {
+      await navigator.clipboard.writeText(publicEventLink)
+      setShareNotice('Public event link copied to clipboard.')
+      setTimeout(() => setShareNotice(''), 3000)
+    } catch {
+      setShareNotice(publicEventLink)
+      setTimeout(() => setShareNotice(''), 5000)
+    }
+  }
+
+  const handleShare = async () => {
+    if (!event || !publicEventLink) return
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: event.name,
+          text: `Join this event: ${event.name}`,
+          url: publicEventLink,
+        })
+        return
+      } catch {
+        // fallback to copy link
+      }
+    }
+    await handleCopyLink()
+  }
+
   if (loading)
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
@@ -161,22 +194,29 @@ const EventDetail: React.FC = () => {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 4 }}>
       <Container maxWidth="lg">
-        {/* Back Button */}
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate(-1)}
-          sx={{
-            mb: 3,
-            color: theme.palette.primary.main,
-            fontWeight: 600,
-            transition: 'all 0.3s ease',
-            '&:hover': {
-              transform: 'translateX(-4px)',
-            },
-          }}
-        >
-          Back to Events
-        </Button>
+        {/* Top Actions */}
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.2} sx={{ mb: 3 }}>
+          <Button
+            startIcon={<ArrowBackIcon />}
+            onClick={() => navigate(-1)}
+            sx={{
+              color: theme.palette.primary.main,
+              fontWeight: 600,
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'translateX(-4px)',
+              },
+            }}
+          >
+            Back to Events
+          </Button>
+          <Button variant="outlined" startIcon={<ShareIcon />} onClick={handleShare}>
+            Share Event
+          </Button>
+          <Button variant="outlined" startIcon={<ContentCopyIcon />} onClick={handleCopyLink}>
+            Copy Link
+          </Button>
+        </Stack>
 
         {/* Event Image & Details Card */}
         {event && (
@@ -357,6 +397,11 @@ const EventDetail: React.FC = () => {
         {error && (
           <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
             {error}
+          </Alert>
+        )}
+        {shareNotice && (
+          <Alert severity="info" sx={{ mb: 3 }} onClose={() => setShareNotice('')}>
+            {shareNotice}
           </Alert>
         )}
 

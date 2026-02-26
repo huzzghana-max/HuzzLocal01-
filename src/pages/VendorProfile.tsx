@@ -29,6 +29,7 @@ import {
   IconButton,
   Alert,
   CircularProgress,
+  Rating,
 } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
@@ -78,6 +79,9 @@ const VendorProfile: React.FC = () => {
   const [portfolioImagePreviews, setPortfolioImagePreviews] = useState<string[]>([])
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null)
   const [reviews, setReviews] = useState<Review[]>([])
+  const averageRating = reviews.length > 0
+    ? reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length
+    : 0
 
   const serviceTypes = [
     'Photography',
@@ -395,6 +399,12 @@ const VendorProfile: React.FC = () => {
             <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
               Reviews
             </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <Rating precision={0.1} value={Number(averageRating.toFixed(1))} readOnly />
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {averageRating.toFixed(1)} ({reviews.length} review{reviews.length === 1 ? '' : 's'})
+              </Typography>
+            </Box>
             {reviews.length === 0 ? (
               <Typography color="text.secondary">No reviews yet.</Typography>
             ) : (
@@ -408,10 +418,10 @@ const VendorProfile: React.FC = () => {
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                      <span style={{ color: '#ff8c00', fontWeight: 700 }}>★</span>
+                      <Rating value={Number(review.rating || 0)} readOnly size="small" />
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>{review.rating}/5</Typography>
                     </Box>
-                    <Typography variant="body2">{review.comment}</Typography>
+                    <Typography variant="body2">{review.comment || 'No comment provided.'}</Typography>
                   </Paper>
                 ))}
               </Box>
@@ -560,3 +570,4 @@ const VendorProfile: React.FC = () => {
 }
 
 export default VendorProfile
+

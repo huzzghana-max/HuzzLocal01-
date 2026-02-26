@@ -36,6 +36,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import CloseIcon from '@mui/icons-material/Close'
 import ReceiptIcon from '@mui/icons-material/Receipt'
 import PeopleIcon from '@mui/icons-material/People'
+import ShareIcon from '@mui/icons-material/Share'
 import api from '../../api'
 import DashboardSidebar from '../../components/DashboardSidebar'
 import { StatCard, DashboardHeader } from '../../components/DashboardComponents'
@@ -98,6 +99,7 @@ const OrganizerDashboard: React.FC = () => {
   const [reviewSuccess, setReviewSuccess] = useState('')
   const [reviewError, setReviewError] = useState('')
   const [reviewedBookings, setReviewedBookings] = useState<number[]>([])
+  const [shareInfo, setShareInfo] = useState('')
   const [conversations, setConversations] = useState<Conversation[]>([])
   const conversationPollingRef = React.useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -162,7 +164,7 @@ const OrganizerDashboard: React.FC = () => {
       const fetchReviewed = async () => {
         try {
           if (!user?.id) return
-          const response = await api.get(`/reviews/${user.id}`)
+          const response = await api.get('/reviews/by-reviewer')
           // Only store booking ids that have been reviewed by this user
           setReviewedBookings(response.data.map((r: any) => r.booking_id))
         } catch (err) {
@@ -475,6 +477,18 @@ const OrganizerDashboard: React.FC = () => {
     navigate('/signin')
   }
 
+  const handleShareEvent = async (eventId: number) => {
+    const publicUrl = `${window.location.origin}/events/public/${eventId}`
+    try {
+      await navigator.clipboard.writeText(publicUrl)
+      setShareInfo('Public event link copied to clipboard.')
+      setTimeout(() => setShareInfo(''), 3000)
+    } catch {
+      setShareInfo(`Share this link: ${publicUrl}`)
+      setTimeout(() => setShareInfo(''), 6000)
+    }
+  }
+
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* Sidebar */}
@@ -562,6 +576,11 @@ const OrganizerDashboard: React.FC = () => {
               </Box>
             }
           />
+          {shareInfo && (
+            <Alert severity="info" sx={{ mb: 2 }} onClose={() => setShareInfo('')}>
+              {shareInfo}
+            </Alert>
+          )}
 
           {/* Loading State */}
           {loading ? (
@@ -676,6 +695,14 @@ const OrganizerDashboard: React.FC = () => {
                                 onClick={() => openTicketsDialog(event.id)}
                               >
                                 Manage Tickets
+                              </Button>
+                              <Button
+                                size="small"
+                                startIcon={<ShareIcon />}
+                                variant="outlined"
+                                onClick={() => handleShareEvent(event.id)}
+                              >
+                                Share
                               </Button>
                             </Box>
                           </TableCell>
@@ -797,48 +824,47 @@ const OrganizerDashboard: React.FC = () => {
                                   Leave Review
                                 </Button>
                               )}
-                            </TableCell>
-                                {/* Review Dialog */}
-                                <Dialog open={reviewDialogOpen} onClose={() => setReviewDialogOpen(false)} maxWidth="xs" fullWidth>
-                                  <DialogTitle>Leave a Review</DialogTitle>
-                                  <DialogContent sx={{ pt: 2 }}>
-                                    {reviewError && <Alert severity="error" sx={{ mb: 2 }}>{reviewError}</Alert>}
-                                    {reviewSuccess && <Alert severity="success" sx={{ mb: 2 }}>{reviewSuccess}</Alert>}
-                                    <Typography variant="subtitle1" sx={{ mb: 1 }}>
-                                      {reviewBooking?.service_title} — {reviewBooking?.vendor_name}
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                                      <Typography>Rating:</Typography>
-                                      <Rating
-                                        value={reviewRating}
-                                        onChange={(_, value) => setReviewRating(value)}
-                                        size="large"
-                                      />
-                                    </Box>
-                                    <TextField
-                                      label="Comment (optional)"
-                                      value={reviewComment}
-                                      onChange={e => setReviewComment(e.target.value)}
-                                      fullWidth
-                                      multiline
-                                      minRows={2}
-                                      maxRows={4}
-                                    />
-                                  </DialogContent>
-                                  <DialogActions>
-                                    <Button onClick={() => setReviewDialogOpen(false)} disabled={reviewSubmitting}>Cancel</Button>
-                                    <Button onClick={handleSubmitReview} variant="contained" disabled={reviewSubmitting || !reviewRating}>
-                                      {reviewSubmitting ? 'Submitting...' : 'Submit'}
-                                    </Button>
-                                  </DialogActions>
-                                </Dialog>
-                          </TableRow>
+                            </TableCell></TableRow>
                         ))}
                       </TableBody>
                     </Table>
                   </TableContainer>
                 )}
               </Box>
+                            {/* Review Dialog */}
+              <Dialog open={reviewDialogOpen} onClose={() => setReviewDialogOpen(false)} maxWidth="xs" fullWidth>
+                <DialogTitle>Leave a Review</DialogTitle>
+                <DialogContent sx={{ pt: 2 }}>
+                  {reviewError && <Alert severity="error" sx={{ mb: 2 }}>{reviewError}</Alert>}
+                  {reviewSuccess && <Alert severity="success" sx={{ mb: 2 }}>{reviewSuccess}</Alert>}
+                  <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                    {reviewBooking?.service_title} - {reviewBooking?.vendor_name}
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <Typography>Rating:</Typography>
+                    <Rating
+                      value={reviewRating}
+                      onChange={(_, value) => setReviewRating(value)}
+                      size="large"
+                    />
+                  </Box>
+                  <TextField
+                    label="Comment (optional)"
+                    value={reviewComment}
+                    onChange={e => setReviewComment(e.target.value)}
+                    fullWidth
+                    multiline
+                    minRows={2}
+                    maxRows={4}
+                  />
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={() => setReviewDialogOpen(false)} disabled={reviewSubmitting}>Cancel</Button>
+                  <Button onClick={handleSubmitReview} variant="contained" disabled={reviewSubmitting || !reviewRating}>
+                    {reviewSubmitting ? 'Submitting...' : 'Submit'}
+                  </Button>
+                </DialogActions>
+              </Dialog>
               <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ fontWeight: 600 }}>
                   {editingEventId ? 'Edit Event' : 'Create New Event'}
@@ -1081,3 +1107,4 @@ const OrganizerDashboard: React.FC = () => {
 }
 
 export default OrganizerDashboard
+

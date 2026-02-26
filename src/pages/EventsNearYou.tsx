@@ -11,6 +11,8 @@ import {
   Skeleton,
   Stack,
   Tooltip,
+  Chip,
+  Divider,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -24,6 +26,9 @@ import {
 import api from '../api'
 import PaystackPaymentModal from '../components/PaystackPaymentModal'
 import { useNavigate } from 'react-router-dom'
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
+import LocationOnIcon from '@mui/icons-material/LocationOn'
+import NearMeIcon from '@mui/icons-material/NearMe'
 
 type EventItem = {
   id: number
@@ -210,13 +215,28 @@ const EventsNearYou: React.FC = () => {
     )
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 4 }}>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        py: 4,
+        background:
+          'radial-gradient(circle at 0% -10%, rgba(93,214,44,0.14) 0%, transparent 42%), radial-gradient(circle at 100% 0%, rgba(51,116,24,0.12) 0%, transparent 38%)',
+      }}
+    >
       <Container maxWidth="lg">
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          justifyContent="space-between"
+          alignItems={{ xs: 'flex-start', md: 'center' }}
+          spacing={1.5}
+          sx={{ mb: 3 }}
+        >
           <Typography
             variant="h3"
             sx={{
-              fontWeight: 800,
+              fontWeight: 900,
+              letterSpacing: -0.6,
+              fontSize: { xs: '2rem', md: '2.6rem' },
               background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -233,11 +253,12 @@ const EventsNearYou: React.FC = () => {
                 onClick={() => window.location.reload()}
                 size="small"
                 sx={{
-                  color: '#0E3B26',
+                  color: 'primary.main',
                   fontWeight: 600,
-                  transition: 'all 0.3s ease',
+                  borderRadius: 2,
+                  transition: 'all 0.25s ease',
                   '&:hover': {
-                    backgroundColor: 'rgba(14, 59, 38, 0.08)',
+                    backgroundColor: 'action.hover',
                   },
                 }}
               >
@@ -261,71 +282,112 @@ const EventsNearYou: React.FC = () => {
                   height: '100%',
                   display: 'flex',
                   flexDirection: 'column',
-                  borderRadius: '16px',
+                  borderRadius: 3,
                   overflow: 'hidden',
-                  background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(244,247,246,0.95) 100%)',
-                  boxShadow: '0 4px 20px rgba(14, 59, 38, 0.1)',
-                  border: '1px solid rgba(184, 227, 197, 0.2)',
+                  backdropFilter: 'blur(6px)',
+                  background: 'linear-gradient(160deg, rgba(255,255,255,0.96) 0%, rgba(244,247,246,0.92) 100%)',
+                  boxShadow: '0 10px 26px rgba(14, 59, 38, 0.12)',
+                  border: '1px solid rgba(207,217,211,0.8)',
                   transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:hover': {
-                    boxShadow: '0 12px 32px rgba(14, 59, 38, 0.15)',
-                    transform: 'translateY(-8px)',
-                    border: '1px solid rgba(14, 59, 38, 0.2)',
+                    boxShadow: '0 18px 36px rgba(14, 59, 38, 0.18)',
+                    transform: 'translateY(-6px)',
+                    border: '1px solid rgba(14, 59, 38, 0.28)',
                   },
                 }}
               >
-                {ev.image_url ? (
-                  <CardMedia component="img" height={180} image={ev.image_url} alt={ev.name} />
-                ) : (
-                  <Skeleton variant="rectangular" height={180} />
-                )}
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Stack spacing={0.5}>
+                <Box sx={{ position: 'relative' }}>
+                  {ev.image_url ? (
+                    <CardMedia component="img" height={180} image={ev.image_url} alt={ev.name} />
+                  ) : (
+                    <Skeleton variant="rectangular" height={180} />
+                  )}
+                  <Chip
+                    icon={<CalendarMonthIcon sx={{ fontSize: 16 }} />}
+                    label={new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(ev.date))}
+                    size="small"
+                    sx={{
+                      position: 'absolute',
+                      left: 12,
+                      bottom: 12,
+                      bgcolor: 'rgba(255,255,255,0.95)',
+                      fontWeight: 700,
+                      border: '1px solid rgba(14,59,38,0.16)',
+                    }}
+                  />
+                </Box>
+                <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+                  <Stack spacing={0.8}>
                     <Typography
                       variant="h6"
                       sx={{
                         fontWeight: 700,
                         color: '#0E3B26',
+                        lineHeight: 1.2,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
                       }}
-                      noWrap
                     >
                       {ev.name}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
                       {new Intl.DateTimeFormat(undefined, {
-                        dateStyle: 'medium',
-                        timeStyle: 'short',
+                        weekday: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
                       }).format(new Date(ev.date))}
                     </Typography>
-                    {ev.location && (
-                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                        {ev.location}
-                      </Typography>
-                    )}
-                    {ev._distance != null && (
-                      <Typography
-                        variant="caption"
+                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                      <Chip
+                        size="small"
+                        icon={<LocationOnIcon sx={{ fontSize: 16 }} />}
+                        label={ev.location || 'Location TBD'}
+                        variant="outlined"
                         sx={{
-                          color: '#1B5E3C',
-                          fontWeight: 600,
-                          display: 'inline-block',
-                          mt: 0.5,
+                          maxWidth: '100%',
+                          borderColor: 'divider',
+                          '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' },
+                        }}
+                      />
+                      {ev._distance != null && (
+                        <Chip
+                          size="small"
+                          icon={<NearMeIcon sx={{ fontSize: 15 }} />}
+                          label={`${(ev._distance as number).toFixed(1)} km away`}
+                          color="success"
+                          variant="outlined"
+                        />
+                      )}
+                    </Stack>
+                    {ev.description && (
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                          lineHeight: 1.45,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
                         }}
                       >
-                        📍 {(ev._distance as number).toFixed(1)} km away
+                        {ev.description}
                       </Typography>
                     )}
                   </Stack>
-                  <Box sx={{ display: 'flex', gap: 1, mt: 2.5, flexWrap: 'wrap' }}>
+                  <Divider sx={{ mt: 'auto' }} />
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mt: 0.6 }}>
                     <Button
                       variant="contained"
                       size="small"
                       onClick={() => navigate(`/events/${ev.id}`)}
                       sx={{
-                        background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+                        background: 'linear-gradient(135deg, #145A45 0%, #0F4333 100%)',
                         fontWeight: 700,
                         textTransform: 'none',
-                        borderRadius: '8px',
+                        borderRadius: 2,
                         transition: 'all 0.3s ease',
                         '&:hover': {
                           boxShadow: '0 4px 12px rgba(14, 59, 38, 0.3)',
@@ -344,7 +406,7 @@ const EventsNearYou: React.FC = () => {
                         color: '#0E3B26',
                         fontWeight: 600,
                         textTransform: 'none',
-                        borderRadius: '8px',
+                        borderRadius: 2,
                         border: '2px solid',
                         transition: 'all 0.3s ease',
                         '&:hover': {

@@ -225,6 +225,14 @@ function App() {
             }
           />
           <Route
+            path="/events/public/:eventId"
+            element={
+              <LayoutWithNavbar>
+                <EventDetail />
+              </LayoutWithNavbar>
+            }
+          />
+          <Route
             path="/about"
             element={
               <LayoutWithNavbar>
