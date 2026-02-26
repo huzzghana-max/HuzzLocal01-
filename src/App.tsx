@@ -23,6 +23,7 @@ import VendorProfile from './pages/VendorProfile'
 import Messaging from './pages/Messaging'
 import Settings from './pages/Settings'
 import VendorServices from './pages/VendorServices'
+import VendorAvailabilityCalendar from './pages/VendorAvailabilityCalendar'
 import Support from './pages/Support'
 import TicketListPage from './pages/TicketListPage'
 import TicketDetail from './pages/TicketDetail'
@@ -144,6 +145,14 @@ function App() {
             element={
               <ProtectedRoute requiredRole="provider">
                 <VendorServices />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor-availability"
+            element={
+              <ProtectedRoute requiredRole="provider">
+                <VendorAvailabilityCalendar />
               </ProtectedRoute>
             }
           />

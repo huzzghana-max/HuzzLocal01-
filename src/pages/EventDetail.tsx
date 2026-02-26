@@ -19,6 +19,7 @@ import {
 } from '@mui/material'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../api'
+import PaystackPaymentModal from '../components/PaystackPaymentModal'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import LocationOnIcon from '@mui/icons-material/LocationOn'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
@@ -45,6 +46,10 @@ const EventDetail: React.FC = () => {
   const [processing, setProcessing] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [paymentOpen, setPaymentOpen] = useState(false)
+  const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null)
+  const [paymentAmount, setPaymentAmount] = useState(0)
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
   const fetchEventDetails = async () => {
     try {
@@ -78,24 +83,58 @@ const EventDetail: React.FC = () => {
       navigate('/')
       return
     }
+    
+    // Load current user
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      try {
+        setCurrentUser(JSON.parse(userStr))
+      } catch (e) {
+        console.error('Failed to parse user:', e)
+      }
+    }
+    
     fetchEventDetails()
   }, [eventId, navigate])
 
-  const handlePurchase = async (ticketId: number) => {
+  const handlePurchase = (ticketId: number) => {
+    if (!currentUser) {
+      setError('Please login to purchase tickets')
+      navigate('/signin')
+      return
+    }
+
+    const ticket = tickets.find(t => t.id === ticketId)
+    if (!ticket) return
+
+    const qty = qtyMap[ticketId] || 1
+    const totalAmount = (ticket.price || 0) * qty
+
+    setSelectedTicketId(ticketId)
+    setPaymentAmount(totalAmount)
+    setPaymentOpen(true)
+  }
+
+  const handlePaymentSuccess = async (reference: string) => {
     try {
       setProcessing(true)
-      const qty = qtyMap[ticketId] || 1
+      const qty = qtyMap[selectedTicketId!] || 1
+      
+      // Complete purchase after payment verification
       const resp = await api.post(`/events/${eventId}/purchase`, {
-        ticket_id: ticketId,
+        ticket_id: selectedTicketId,
         quantity: qty,
-        payment_method: 'offline',
+        payment_method: 'paystack',
+        payment_reference: reference,
       })
-      setMessage(`Purchase successful — ${resp.data.transactionId} — $${resp.data.amount}`)
+      
+      setMessage(`Purchase successful — ${resp.data.transactionId} — ₵${resp.data.amount}`)
+      setPaymentOpen(false)
       fetchEventDetails()
       setTimeout(() => setMessage(''), 4000)
     } catch (err: any) {
-      console.error('Purchase failed', err)
-      setError(err.response?.data?.message || 'Purchase failed')
+      console.error('Purchase completion failed', err)
+      setError(err.response?.data?.message || 'Failed to complete purchase')
       setTimeout(() => setError(''), 4000)
     } finally {
       setProcessing(false)
@@ -432,6 +471,26 @@ const EventDetail: React.FC = () => {
             </Box>
           )}
         </Box>
+
+        {/* Paystack Payment Modal */}
+        <PaystackPaymentModal
+          open={paymentOpen}
+          amount={paymentAmount}
+          email={currentUser?.email || ''}
+          title="Purchase Event Ticket"
+          description={`Complete your purchase for ${event?.name}`}
+          metadata={{
+            eventId: event?.id,
+            ticketId: selectedTicketId,
+            eventName: event?.name,
+          }}
+          onSuccess={handlePaymentSuccess}
+          onClose={() => setPaymentOpen(false)}
+          onError={(err) => {
+            setError(`Payment error: ${err.message}`)
+            setTimeout(() => setError(''), 4000)
+          }}
+        />
       </Container>
     </Box>
   )

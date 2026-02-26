@@ -99,6 +99,35 @@ async function getServiceBookingsOwnerColumn(pool) {
   return serviceBookingsOwnerColumnCache
 }
 
+function pad2(value) {
+  return String(value).padStart(2, '0')
+}
+
+function formatDateOnly(date) {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`
+}
+
+function toDateOnly(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return formatDateOnly(date)
+}
+
+function normalizeRange(fromRaw, toRaw, fallbackDays = 90) {
+  const now = new Date()
+  const from = new Date(fromRaw || now)
+  const to = new Date(toRaw || now)
+
+  if (Number.isNaN(from.getTime())) return null
+  if (Number.isNaN(to.getTime())) to.setDate(from.getDate() + fallbackDays)
+  if (!toRaw) to.setDate(from.getDate() + fallbackDays)
+
+  from.setHours(0, 0, 0, 0)
+  to.setHours(23, 59, 59, 999)
+
+  return { from, to }
+}
+
 async function sendTicketPurchaseEmail({
   pool,
   buyerId,
@@ -687,6 +716,260 @@ app.get('/api/approved-services', async (req, res) => {
     res.json(services)
   } catch (error) {
     console.error('Get approved services error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+// Public vendor availability calendar summary (used by booking UI)
+app.get('/api/vendors/:vendorId/availability-calendar', async (req, res) => {
+  try {
+    const vendorId = parseInt(req.params.vendorId, 10)
+    if (!vendorId) return res.status(400).json({ message: 'Invalid vendorId' })
+
+    const range = normalizeRange(req.query.from, req.query.to, 90)
+    if (!range) return res.status(400).json({ message: 'Invalid date range' })
+
+    const pool = getPoolOrThrow()
+    const serviceBookingOwnerColumn = await getServiceBookingsOwnerColumn(pool)
+    const from = formatDateOnly(range.from)
+    const to = formatDateOnly(range.to)
+
+    const [bookings] = await pool.execute(
+      `SELECT id, booking_date
+       FROM service_bookings
+       WHERE ${serviceBookingOwnerColumn} = ?
+         AND status IN ('pending', 'confirmed')
+         AND DATE(booking_date) BETWEEN ? AND ?`,
+      [vendorId, from, to],
+    )
+
+    const [blocks] = await pool.execute(
+      `SELECT id, start_at, end_at, source, source_ref, notes
+       FROM vendor_availability_blocks
+       WHERE vendor_id = ?
+         AND status = 'active'
+         AND DATE(start_at) <= ?
+         AND DATE(end_at) >= ?
+       ORDER BY start_at ASC`,
+      [vendorId, to, from],
+    )
+
+    const blockedDateSet = new Set()
+    bookings.forEach((b) => {
+      const day = toDateOnly(b.booking_date)
+      if (day) blockedDateSet.add(day)
+    })
+    blocks.forEach((b) => {
+      const start = new Date(b.start_at)
+      const end = new Date(b.end_at)
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return
+      const cursor = new Date(start)
+      cursor.setHours(0, 0, 0, 0)
+      const endDay = new Date(end)
+      endDay.setHours(0, 0, 0, 0)
+      while (cursor <= endDay) {
+        blockedDateSet.add(formatDateOnly(cursor))
+        cursor.setDate(cursor.getDate() + 1)
+      }
+    })
+
+    res.json({
+      vendorId,
+      from,
+      to,
+      blockedDates: Array.from(blockedDateSet).sort(),
+      slots: blocks,
+    })
+  } catch (error) {
+    console.error('Get vendor availability calendar error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+// Provider: get own manual/calendar blocks
+app.get('/api/vendor/availability-blocks', verifyToken, async (req, res) => {
+  try {
+    const vendorId = req.userId
+    const range = normalizeRange(req.query.from, req.query.to, 120)
+    if (!range) return res.status(400).json({ message: 'Invalid date range' })
+    const pool = getPoolOrThrow()
+    const from = formatDateOnly(range.from)
+    const to = formatDateOnly(range.to)
+
+    const [blocks] = await pool.execute(
+      `SELECT id, vendor_id, start_at, end_at, source, source_ref, status, notes, created_at, updated_at
+       FROM vendor_availability_blocks
+       WHERE vendor_id = ?
+         AND DATE(start_at) <= ?
+         AND DATE(end_at) >= ?
+       ORDER BY start_at ASC`,
+      [vendorId, to, from],
+    )
+
+    res.json(blocks)
+  } catch (error) {
+    console.error('Get vendor availability blocks error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+// Provider: create manual/calendar sync block
+app.post('/api/vendor/availability-blocks', verifyToken, async (req, res) => {
+  try {
+    const vendorId = req.userId
+    const { start_at, end_at, notes, source = 'manual', source_ref = null } = req.body
+    if (!start_at || !end_at) return res.status(400).json({ message: 'start_at and end_at are required' })
+
+    const start = new Date(start_at)
+    const end = new Date(end_at)
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return res.status(400).json({ message: 'Invalid start_at or end_at value' })
+    }
+    if (start > end) return res.status(400).json({ message: 'start_at must be before end_at' })
+
+    const normalizedSource = ['manual', 'calendar_sync', 'booking'].includes(String(source))
+      ? String(source)
+      : 'manual'
+
+    const pool = getPoolOrThrow()
+    const [result] = await pool.execute(
+      `INSERT INTO vendor_availability_blocks (vendor_id, start_at, end_at, source, source_ref, status, notes)
+       VALUES (?, ?, ?, ?, ?, 'active', ?)`,
+      [vendorId, start, end, normalizedSource, source_ref, notes || null],
+    )
+
+    res.status(201).json({
+      message: 'Availability block created',
+      id: result.insertId,
+      vendor_id: vendorId,
+      start_at: start,
+      end_at: end,
+      source: normalizedSource,
+      source_ref,
+      status: 'active',
+      notes: notes || null,
+    })
+  } catch (error) {
+    console.error('Create vendor availability block error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+// Provider: bulk sync external busy slots (e.g., Google/Outlook worker output)
+app.post('/api/vendor/availability-blocks/sync', verifyToken, async (req, res) => {
+  try {
+    const vendorId = req.userId
+    const {
+      source = 'google',
+      replace = false,
+      blocks = [],
+    } = req.body || {}
+
+    if (!Array.isArray(blocks)) {
+      return res.status(400).json({ message: 'blocks must be an array' })
+    }
+    if (blocks.length > 1000) {
+      return res.status(400).json({ message: 'blocks payload too large (max 1000)' })
+    }
+
+    const safeSource = String(source || 'google').slice(0, 32)
+    const pool = getPoolOrThrow()
+
+    let created = 0
+    let updated = 0
+    let skipped = 0
+    const activeRefs = []
+
+    for (const block of blocks) {
+      const start = new Date(block?.start_at)
+      const end = new Date(block?.end_at)
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) {
+        skipped += 1
+        continue
+      }
+
+      const externalIdRaw = block?.external_id != null ? String(block.external_id) : ''
+      const fallbackId = `${start.toISOString()}_${end.toISOString()}`
+      const sourceRef = `calendar_sync:${safeSource}:${(externalIdRaw || fallbackId).slice(0, 120)}`
+      const notes = block?.summary ? String(block.summary).slice(0, 2000) : null
+      activeRefs.push(sourceRef)
+
+      const [existing] = await pool.execute(
+        `SELECT id
+         FROM vendor_availability_blocks
+         WHERE vendor_id = ? AND source = 'calendar_sync' AND source_ref = ?
+         LIMIT 1`,
+        [vendorId, sourceRef],
+      )
+
+      if (existing.length > 0) {
+        await pool.execute(
+          `UPDATE vendor_availability_blocks
+           SET start_at = ?, end_at = ?, notes = ?, status = 'active'
+           WHERE id = ?`,
+          [start, end, notes, existing[0].id],
+        )
+        updated += 1
+      } else {
+        await pool.execute(
+          `INSERT INTO vendor_availability_blocks (vendor_id, start_at, end_at, source, source_ref, status, notes)
+           VALUES (?, ?, ?, 'calendar_sync', ?, 'active', ?)`,
+          [vendorId, start, end, sourceRef, notes],
+        )
+        created += 1
+      }
+    }
+
+    if (replace === true) {
+      if (activeRefs.length > 0) {
+        const placeholders = activeRefs.map(() => '?').join(', ')
+        await pool.execute(
+          `UPDATE vendor_availability_blocks
+           SET status = 'cancelled'
+           WHERE vendor_id = ?
+             AND source = 'calendar_sync'
+             AND source_ref NOT IN (${placeholders})`,
+          [vendorId, ...activeRefs],
+        )
+      } else {
+        await pool.execute(
+          `UPDATE vendor_availability_blocks
+           SET status = 'cancelled'
+           WHERE vendor_id = ? AND source = 'calendar_sync'`,
+          [vendorId],
+        )
+      }
+    }
+
+    res.json({
+      message: 'Availability sync completed',
+      source: safeSource,
+      replace: Boolean(replace),
+      counts: { created, updated, skipped, received: blocks.length },
+    })
+  } catch (error) {
+    console.error('Sync vendor availability blocks error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+// Provider: cancel availability block
+app.delete('/api/vendor/availability-blocks/:id', verifyToken, async (req, res) => {
+  try {
+    const blockId = parseInt(req.params.id, 10)
+    const vendorId = req.userId
+    if (!blockId) return res.status(400).json({ message: 'Invalid block id' })
+    const pool = getPoolOrThrow()
+    const [result] = await pool.execute(
+      `UPDATE vendor_availability_blocks
+       SET status = 'cancelled'
+       WHERE id = ? AND vendor_id = ?`,
+      [blockId, vendorId],
+    )
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Block not found' })
+    res.json({ message: 'Availability block cancelled' })
+  } catch (error) {
+    console.error('Cancel vendor availability block error:', error.message)
     res.status(500).json({ message: error.message })
   }
 })
@@ -2087,6 +2370,39 @@ app.post('/api/service-bookings', verifyToken, async (req, res) => {
     }
 
     const serviceOwnerId = serviceData[0].service_owner_id
+    const requestedDay = toDateOnly(booking_date)
+    if (!requestedDay) {
+      return res.status(400).json({ message: 'Invalid booking date format' })
+    }
+
+    // Prevent booking on days already blocked by existing bookings
+    const [existingBookings] = await pool.execute(
+      `SELECT id
+       FROM service_bookings
+       WHERE ${serviceBookingOwnerColumn} = ?
+         AND status IN ('pending', 'confirmed')
+         AND DATE(booking_date) = ?
+       LIMIT 1`,
+      [serviceOwnerId, requestedDay],
+    )
+    if (existingBookings.length > 0) {
+      return res.status(409).json({ message: 'Vendor is already booked for the selected date' })
+    }
+
+    // Prevent booking on blocked dates from manual/external availability sync
+    const [blockedSlots] = await pool.execute(
+      `SELECT id
+       FROM vendor_availability_blocks
+       WHERE vendor_id = ?
+         AND status = 'active'
+         AND DATE(start_at) <= ?
+         AND DATE(end_at) >= ?
+       LIMIT 1`,
+      [serviceOwnerId, requestedDay, requestedDay],
+    )
+    if (blockedSlots.length > 0) {
+      return res.status(409).json({ message: 'Vendor is unavailable on the selected date' })
+    }
 
     // Create booking
     const [result] = await pool.execute(
@@ -2095,10 +2411,24 @@ app.post('/api/service-bookings', verifyToken, async (req, res) => {
       [service_id, serviceOwnerId, organizer_id, booking_date, notes || null]
     )
 
-    console.log(`Service booking created: ID ${result.insertId} for service ${service_id}`)
+    // Auto-create booking hold in availability calendar
+    const bookingId = result.insertId
+    await pool.execute(
+      `INSERT INTO vendor_availability_blocks (vendor_id, start_at, end_at, source, source_ref, status, notes)
+       VALUES (?, ?, ?, 'booking', ?, 'active', ?)`,
+      [
+        serviceOwnerId,
+        `${requestedDay} 00:00:00`,
+        `${requestedDay} 23:59:59`,
+        `service_booking:${bookingId}`,
+        'Auto-synced from booking',
+      ],
+    )
+
+    console.log(`Service booking created: ID ${bookingId} for service ${service_id}`)
     res.status(201).json({ 
       message: 'Service booking created successfully',
-      bookingId: result.insertId 
+      bookingId,
     })
   } catch (error) {
     console.error('Create booking error:', error.message)
@@ -2198,6 +2528,15 @@ app.put('/api/service-bookings/:bookingId', verifyToken, async (req, res) => {
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: 'Booking not found' })
+    }
+
+    if (status === 'cancelled' || status === 'rejected') {
+      await pool.execute(
+        `UPDATE vendor_availability_blocks
+         SET status = 'cancelled'
+         WHERE source = 'booking' AND source_ref = ?`,
+        [`service_booking:${bookingId}`],
+      )
     }
 
     console.log(`Booking ${bookingId} status updated to ${status}`)

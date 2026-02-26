@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS payments (
   user_id INT NOT NULL,
   amount DECIMAL(12, 2) NOT NULL,
   amount_paid DECIMAL(12, 2),
-  currency VARCHAR(3) DEFAULT 'NGN',
+  currency VARCHAR(3) DEFAULT 'GHS',
   status ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending',
   payment_method VARCHAR(50) DEFAULT 'paystack',
   reference VARCHAR(255) UNIQUE NOT NULL,

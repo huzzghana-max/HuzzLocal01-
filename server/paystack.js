@@ -6,6 +6,7 @@
 const Paystack = require('paystack')
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY
+const PAYSTACK_CURRENCY = (process.env.PAYSTACK_CURRENCY || 'GHS').toUpperCase()
 
 if (!PAYSTACK_SECRET_KEY) {
   console.warn('WARNING: PAYSTACK_SECRET_KEY not configured')
@@ -17,7 +18,7 @@ const paystack = new Paystack(PAYSTACK_SECRET_KEY, { timeout: 10000 })
 /**
  * Initialize a Paystack transaction
  * @param {string} email - Customer email
- * @param {number} amount - Amount in Naira (will be converted to kobo)
+ * @param {number} amount - Amount in major unit (e.g. GHS, NGN)
  * @param {Object} metadata - Additional metadata
  * @returns {Promise<Object>} - Transaction details with authorization URL
  */
@@ -25,7 +26,8 @@ async function initializePaystackTransaction(email, amount, metadata = {}) {
   try {
     const response = await paystack.transaction.initialize({
       email,
-      amount: Math.round(amount * 100), // Convert Naira to kobo
+      amount: Math.round(amount * 100), // Convert major currency unit to smallest unit
+      currency: PAYSTACK_CURRENCY,
       metadata,
     })
 
@@ -39,6 +41,7 @@ async function initializePaystackTransaction(email, amount, metadata = {}) {
       authorizationUrl: response.data.authorization_url,
       accessCode: response.data.access_code,
       amount: response.data.amount,
+      currency: response.data.currency,
       message: response.message,
     }
   } catch (error) {
@@ -122,7 +125,7 @@ async function fetchTransaction(id) {
 /**
  * Create recurring payment (subscription)
  * @param {string} email - Customer email
- * @param {number} amount - Amount in Naira (will be converted to kobo)
+ * @param {number} amount - Amount in major unit (e.g. GHS, NGN)
  * @param {string} authorizationCode - Authorization code from previous payment
  * @param {string} reference - Unique reference for this transaction
  * @returns {Promise<Object>} - Charge result
@@ -132,6 +135,7 @@ async function chargeAuthorization(email, amount, authorizationCode, reference) 
     const response = await paystack.transaction.chargeAuthorization({
       email,
       amount: Math.round(amount * 100),
+      currency: PAYSTACK_CURRENCY,
       authorization_code: authorizationCode,
       reference,
     })
@@ -150,7 +154,7 @@ async function chargeAuthorization(email, amount, authorizationCode, reference) 
 /**
  * Refund a transaction
  * @param {number|string} reference - Transaction reference
- * @param {number} amount - Optional: Amount to refund in kobo (partial refund)
+ * @param {number} amount - Optional: Amount to refund in Paystack's smallest unit (partial refund)
  * @returns {Promise<Object>} - Refund result
  */
 async function refundTransaction(reference, amount = null) {

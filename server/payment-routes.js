@@ -12,6 +12,7 @@ const {
 } = require('./paystack');
 
 const router = express.Router();
+const PAYSTACK_CURRENCY = (process.env.PAYSTACK_CURRENCY || 'GHS').toUpperCase();
 
 /**
  * POST /api/payments/paystack/initialize
@@ -39,7 +40,7 @@ router.post('/paystack/initialize', verifyToken, async (req, res) => {
       ...metadata,
     };
 
-    // Initialize Paystack transaction (amount in Naira)
+    // Initialize Paystack transaction (amount in configured merchant currency)
     const paystackResponse = await initializePaystackTransaction(
       email,
       amount,
@@ -53,8 +54,8 @@ router.post('/paystack/initialize', verifyToken, async (req, res) => {
       
       await pool.execute(
         `INSERT INTO payments (user_id, amount, currency, status, payment_method, reference, metadata)
-         VALUES (?, ?, 'NGN', 'pending', 'paystack', ?, ?)`,
-        [userId, amount, reference, JSON.stringify(paymentMetadata)]
+         VALUES (?, ?, ?, 'pending', 'paystack', ?, ?)`,
+        [userId, amount, PAYSTACK_CURRENCY, reference, JSON.stringify(paymentMetadata)]
       );
     } catch (dbError) {
       console.error('Failed to store payment record:', dbError);
@@ -66,7 +67,8 @@ router.post('/paystack/initialize', verifyToken, async (req, res) => {
       reference: paystackResponse.reference,
       authorizationUrl: paystackResponse.authorizationUrl,
       accessCode: paystackResponse.accessCode,
-      amount: paystackResponse.amount, // In kobo
+      amount: paystackResponse.amount, // In smallest currency unit
+      currency: paystackResponse.currency || PAYSTACK_CURRENCY,
     });
   } catch (error) {
     console.error('Payment initialization error:', error);
@@ -101,13 +103,13 @@ router.get('/paystack/verify/:reference', verifyToken, async (req, res) => {
     try {
       const pool = getPool();
       const status = paystackResponse.status === 'success' ? 'completed' : 'failed';
-      const amountPaidNaira = paystackResponse.amountPaid ? paystackResponse.amountPaid / 100 : 0;
+      const amountPaidMajor = paystackResponse.amountPaid ? paystackResponse.amountPaid / 100 : 0;
       
       await pool.execute(
         `UPDATE payments 
          SET status = ?, amount_paid = ?, verified_at = NOW() 
          WHERE reference = ? AND user_id = ?`,
-        [status, amountPaidNaira, reference, userId]
+        [status, amountPaidMajor, reference, userId]
       );
     } catch (dbError) {
       console.error('Failed to update payment record:', dbError);
@@ -117,8 +119,8 @@ router.get('/paystack/verify/:reference', verifyToken, async (req, res) => {
       success: true,
       status: paystackResponse.status,
       reference: paystackResponse.reference,
-      amountKobo: paystackResponse.amount,
-      amountNaira: paystackResponse.amount / 100,
+      amountSmallestUnit: paystackResponse.amount,
+      amountMajor: paystackResponse.amount / 100,
       currency: paystackResponse.currency,
       paidAt: paystackResponse.paidAt,
     });
@@ -178,7 +180,7 @@ router.post('/paystack/webhook', async (req, res) => {
 
         if (payment.length > 0) {
           const paymentRecord = payment[0];
-          console.log(`Payment completed: ${reference}, Amount: ${amount / 100} NGN`);
+          console.log(`Payment completed: ${reference}, Amount: ${amount / 100} ${PAYSTACK_CURRENCY}`);
           
           // Trigger any post-payment actions here
           // e.g., create booking, send confirmation email, etc.

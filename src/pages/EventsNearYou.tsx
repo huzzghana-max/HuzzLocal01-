@@ -22,6 +22,7 @@ import {
   MenuItem,
 } from '@mui/material'
 import api from '../api'
+import PaystackPaymentModal from '../components/PaystackPaymentModal'
 import { useNavigate } from 'react-router-dom'
 
 type EventItem = {

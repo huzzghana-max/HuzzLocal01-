@@ -34,6 +34,7 @@ import PaymentIcon from '@mui/icons-material/Payment'
 import MenuIcon from '@mui/icons-material/Menu'
 import CloseIcon from '@mui/icons-material/Close'
 import HelpIcon from '@mui/icons-material/Help'
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
 
 interface SidebarItem {
   label: string
@@ -255,6 +256,11 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             label: 'Portfolio',
             icon: <EventIcon />,
             path: '/vendor-services',
+          },
+          {
+            label: 'Availability Calendar',
+            icon: <CalendarMonthIcon />,
+            path: '/vendor-availability',
           },
           {
             label: 'Earnings',

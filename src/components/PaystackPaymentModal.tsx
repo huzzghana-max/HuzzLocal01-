@@ -21,10 +21,11 @@ import {
 import PaymentIcon from '@mui/icons-material/Payment'
 import { PaystackButton } from 'react-paystack'
 import { getErrorMessage, logError } from '../utils/errorHandler'
+import API_CONFIG from '../config/api.config'
 
 interface PaystackPaymentModalProps {
   open: boolean
-  amount: number // Amount in Naira
+  amount: number // Amount in major currency unit (e.g. GHS, NGN)
   email: string
   onClose: () => void
   onSuccess: (reference: string) => void
@@ -51,6 +52,7 @@ const PaystackPaymentModal: React.FC<PaystackPaymentModalProps> = ({
   const [phone, setPhone] = useState('')
 
   const publicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY
+  const currency = (import.meta.env.VITE_PAYSTACK_CURRENCY || 'GHS').toUpperCase()
 
   if (!publicKey) {
     return (
@@ -64,11 +66,12 @@ const PaystackPaymentModal: React.FC<PaystackPaymentModalProps> = ({
     )
   }
 
-  const transformedAmount = Math.round(amount * 100) // Convert to kobo
+  const transformedAmount = Math.round(amount * 100) // Convert to Paystack smallest unit
 
   const paystackConfig = {
     email,
     amount: transformedAmount,
+    currency,
     publicKey,
     metadata: {
       custom_fields: [
@@ -90,7 +93,6 @@ const PaystackPaymentModal: React.FC<PaystackPaymentModalProps> = ({
   const handlePaymentSuccess = (reference: any) => {
     setLoading(false)
     try {
-      // Verify payment on backend
       verifyPayment(reference.reference)
     } catch (err) {
       const errorMsg = getErrorMessage(err)
@@ -107,20 +109,32 @@ const PaystackPaymentModal: React.FC<PaystackPaymentModalProps> = ({
   const verifyPayment = async (reference: string) => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`/api/payments/paystack/verify/${reference}`, {
+      const response = await fetch(`${API_CONFIG.baseURL}/payments/paystack/verify/${encodeURIComponent(reference)}`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
           'Content-Type': 'application/json',
         },
       })
 
-      const data = await response.json()
+      const rawBody = await response.text()
+      let data: any = null
+
+      try {
+        data = rawBody ? JSON.parse(rawBody) : {}
+      } catch {
+        throw new Error(
+          'Payment verification returned a non-JSON response. Check VITE_API_BASE_URL and backend routing.',
+        )
+      }
+
+      if (!response.ok) {
+        throw new Error(data?.message || `Payment verification failed (${response.status})`)
+      }
 
       if (data.success && data.status === 'success') {
         onSuccess(reference)
         onClose()
-        // Reset form
         setFullName('')
         setPhone('')
         setError(null)
@@ -164,7 +178,6 @@ const PaystackPaymentModal: React.FC<PaystackPaymentModalProps> = ({
 
       <DialogContent>
         <Stack spacing={2.5}>
-          {/* Payment Summary */}
           <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
             <Stack spacing={1}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -172,7 +185,7 @@ const PaystackPaymentModal: React.FC<PaystackPaymentModalProps> = ({
                   Amount
                 </Typography>
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                  ₦{amount.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {currency} {amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Typography>
               </Box>
               <Typography variant="caption" color="text.secondary">
@@ -183,10 +196,8 @@ const PaystackPaymentModal: React.FC<PaystackPaymentModalProps> = ({
 
           <Divider />
 
-          {/* Error Alert */}
           {error && <Alert severity="error">{error}</Alert>}
 
-          {/* Email (Read-only) */}
           <TextField
             fullWidth
             label="Email Address"
@@ -196,7 +207,6 @@ const PaystackPaymentModal: React.FC<PaystackPaymentModalProps> = ({
             size="small"
           />
 
-          {/* Full Name */}
           <TextField
             fullWidth
             label="Full Name"
@@ -208,7 +218,6 @@ const PaystackPaymentModal: React.FC<PaystackPaymentModalProps> = ({
             required
           />
 
-          {/* Phone Number */}
           <TextField
             fullWidth
             label="Phone Number"
@@ -220,9 +229,8 @@ const PaystackPaymentModal: React.FC<PaystackPaymentModalProps> = ({
             required
           />
 
-          {/* Security Info */}
           <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
-            🔒 Your payment information is secure and encrypted by Paystack
+            Your payment information is secure and encrypted by Paystack
           </Typography>
         </Stack>
       </DialogContent>
@@ -238,7 +246,7 @@ const PaystackPaymentModal: React.FC<PaystackPaymentModalProps> = ({
             onSuccess={handlePaymentSuccess}
             onClose={handlePaymentClose}
             className="paystack-button"
-            text={`Pay ₦${amount.toLocaleString()}`}
+            text={`Pay ${currency} ${amount.toLocaleString()}`}
           />
         ) : (
           <Button
@@ -247,7 +255,7 @@ const PaystackPaymentModal: React.FC<PaystackPaymentModalProps> = ({
             startIcon={loading ? <CircularProgress size={20} /> : undefined}
             onClick={handleInitiate}
           >
-            {loading ? 'Processing...' : `Pay ₦${amount.toLocaleString()}`}
+            {loading ? 'Processing...' : `Pay ${currency} ${amount.toLocaleString()}`}
           </Button>
         )}
       </DialogActions>

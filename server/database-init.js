@@ -185,6 +185,26 @@ async function initializeDatabase() {
     `);
     console.log('  ✓ service_bookings table');
 
+    // Vendor availability calendar blocks (manual + external calendar sync + booking holds)
+    await connection.execute(`
+      CREATE TABLE vendor_availability_blocks (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        vendor_id INT NOT NULL,
+        start_at DATETIME NOT NULL,
+        end_at DATETIME NOT NULL,
+        source ENUM('manual', 'calendar_sync', 'booking') DEFAULT 'manual',
+        source_ref VARCHAR(191),
+        status ENUM('active', 'cancelled') DEFAULT 'active',
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (vendor_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_vendor_time (vendor_id, start_at, end_at),
+        INDEX idx_source_ref (source_ref)
+      )
+    `);
+    console.log('  ✓ vendor_availability_blocks table');
+
     // Messages table
     await connection.execute(`
       CREATE TABLE messages (

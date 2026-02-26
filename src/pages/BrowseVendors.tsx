@@ -52,6 +52,8 @@ import api from '../api'
 
 interface Vendor {
   id: number
+  vendor_id?: number
+  user_id?: number
   name: string
   service_type?: string
   business_name?: string
@@ -92,6 +94,8 @@ const BrowseVendors: React.FC = () => {
   const [bookingNotes, setBookingNotes] = useState('')
   const [bookingLoading, setBookingLoading] = useState(false)
   const [bookingMessage, setBookingMessage] = useState({ type: '', text: '' })
+  const [availabilityLoading, setAvailabilityLoading] = useState(false)
+  const [blockedDates, setBlockedDates] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [sortBy, setSortBy] = useState<'rating' | 'price' | 'name'>('rating')
 
@@ -176,10 +180,38 @@ const BrowseVendors: React.FC = () => {
     setSelectedVendor(null)
   }
 
-  const handleBookClick = () => {
+  const fetchVendorAvailability = async (vendor: Vendor) => {
+    try {
+      setAvailabilityLoading(true)
+      const vendorId = vendor.vendor_id || vendor.user_id
+      if (!vendorId) {
+        setBlockedDates([])
+        return
+      }
+      const from = new Date().toISOString().split('T')[0]
+      const toDate = new Date()
+      toDate.setDate(toDate.getDate() + 120)
+      const to = toDate.toISOString().split('T')[0]
+      const response = await api.get(`/vendors/${vendorId}/availability-calendar`, {
+        params: { from, to },
+      })
+      const dates = Array.isArray(response.data?.blockedDates) ? response.data.blockedDates : []
+      setBlockedDates(dates)
+    } catch (error) {
+      console.error('Failed to fetch vendor availability:', error)
+      setBlockedDates([])
+    } finally {
+      setAvailabilityLoading(false)
+    }
+  }
+
+  const handleBookClick = async () => {
     setOpenDetailDialog(false)
     setOpenBookingDialog(true)
     setBookingMessage({ type: '', text: '' })
+    if (selectedVendor) {
+      await fetchVendorAvailability(selectedVendor)
+    }
   }
 
   const handleCloseBookingDialog = () => {
@@ -187,6 +219,7 @@ const BrowseVendors: React.FC = () => {
     setBookingDate('')
     setBookingNotes('')
     setBookingMessage({ type: '', text: '' })
+    setBlockedDates([])
   }
 
   const handleBookService = async () => {
@@ -197,6 +230,11 @@ const BrowseVendors: React.FC = () => {
 
     if (!selectedVendor) {
       setBookingMessage({ type: 'error', text: 'No service selected' })
+      return
+    }
+
+    if (blockedDates.includes(bookingDate)) {
+      setBookingMessage({ type: 'error', text: 'Selected date is unavailable for this vendor. Please choose another date.' })
       return
     }
 
@@ -773,6 +811,19 @@ const BrowseVendors: React.FC = () => {
                 </Typography>
               </Box>
             )}
+            {availabilityLoading ? (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Syncing vendor availability calendar...
+              </Alert>
+            ) : blockedDates.length > 0 ? (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                This vendor has {blockedDates.length} blocked date{blockedDates.length > 1 ? 's' : ''} in the next few months.
+              </Alert>
+            ) : (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                No blocked dates found in vendor calendar.
+              </Alert>
+            )}
             <TextField
               fullWidth
               label="Booking Date"
@@ -782,6 +833,8 @@ const BrowseVendors: React.FC = () => {
               InputLabelProps={{ shrink: true }}
               sx={{ mb: 2 }}
               inputProps={{ min: new Date().toISOString().split('T')[0] }}
+              error={Boolean(bookingDate && blockedDates.includes(bookingDate))}
+              helperText={bookingDate && blockedDates.includes(bookingDate) ? 'Unavailable date, please choose another one.' : undefined}
             />
             <TextField
               fullWidth
@@ -803,7 +856,7 @@ const BrowseVendors: React.FC = () => {
             <Button
               variant="contained"
               onClick={handleBookService}
-              disabled={bookingLoading}
+              disabled={bookingLoading || availabilityLoading || (bookingDate ? blockedDates.includes(bookingDate) : false)}
               sx={{ background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)' }}
             >
               {bookingLoading ? <CircularProgress size={24} /> : 'Book Service'}
