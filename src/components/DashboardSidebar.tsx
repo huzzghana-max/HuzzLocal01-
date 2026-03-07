@@ -135,7 +135,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
           {
             label: 'Payments',
             icon: <PaymentIcon />,
-            path: '#payments',
+            path: '/admin/payout-requests',
           },
           /*{
             label: 'Notifications',

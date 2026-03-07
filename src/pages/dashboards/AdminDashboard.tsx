@@ -111,6 +111,7 @@ const AdminDashboard: React.FC = () => {
   const [updatingEvent, setUpdatingEvent] = useState(false)
   const [deletingEvent, setDeletingEvent] = useState(false)
   const [pendingServicesCount, setPendingServicesCount] = useState(0)
+  const [pendingPayoutRequestsCount, setPendingPayoutRequestsCount] = useState(0)
 
   useEffect(() => {
     const userStr = localStorage.getItem('user')
@@ -130,6 +131,7 @@ const AdminDashboard: React.FC = () => {
     fetchUsers()
     fetchEvents()
     fetchPendingServices()
+    fetchPendingPayoutRequests()
   }, [navigate])
 
   const fetchPendingServices = async () => {
@@ -142,6 +144,20 @@ const AdminDashboard: React.FC = () => {
     } catch (err: any) {
       console.error('Error fetching pending services:', err)
       setPendingServicesCount(0)
+    }
+  }
+
+  const fetchPendingPayoutRequests = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await api.get('/admin/payout-requests', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const rows = response.data || []
+      setPendingPayoutRequestsCount(rows.filter((item: any) => item.status === 'pending').length)
+    } catch (err: any) {
+      console.error('Error fetching payout requests:', err)
+      setPendingPayoutRequestsCount(0)
     }
   }
 
@@ -466,7 +482,7 @@ const AdminDashboard: React.FC = () => {
           ) : (
             <>
               {/* Stats Grid */}
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)', lg: 'repeat(5, 1fr)' }, gap: 3, mb: 5 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)', lg: 'repeat(6, 1fr)' }, gap: 3, mb: 5 }}>
                 <StatCard title="Total Users" value={totalUsers} icon={<PersonIcon />} color="primary" change={12} />
                 <StatCard title="Organizers" value={organizersCount} icon={<PersonIcon />} color="secondary" change={8} />
                 <StatCard title="Service Providers" value={providersCount} icon={<PaymentIcon />} color="success" change={15} />
@@ -496,6 +512,33 @@ const AdminDashboard: React.FC = () => {
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     Pending Review
+                  </Typography>
+                </Paper>
+                <Paper
+                  onClick={() => navigate('/admin/payout-requests')}
+                  sx={{
+                    p: 3,
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    border: '2px solid #2D6CDF',
+                    borderRadius: 2,
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      boxShadow: '0 4px 12px rgba(45, 108, 223, 0.3)',
+                      transform: 'translateY(-4px)',
+                      borderColor: '#1F5FCF',
+                    },
+                  }}
+                >
+                  <PaymentIcon sx={{ fontSize: 40, color: '#2D6CDF', mb: 1 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                    Payout Requests
+                  </Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#2D6CDF', mb: 1 }}>
+                    {pendingPayoutRequestsCount}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Pending Approval
                   </Typography>
                 </Paper>
               </Box>
@@ -531,7 +574,7 @@ const AdminDashboard: React.FC = () => {
                 >
                   <Tab label="👥 Users" />
                   <Tab label={`📅 Events (${totalEvents})`} />
-                  <Tab label="ðŸ“ˆ Analytics" />
+                  <Tab label="Analytics" />
                 </Tabs>
               </Paper>
 

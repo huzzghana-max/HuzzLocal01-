@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
   AppBar,
   Avatar,
@@ -20,7 +20,6 @@ import MenuIcon from '@mui/icons-material/Menu'
 import { NavLink, useNavigate } from 'react-router-dom'
 import ThemeToggle from './themes/ThemeToggle'
 import { useAuth } from './contexts/AuthContext'
-import { normalizeImageUrl } from './utils/imageUtils'
 
 type NavState = 'default' | 'active' | 'alternate'
 

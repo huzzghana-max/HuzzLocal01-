@@ -16,6 +16,7 @@ import OrganizerAnalytics from './pages/dashboards/OrganizerAnalytics'
 import ProviderAnalytics from './pages/dashboards/ProviderAnalytics'
 import AdminServiceApproval from './pages/AdminServiceApproval'
 import AdminTicketReports from './pages/AdminTicketReports'
+import AdminPayoutRequests from './pages/AdminPayoutRequests'
 import EventsNearYou from './pages/EventsNearYou'
 import CreateEvent from './pages/CreateEvent'
 import BrowseVendors from './pages/BrowseVendors'
@@ -121,6 +122,14 @@ function App() {
             element={
               <ProtectedRoute requiredRole="admin">
                 <AdminTicketReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/payout-requests"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminPayoutRequests />
               </ProtectedRoute>
             }
           />

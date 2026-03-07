@@ -128,6 +128,94 @@ function normalizeRange(fromRaw, toRaw, fallbackDays = 90) {
   return { from, to }
 }
 
+async function ensurePayoutRequestsTable() {
+  const pool = getPoolOrThrow()
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS payout_requests (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      requester_id INT NOT NULL,
+      requester_role ENUM('provider','organizer') NOT NULL,
+      source_type ENUM('service_bookings','ticket_sales') NOT NULL,
+      source_event_id INT NULL,
+      amount DECIMAL(12, 2) NOT NULL,
+      status ENUM('pending','approved','rejected','paid') DEFAULT 'pending',
+      note TEXT NULL,
+      admin_note TEXT NULL,
+      requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      processed_at TIMESTAMP NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (requester_id) REFERENCES users(id) ON DELETE CASCADE,
+      INDEX idx_requester (requester_id, requester_role),
+      INDEX idx_status (status),
+      INDEX idx_source_event (source_event_id)
+    )
+  `)
+}
+
+async function getProviderPayoutSummary(pool, providerId) {
+  const serviceBookingOwnerColumn = await getServiceBookingsOwnerColumn(pool)
+  const [earnedRows] = await pool.execute(
+    `SELECT COALESCE(SUM(s.price), 0) AS totalEarned
+     FROM service_bookings sb
+     JOIN services s ON sb.service_id = s.id
+     WHERE sb.${serviceBookingOwnerColumn} = ? AND sb.status = 'completed'`,
+    [providerId],
+  )
+  const [requestedRows] = await pool.execute(
+    `SELECT COALESCE(SUM(amount), 0) AS totalRequested
+     FROM payout_requests
+     WHERE requester_id = ? AND requester_role = 'provider'
+       AND status IN ('pending', 'approved', 'paid')`,
+    [providerId],
+  )
+
+  const totalEarned = Number(earnedRows[0]?.totalEarned || 0)
+  const totalRequested = Number(requestedRows[0]?.totalRequested || 0)
+  return {
+    totalEarned,
+    totalRequested,
+    available: Math.max(0, totalEarned - totalRequested),
+    sourceType: 'service_bookings',
+  }
+}
+
+async function getOrganizerPayoutSummary(pool, organizerId, eventId = null) {
+  let earnedSql = `
+    SELECT COALESCE(SUM(ts.amount), 0) AS totalEarned
+    FROM ticket_sales ts
+    JOIN tickets t ON ts.ticket_id = t.id
+    JOIN events e ON t.event_id = e.id
+    WHERE e.organizer_id = ? AND ts.status = 'completed'
+  `
+  const earnedParams = [organizerId]
+  let requestSql = `
+    SELECT COALESCE(SUM(amount), 0) AS totalRequested
+    FROM payout_requests
+    WHERE requester_id = ? AND requester_role = 'organizer'
+      AND status IN ('pending', 'approved', 'paid')
+  `
+  const requestParams = [organizerId]
+
+  if (eventId) {
+    earnedSql += ' AND e.id = ?'
+    earnedParams.push(eventId)
+    requestSql += ' AND source_event_id = ?'
+    requestParams.push(eventId)
+  }
+
+  const [earnedRows] = await pool.execute(earnedSql, earnedParams)
+  const [requestedRows] = await pool.execute(requestSql, requestParams)
+  const totalEarned = Number(earnedRows[0]?.totalEarned || 0)
+  const totalRequested = Number(requestedRows[0]?.totalRequested || 0)
+  return {
+    totalEarned,
+    totalRequested,
+    available: Math.max(0, totalEarned - totalRequested),
+    sourceType: 'ticket_sales',
+  }
+}
+
 async function sendTicketPurchaseEmail({
   pool,
   buyerId,
@@ -217,10 +305,18 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // Always initialize database on startup.
 // initializeDatabase() is idempotent and ensures required tables exist.
-initializeDatabase().catch(err => {
-  console.warn('⚠️  Database initialization warning:', err.message)
-  console.warn('Server will continue running without database. Authentication will fail.')
-})
+initializeDatabase()
+  .then(async () => {
+    try {
+      await ensurePayoutRequestsTable()
+    } catch (payoutErr) {
+      console.warn('Payout table initialization warning:', payoutErr.message)
+    }
+  })
+  .catch(err => {
+    console.warn('Database initialization warning:', err.message)
+    console.warn('Server will continue running without database. Authentication will fail.')
+  })
 
 // Middleware: Token verification
 const verifyToken = (req, res, next) => {
@@ -2569,6 +2665,189 @@ app.get('/api/provider-bookings', verifyToken, async (req, res) => {
   }
 })
 
+app.get('/api/payouts/summary', verifyToken, async (req, res) => {
+  try {
+    const pool = getPoolOrThrow()
+    await ensurePayoutRequestsTable()
+    const role = req.userRole
+    const userId = req.userId
+    const eventId = req.query.eventId ? Number(req.query.eventId) : null
+
+    if (!['provider', 'organizer'].includes(role)) {
+      return res.status(403).json({ message: 'Only providers and organizers can view payout summary' })
+    }
+
+    if (role === 'provider') {
+      const summary = await getProviderPayoutSummary(pool, userId)
+      return res.json(summary)
+    }
+
+    if (eventId) {
+      const [events] = await pool.execute(
+        'SELECT id FROM events WHERE id = ? AND organizer_id = ? LIMIT 1',
+        [eventId, userId],
+      )
+      if (events.length === 0) {
+        return res.status(403).json({ message: 'You do not have access to this event payout summary' })
+      }
+    }
+
+    const summary = await getOrganizerPayoutSummary(pool, userId, eventId)
+    return res.json(summary)
+  } catch (error) {
+    console.error('Get payout summary error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.get('/api/payouts/my-requests', verifyToken, async (req, res) => {
+  try {
+    const pool = getPoolOrThrow()
+    await ensurePayoutRequestsTable()
+    const role = req.userRole
+    const userId = req.userId
+
+    if (!['provider', 'organizer'].includes(role)) {
+      return res.status(403).json({ message: 'Only providers and organizers can view payout requests' })
+    }
+
+    const [rows] = await pool.execute(
+      `SELECT pr.id, pr.requester_id, pr.requester_role, pr.source_type, pr.source_event_id,
+              pr.amount, pr.status, pr.note, pr.admin_note, pr.requested_at, pr.processed_at,
+              e.name as source_event_name
+       FROM payout_requests pr
+       LEFT JOIN events e ON pr.source_event_id = e.id
+       WHERE pr.requester_id = ? AND pr.requester_role = ?
+       ORDER BY pr.requested_at DESC
+       LIMIT 50`,
+      [userId, role],
+    )
+
+    res.json(rows)
+  } catch (error) {
+    console.error('Get payout requests error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.post('/api/payouts/request', verifyToken, async (req, res) => {
+  try {
+    const pool = getPoolOrThrow()
+    await ensurePayoutRequestsTable()
+    const role = req.userRole
+    const userId = req.userId
+    const amount = Number(req.body?.amount || 0)
+    const note = typeof req.body?.note === 'string' ? req.body.note.trim() : ''
+    const sourceEventId = req.body?.sourceEventId ? Number(req.body.sourceEventId) : null
+
+    if (!['provider', 'organizer'].includes(role)) {
+      return res.status(403).json({ message: 'Only providers and organizers can request payouts' })
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({ message: 'A valid payout amount is required' })
+    }
+
+    let summary
+    let sourceType = 'service_bookings'
+
+    if (role === 'provider') {
+      summary = await getProviderPayoutSummary(pool, userId)
+      sourceType = 'service_bookings'
+    } else {
+      if (sourceEventId) {
+        const [events] = await pool.execute(
+          'SELECT id FROM events WHERE id = ? AND organizer_id = ? LIMIT 1',
+          [sourceEventId, userId],
+        )
+        if (events.length === 0) {
+          return res.status(403).json({ message: 'You do not have access to this event' })
+        }
+      }
+      summary = await getOrganizerPayoutSummary(pool, userId, sourceEventId)
+      sourceType = 'ticket_sales'
+    }
+
+    if (amount > Number(summary.available || 0)) {
+      return res.status(400).json({
+        message: `Requested amount exceeds available payout balance (${Number(summary.available || 0).toFixed(2)})`,
+      })
+    }
+
+    const [result] = await pool.execute(
+      `INSERT INTO payout_requests (requester_id, requester_role, source_type, source_event_id, amount, note, status)
+       VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
+      [userId, role, sourceType, sourceEventId, amount.toFixed(2), note || null],
+    )
+
+    const [rows] = await pool.execute(
+      `SELECT id, requester_id, requester_role, source_type, source_event_id, amount, status, note, admin_note, requested_at, processed_at
+       FROM payout_requests WHERE id = ? LIMIT 1`,
+      [result.insertId],
+    )
+
+    res.status(201).json(rows[0])
+  } catch (error) {
+    console.error('Create payout request error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.get('/api/admin/payout-requests', verifyToken, async (req, res) => {
+  try {
+    if (req.userRole !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can view payout requests' })
+    }
+    const pool = getPoolOrThrow()
+    await ensurePayoutRequestsTable()
+    const [rows] = await pool.execute(
+      `SELECT pr.id, pr.requester_id, pr.requester_role, pr.source_type, pr.source_event_id,
+              pr.amount, pr.status, pr.note, pr.admin_note, pr.requested_at, pr.processed_at,
+              u.name as requester_name, u.email as requester_email, u.phone as requester_phone,
+              e.name as source_event_name, e.date as source_event_date, e.location as source_event_location,
+              e.type as source_event_type, e.status as source_event_status
+       FROM payout_requests pr
+       JOIN users u ON pr.requester_id = u.id
+       LEFT JOIN events e ON pr.source_event_id = e.id
+       ORDER BY pr.requested_at DESC`
+    )
+    res.json(rows)
+  } catch (error) {
+    console.error('Admin payout requests error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.put('/api/admin/payout-requests/:requestId', verifyToken, async (req, res) => {
+  try {
+    if (req.userRole !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can update payout requests' })
+    }
+    const requestId = Number(req.params.requestId)
+    const status = String(req.body?.status || '').toLowerCase()
+    const adminNote = typeof req.body?.admin_note === 'string' ? req.body.admin_note.trim() : null
+
+    if (!['approved', 'rejected', 'paid'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid payout status' })
+    }
+
+    const pool = getPoolOrThrow()
+    await ensurePayoutRequestsTable()
+    const [result] = await pool.execute(
+      `UPDATE payout_requests
+       SET status = ?, admin_note = ?, processed_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [status, adminNote, requestId],
+    )
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Payout request not found' })
+    }
+    res.json({ message: 'Payout request updated successfully' })
+  } catch (error) {
+    console.error('Update payout request error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
 // Update booking status (confirm/reject)
 app.put('/api/service-bookings/:bookingId', verifyToken, async (req, res) => {
   try {
@@ -3264,3 +3543,4 @@ app.use('/api/payments', paymentRoutes)
 app.listen(PORT, HOST, () => {
   console.log(`Server running on http://${HOST}:${PORT}`);
 });
+

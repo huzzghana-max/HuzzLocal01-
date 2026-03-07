@@ -19,6 +19,9 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  TextField,
+  Alert,
+  Stack,
 } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import AssignmentIcon from '@mui/icons-material/Assignment'
@@ -50,6 +53,21 @@ interface Booking {
   organizer_id?: number
 }
 
+interface PayoutSummary {
+  totalEarned: number
+  totalRequested: number
+  available: number
+  sourceType: 'service_bookings' | 'ticket_sales'
+}
+
+interface PayoutRequest {
+  id: number
+  amount: number
+  status: 'pending' | 'approved' | 'rejected' | 'paid'
+  requested_at: string
+  note?: string
+}
+
 const ProviderDashboard: React.FC = () => {
   const navigate = useNavigate()
   const [user, setUser] = useState<User | null>(null)
@@ -59,6 +77,13 @@ const ProviderDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [openDialog, setOpenDialog] = useState(false)
+  const [payoutSummary, setPayoutSummary] = useState<PayoutSummary | null>(null)
+  const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>([])
+  const [payoutDialogOpen, setPayoutDialogOpen] = useState(false)
+  const [payoutAmount, setPayoutAmount] = useState('')
+  const [payoutNote, setPayoutNote] = useState('')
+  const [payoutSubmitting, setPayoutSubmitting] = useState(false)
+  const [payoutMessage, setPayoutMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
     const userStr = localStorage.getItem('user')
@@ -100,6 +125,9 @@ const ProviderDashboard: React.FC = () => {
         pendingRequests: transformedBookings.filter((booking: Booking) => booking.status === 'pending').length,
         totalEarnings: totalEarnings.toFixed(2),
       })
+      await fetchPayoutData().catch((err) => {
+        console.error('Failed to fetch payout data:', err)
+      })
     } catch (error: any) {
       console.error('Failed to fetch dashboard data:', error)
       if (error.response?.status === 401) {
@@ -108,6 +136,15 @@ const ProviderDashboard: React.FC = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const fetchPayoutData = async () => {
+    const [summaryRes, requestsRes] = await Promise.all([
+      api.get('/payouts/summary'),
+      api.get('/payouts/my-requests'),
+    ])
+    setPayoutSummary(summaryRes.data || null)
+    setPayoutRequests(requestsRes.data || [])
   }
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
@@ -160,6 +197,34 @@ const ProviderDashboard: React.FC = () => {
     navigate('/signin')
   }
 
+  const handleRequestPayout = async () => {
+    const amount = Number(payoutAmount)
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setPayoutMessage({ type: 'error', text: 'Enter a valid payout amount.' })
+      return
+    }
+
+    try {
+      setPayoutSubmitting(true)
+      await api.post('/payouts/request', {
+        amount,
+        note: payoutNote.trim() || undefined,
+      })
+      setPayoutMessage({ type: 'success', text: 'Payout request submitted.' })
+      setPayoutDialogOpen(false)
+      setPayoutAmount('')
+      setPayoutNote('')
+      await fetchPayoutData()
+    } catch (error: any) {
+      setPayoutMessage({
+        type: 'error',
+        text: error?.response?.data?.message || 'Failed to submit payout request.',
+      })
+    } finally {
+      setPayoutSubmitting(false)
+    }
+  }
+
   const filteredBookings = () => {
     const tab = tabValue
     if (tab === 0) return bookings.filter((b) => b.status === 'pending')
@@ -199,26 +264,41 @@ const ProviderDashboard: React.FC = () => {
             title="Provider Dashboard"
             subtitle="Manage your bookings and service offerings"
             actionButton={
-              <Button
-                variant="outlined"
-                onClick={() => navigate('/vendor-services')}
-                sx={{
-                  textTransform: 'none',
-                  fontWeight: 700,
-                  borderColor: '#0E3B26',
-                  color: '#0E3B26',
-                  borderRadius: '12px',
-                  border: '2px solid',
-                  transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    borderColor: '#1B5E3C',
-                    backgroundColor: 'rgba(14, 59, 38, 0.08)',
-                    transform: 'translateY(-2px)',
-                  },
-                }}
-              >
-                Manage Services
-              </Button>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.2}>
+                <Button
+                  variant="contained"
+                  onClick={() => setPayoutDialogOpen(true)}
+                  sx={{
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    borderRadius: '12px',
+                    bgcolor: '#0E3B26',
+                    '&:hover': { bgcolor: '#1B5E3C' },
+                  }}
+                >
+                  Request Payout
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => navigate('/vendor-services')}
+                  sx={{
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    borderColor: '#0E3B26',
+                    color: '#0E3B26',
+                    borderRadius: '12px',
+                    border: '2px solid',
+                    transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:hover': {
+                      borderColor: '#1B5E3C',
+                      backgroundColor: 'rgba(14, 59, 38, 0.08)',
+                      transform: 'translateY(-2px)',
+                    },
+                  }}
+                >
+                  Manage Services
+                </Button>
+              </Stack>
             }
           />
 
@@ -229,6 +309,12 @@ const ProviderDashboard: React.FC = () => {
             </Box>
           ) : (
             <>
+              {payoutMessage && (
+                <Alert severity={payoutMessage.type} sx={{ mb: 3 }} onClose={() => setPayoutMessage(null)}>
+                  {payoutMessage.text}
+                </Alert>
+              )}
+
               {/* Stats Grid */}
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 3, mb: 5 }}>
                 <StatCard title="Total Bookings" value={bookings.length} icon={<AssignmentIcon />} color="primary" change={10} />
@@ -236,6 +322,41 @@ const ProviderDashboard: React.FC = () => {
                 <StatCard title="Completed" value={bookings.filter(b => b.status === 'completed').length} icon={<CheckCircleIcon />} color="success" change={20} />
                 <StatCard title="Total Earnings" value={`$${stats?.totalEarnings || 0}`} icon={<PaymentIcon />} color="secondary" change={8} />
               </Box>
+
+              <Paper id="earnings" sx={{ p: 3, borderRadius: 2, mb: 4 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    Earnings & Payouts
+                  </Typography>
+                  <Button variant="contained" onClick={() => setPayoutDialogOpen(true)} sx={{ textTransform: 'none' }}>
+                    Request Payout
+                  </Button>
+                </Box>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  Available: ${Number(payoutSummary?.available || 0).toFixed(2)} | Requested: ${Number(payoutSummary?.totalRequested || 0).toFixed(2)}
+                </Typography>
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                    Recent Requests
+                  </Typography>
+                  {payoutRequests.length === 0 ? (
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      No payout requests yet.
+                    </Typography>
+                  ) : (
+                    <Stack spacing={1}>
+                      {payoutRequests.slice(0, 4).map((request) => (
+                        <Box key={request.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body2">
+                            ${Number(request.amount || 0).toFixed(2)} on {new Date(request.requested_at).toLocaleDateString()}
+                          </Typography>
+                          <Chip size="small" label={request.status} color={request.status === 'rejected' ? 'error' : request.status === 'paid' ? 'success' : 'warning'} />
+                        </Box>
+                      ))}
+                    </Stack>
+                  )}
+                </Box>
+              </Paper>
 
               {/* Bookings Section */}
               <Typography variant="h5" sx={{ fontWeight: 600, mb: 3 }}>
@@ -420,6 +541,46 @@ const ProviderDashboard: React.FC = () => {
                       Accept Booking
                     </Button>
                   )}
+                </DialogActions>
+              </Dialog>
+
+              <Dialog open={payoutDialogOpen} onClose={() => setPayoutDialogOpen(false)} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ fontWeight: 700 }}>Request Payout</DialogTitle>
+                <DialogContent sx={{ pt: 2 }}>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+                    Available balance: ${Number(payoutSummary?.available || 0).toFixed(2)}
+                  </Typography>
+                  <Stack spacing={2}>
+                    <TextField
+                      label="Amount"
+                      type="number"
+                      value={payoutAmount}
+                      onChange={(event) => setPayoutAmount(event.target.value)}
+                      inputProps={{ min: 0, step: 0.01 }}
+                      fullWidth
+                    />
+                    <TextField
+                      label="Note (optional)"
+                      value={payoutNote}
+                      onChange={(event) => setPayoutNote(event.target.value)}
+                      fullWidth
+                      multiline
+                      minRows={2}
+                    />
+                  </Stack>
+                </DialogContent>
+                <DialogActions sx={{ p: 2 }}>
+                  <Button onClick={() => setPayoutDialogOpen(false)} sx={{ textTransform: 'none' }}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="contained"
+                    onClick={handleRequestPayout}
+                    disabled={payoutSubmitting}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    {payoutSubmitting ? 'Submitting...' : 'Submit Request'}
+                  </Button>
                 </DialogActions>
               </Dialog>
             </>

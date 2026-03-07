@@ -24,7 +24,6 @@ import {
   MenuItem,
 } from '@mui/material'
 import api from '../api'
-import PaystackPaymentModal from '../components/PaystackPaymentModal'
 import { useNavigate } from 'react-router-dom'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
 import LocationOnIcon from '@mui/icons-material/LocationOn'
