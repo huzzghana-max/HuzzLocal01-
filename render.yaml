@@ -12,26 +12,8 @@ services:
         value: production
       - key: JWT_SECRET
         generateValue: true
-      - key: MYSQL_HOST
-        fromDatabase:
-          name: huzz-mysql
-          property: host
-      - key: MYSQL_PORT
-        fromDatabase:
-          name: huzz-mysql
-          property: port
-      - key: MYSQL_USER
-        fromDatabase:
-          name: huzz-mysql
-          property: user
-      - key: MYSQL_PASSWORD
-        fromDatabase:
-          name: huzz-mysql
-          property: password
-      - key: MYSQL_DATABASE
-        fromDatabase:
-          name: huzz-mysql
-          property: database
+      - key: SUPABASE_DB_URL
+        sync: false
       - key: CORS_ORIGIN
         sync: false
       - key: PUBLIC_BASE_URL
@@ -56,9 +38,3 @@ services:
         sync: false
       - key: STRIPE_SECRET_KEY
         sync: false
-
-databases:
-  - name: huzz-mysql
-    plan: starter
-    databaseName: huzz_auth
-    user: huzz_user

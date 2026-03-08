@@ -76,6 +76,10 @@ function logMailConfigStatus() {
   })
 }
 
+function isUniqueViolation(error) {
+  return error?.code === '23505' || error?.code === 'ER_DUP_ENTRY'
+}
+
 logMailConfigStatus()
 
 
@@ -89,7 +93,7 @@ if (!fs.existsSync(uploadsDir)) {
 function getPoolOrThrow() {
   const pool = getPool()
   if (!pool) {
-    throw new Error('Database is not initialized. Please ensure MySQL is running on port 3306.')
+    throw new Error('Database is not initialized. Please ensure Postgres/Supabase is reachable.')
   }
   return pool
 }
@@ -97,17 +101,30 @@ function getPoolOrThrow() {
 let servicesOwnerColumnCache = null
 let serviceBookingsOwnerColumnCache = null
 
+async function hasColumn(pool, tableName, columnName) {
+  const [rows] = await pool.execute(
+    `SELECT 1
+     FROM information_schema.columns
+     WHERE table_schema = current_schema()
+       AND table_name = ?
+       AND column_name = ?
+     LIMIT 1`,
+    [tableName, columnName],
+  )
+  return rows.length > 0
+}
+
 async function getServicesOwnerColumn(pool) {
   if (servicesOwnerColumnCache) return servicesOwnerColumnCache
-  const [vendorColumn] = await pool.execute("SHOW COLUMNS FROM services LIKE 'vendor_id'")
-  servicesOwnerColumnCache = vendorColumn.length > 0 ? 'vendor_id' : 'provider_id'
+  const vendorColumnExists = await hasColumn(pool, 'services', 'vendor_id')
+  servicesOwnerColumnCache = vendorColumnExists ? 'vendor_id' : 'provider_id'
   return servicesOwnerColumnCache
 }
 
 async function getServiceBookingsOwnerColumn(pool) {
   if (serviceBookingsOwnerColumnCache) return serviceBookingsOwnerColumnCache
-  const [vendorColumn] = await pool.execute("SHOW COLUMNS FROM service_bookings LIKE 'vendor_id'")
-  serviceBookingsOwnerColumnCache = vendorColumn.length > 0 ? 'vendor_id' : 'provider_id'
+  const vendorColumnExists = await hasColumn(pool, 'service_bookings', 'vendor_id')
+  serviceBookingsOwnerColumnCache = vendorColumnExists ? 'vendor_id' : 'provider_id'
   return serviceBookingsOwnerColumnCache
 }
 
@@ -144,25 +161,26 @@ async function ensurePayoutRequestsTable() {
   const pool = getPoolOrThrow()
   await pool.execute(`
     CREATE TABLE IF NOT EXISTS payout_requests (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      requester_id INT NOT NULL,
-      requester_role ENUM('provider','organizer') NOT NULL,
-      source_type ENUM('service_bookings','ticket_sales') NOT NULL,
-      source_event_id INT NULL,
+      id BIGSERIAL PRIMARY KEY,
+      requester_id BIGINT NOT NULL,
+      requester_role VARCHAR(20) NOT NULL CHECK (requester_role IN ('provider','organizer')),
+      source_type VARCHAR(40) NOT NULL CHECK (source_type IN ('service_bookings','ticket_sales')),
+      source_event_id BIGINT NULL,
       amount DECIMAL(12, 2) NOT NULL,
-      status ENUM('pending','approved','rejected','paid') DEFAULT 'pending',
+      status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected','paid')),
       note TEXT NULL,
       admin_note TEXT NULL,
-      requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      requested_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
       processed_at TIMESTAMP NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (requester_id) REFERENCES users(id) ON DELETE CASCADE,
-      INDEX idx_requester (requester_id, requester_role),
-      INDEX idx_status (status),
-      INDEX idx_source_event (source_event_id)
+      CONSTRAINT payout_requests_amount_nonnegative CHECK (amount >= 0)
     )
   `)
+  await pool.execute('CREATE INDEX IF NOT EXISTS idx_payout_requester ON payout_requests (requester_id, requester_role)')
+  await pool.execute('CREATE INDEX IF NOT EXISTS idx_payout_status ON payout_requests (status)')
+  await pool.execute('CREATE INDEX IF NOT EXISTS idx_payout_source_event ON payout_requests (source_event_id)')
 }
 
 async function getProviderPayoutSummary(pool, providerId) {
@@ -357,6 +375,7 @@ const verifyToken = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-this')
     console.log('Token decoded:', decoded)
+    req.user = decoded
     req.userId = decoded.id
     req.userRole = decoded.role
     next()
@@ -418,7 +437,7 @@ app.post('/api/auth/register', async (req, res) => {
     console.error('Register error - Message:', error.message)
     console.error('Register error - Code:', error.code)
     
-    if (error.code === 'ER_DUP_ENTRY') {
+    if (isUniqueViolation(error)) {
       return res.status(409).json({ message: 'Email already exists' })
     }
     res.status(500).json({ message: error.message || 'Registration failed' })
@@ -633,7 +652,7 @@ app.post('/api/admin/users', verifyToken, async (req, res) => {
       }
     })
   } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') {
+    if (isUniqueViolation(error)) {
       return res.status(409).json({ message: 'Email already exists' })
     }
     res.status(500).json({ message: error.message })
@@ -689,9 +708,22 @@ app.delete('/api/admin/users/:id', verifyToken, async (req, res) => {
   }
 })
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'Server is running' })
+// Health check (includes DB reachability)
+app.get('/api/health', async (req, res) => {
+  try {
+    const pool = getPoolOrThrow()
+    await pool.execute('SELECT 1 as ok')
+    res.json({
+      status: 'ok',
+      database: 'connected',
+    })
+  } catch (error) {
+    res.status(503).json({
+      status: 'degraded',
+      database: 'disconnected',
+      message: error.message,
+    })
+  }
 })
 
 // Mail test endpoint (authenticated)
