@@ -144,7 +144,8 @@ const HomePage: React.FC = () => {
                       borderRadius: 999,
                       fontWeight: 800,
                       textTransform: 'none',
-                      background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                      color: 'secondary.contrastText',
+                      background: `linear-gradient(135deg, ${theme.palette.secondary.main} 0%, ${theme.palette.secondary.dark} 100%)`,
                     }}
                   >
                     Start now
@@ -315,7 +316,7 @@ const HomePage: React.FC = () => {
             <Grid size={{ xs: 12, md: 5 }}>
               <Typography sx={{ fontWeight: 800, mb: 0.6 }}>HUZZ</Typography>
               <Typography sx={{ opacity: 0.9, fontSize: '0.92rem' }}>
-                Built by Huzz Labs. Professional event operations platform for organizers and providers.
+                Built by GROUP 34. Professional event operations platform for organizers and providers.
               </Typography>
             </Grid>
             <Grid size={{ xs: 12, md: 4 }}>
@@ -352,4 +353,3 @@ const HomePage: React.FC = () => {
 }
 
 export default HomePage
-

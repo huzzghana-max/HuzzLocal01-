@@ -339,7 +339,7 @@ const VendorServices: React.FC = () => {
               startIcon={<AddIcon />}
               onClick={() => handleOpenDialog()}
               sx={{
-                background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)',
+                background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
                 textTransform: 'none',
                 fontWeight: 600,
               }}
@@ -377,7 +377,7 @@ const VendorServices: React.FC = () => {
                 startIcon={<AddIcon />}
                 onClick={() => handleOpenDialog()}
                 sx={{
-                  background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)',
+                  background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
                   textTransform: 'none',
                   fontWeight: 600,
                 }}
@@ -405,7 +405,7 @@ const VendorServices: React.FC = () => {
                         {service.title}
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <IconButton size="small" onClick={() => handleOpenDialog(service)} sx={{ color: '#ff8c00' }}>
+                        <IconButton size="small" onClick={() => handleOpenDialog(service)} sx={{ color: '#F19B7D' }}>
                           <EditIcon fontSize="small" />
                         </IconButton>
                         <IconButton size="small" onClick={() => handleDeleteService(service.id)} sx={{ color: 'error.main' }}>
@@ -418,7 +418,7 @@ const VendorServices: React.FC = () => {
                       <Chip
                         label={service.category}
                         size="small"
-                        sx={{ alignSelf: 'flex-start', bgcolor: '#fff3e0', color: '#ff8c00', fontWeight: 600 }}
+                        sx={{ alignSelf: 'flex-start', bgcolor: '#FCE9E2', color: '#F19B7D', fontWeight: 600 }}
                       />
 
                       <Chip
@@ -445,7 +445,7 @@ const VendorServices: React.FC = () => {
                     </Box>
 
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 'auto' }}>
-                      <Typography variant="h6" sx={{ fontWeight: 700, color: '#ff8c00' }}>
+                      <Typography variant="h6" sx={{ fontWeight: 700, color: '#F19B7D' }}>
                         ${service.price}
                       </Typography>
                       <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>per service</Typography>
@@ -489,8 +489,8 @@ const VendorServices: React.FC = () => {
                 startIcon={<CloudUploadIcon />}
                 fullWidth
                 sx={{
-                  borderColor: '#ff8c00',
-                  color: '#ff8c00',
+                  borderColor: '#F19B7D',
+                  color: '#F19B7D',
                   textTransform: 'none',
                   fontWeight: 600,
                 }}
@@ -625,7 +625,7 @@ const VendorServices: React.FC = () => {
             variant="contained"
             startIcon={<SaveIcon />}
             sx={{
-              background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)',
+              background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
               textTransform: 'none',
               fontWeight: 600,
             }}
@@ -639,3 +639,4 @@ const VendorServices: React.FC = () => {
 }
 
 export default VendorServices
+

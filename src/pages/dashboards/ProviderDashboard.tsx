@@ -272,8 +272,8 @@ const ProviderDashboard: React.FC = () => {
                     textTransform: 'none',
                     fontWeight: 700,
                     borderRadius: '12px',
-                    bgcolor: '#0E3B26',
-                    '&:hover': { bgcolor: '#1B5E3C' },
+                    bgcolor: '#414958',
+                    '&:hover': { bgcolor: '#2B3240' },
                   }}
                 >
                   Request Payout
@@ -284,14 +284,14 @@ const ProviderDashboard: React.FC = () => {
                   sx={{
                     textTransform: 'none',
                     fontWeight: 700,
-                    borderColor: '#0E3B26',
-                    color: '#0E3B26',
+                    borderColor: '#414958',
+                    color: '#414958',
                     borderRadius: '12px',
                     border: '2px solid',
                     transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                     '&:hover': {
-                      borderColor: '#1B5E3C',
-                      backgroundColor: 'rgba(14, 59, 38, 0.08)',
+                      borderColor: '#2B3240',
+                      backgroundColor: 'rgba(65, 73, 88, 0.1)',
                       transform: 'translateY(-2px)',
                     },
                   }}
@@ -393,12 +393,12 @@ const ProviderDashboard: React.FC = () => {
                 <TableContainer component={Paper} sx={{
                   borderRadius: '16px',
                   overflow: 'hidden',
-                  boxShadow: '0 4px 20px rgba(14, 59, 38, 0.1)',
-                  border: '1px solid rgba(184, 227, 197, 0.2)',
+                  boxShadow: '0 4px 20px rgba(65, 73, 88, 0.12)',
+                  border: '1px solid rgba(204, 213, 226, 0.24)',
                 }}>
                   <Table>
                     <TableHead sx={{
-                      background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+                      background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
                     }}>
                       <TableRow>
                         <TableCell sx={{ fontWeight: 700, py: 2.5, color: '#FFFFFF' }}>Service</TableCell>
@@ -415,8 +415,8 @@ const ProviderDashboard: React.FC = () => {
                           sx={{
                             transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                             '&:hover': {
-                              bgcolor: 'rgba(184, 227, 197, 0.1)',
-                              boxShadow: '0 2px 8px rgba(14, 59, 38, 0.08) inset',
+                              bgcolor: 'rgba(204, 213, 226, 0.12)',
+                              boxShadow: '0 2px 8px rgba(65, 73, 88, 0.1) inset',
                             },
                           }}
                         >
@@ -443,7 +443,7 @@ const ProviderDashboard: React.FC = () => {
                                 color: booking.status === 'pending'
                                   ? '#F5A623'
                                   : booking.status === 'confirmed'
-                                  ? '#1B5E3C'
+                                  ? '#2B3240'
                                   : '#6B7280',
                               }}
                             />
@@ -454,12 +454,12 @@ const ProviderDashboard: React.FC = () => {
                               variant="text"
                               onClick={() => handleViewDetails(booking)}
                               sx={{
-                                color: '#0E3B26',
+                                color: '#414958',
                                 fontWeight: 600,
                                 transition: 'all 0.3s ease',
                                 '&:hover': {
-                                  color: '#1B5E3C',
-                                  backgroundColor: 'rgba(14, 59, 38, 0.08)',
+                                  color: '#2B3240',
+                                  backgroundColor: 'rgba(65, 73, 88, 0.1)',
                                 },
                               }}
                             >
@@ -592,3 +592,4 @@ const ProviderDashboard: React.FC = () => {
 }
 
 export default ProviderDashboard
+

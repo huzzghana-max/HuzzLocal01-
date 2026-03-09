@@ -83,7 +83,7 @@ const CreateEvent: React.FC = () => {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <Container maxWidth="sm" sx={{ py: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, mb: 3, color: '#0E3B26' }}>Create Event</Typography>
+        <Typography variant="h4" sx={{ fontWeight: 700, mb: 3, color: '#414958' }}>Create Event</Typography>
         
         <Stack spacing={2}>
           <TextField 
@@ -129,19 +129,19 @@ const CreateEvent: React.FC = () => {
 
           {/* Image Upload Section */}
           <Box>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: '#0E3B26' }}>Event Image (Optional)</Typography>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: '#414958' }}>Event Image (Optional)</Typography>
             <Box
               sx={{
-                border: '2px dashed #0E3B26',
+                border: '2px dashed #414958',
                 borderRadius: '12px',
                 padding: 2,
                 textAlign: 'center',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
-                backgroundColor: 'rgba(14, 59, 38, 0.02)',
+                backgroundColor: 'rgba(65, 73, 88, 0.03)',
                 '&:hover': {
-                  backgroundColor: 'rgba(14, 59, 38, 0.06)',
-                  borderColor: '#1B5E3C',
+                  backgroundColor: 'rgba(65, 73, 88, 0.08)',
+                  borderColor: '#2B3240',
                 },
               }}
               component="label"
@@ -171,7 +171,7 @@ const CreateEvent: React.FC = () => {
                   sx={{ maxHeight: 300, objectFit: 'cover' }}
                 />
                 <Box sx={{ p: 1, textAlign: 'center' }}>
-                  <Typography variant="caption" sx={{ color: '#0E3B26', fontWeight: 600 }}>
+                  <Typography variant="caption" sx={{ color: '#414958', fontWeight: 600 }}>
                     {imageFile?.name} ({((imageFile?.size || 0) / 1024 / 1024).toFixed(2)} MB)
                   </Typography>
                   <Button 
@@ -196,7 +196,7 @@ const CreateEvent: React.FC = () => {
               onClick={handleSubmit} 
               disabled={loading || !name || !date}
               sx={{
-                background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+                background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
                 fontWeight: 700,
               }}
             >
@@ -210,3 +210,4 @@ const CreateEvent: React.FC = () => {
 }
 
 export default CreateEvent
+

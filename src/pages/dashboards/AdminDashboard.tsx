@@ -405,8 +405,8 @@ const AdminDashboard: React.FC = () => {
   const cancelledEventsCount = events.filter((event) => event.status === 'cancelled').length
   const draftEventsCount = events.filter((event) => event.status === 'draft' || event.status === 'pending').length
   const roleDistribution = [
-    { label: 'Organizers', value: organizersCount, color: '#1B5E3C' },
-    { label: 'Providers', value: providersCount, color: '#ff8c00' },
+    { label: 'Organizers', value: organizersCount, color: '#2B3240' },
+    { label: 'Providers', value: providersCount, color: '#F19B7D' },
     { label: 'Admins', value: adminsCount, color: '#5C6BC0' },
   ]
   const statusDistribution = [
@@ -453,16 +453,16 @@ const AdminDashboard: React.FC = () => {
                     variant="contained"
                     onClick={handleOpenCreateDialog}
                     sx={{
-                      background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+                      background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
                       textTransform: 'none',
                       fontWeight: 700,
                       borderRadius: '12px',
                       py: 1,
                       px: 3,
-                      boxShadow: '0 4px 15px rgba(14, 59, 38, 0.3)',
+                      boxShadow: '0 4px 15px rgba(65, 73, 88, 0.3)',
                       transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                       '&:hover': {
-                        boxShadow: '0 8px 25px rgba(14, 59, 38, 0.4)',
+                        boxShadow: '0 8px 25px rgba(65, 73, 88, 0.38)',
                         transform: 'translateY(-2px)',
                       },
                     }}
@@ -493,21 +493,21 @@ const AdminDashboard: React.FC = () => {
                     p: 3,
                     textAlign: 'center',
                     cursor: 'pointer',
-                    border: '2px solid #ff8c00',
+                    border: '2px solid #F19B7D',
                     borderRadius: 2,
                     transition: 'all 0.3s ease',
                     '&:hover': {
-                      boxShadow: '0 4px 12px rgba(255, 140, 0, 0.3)',
+                      boxShadow: '0 4px 12px rgba(241, 155, 125, 0.34)',
                       transform: 'translateY(-4px)',
-                      borderColor: '#ff6b35',
+                      borderColor: '#DD8568',
                     },
                   }}
                 >
-                  <CheckCircleIcon sx={{ fontSize: 40, color: '#ff8c00', mb: 1 }} />
+                  <CheckCircleIcon sx={{ fontSize: 40, color: '#F19B7D', mb: 1 }} />
                   <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
                     Service Approvals
                   </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#ff8c00', mb: 1 }}>
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#F19B7D', mb: 1 }}>
                     {pendingServicesCount}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
@@ -549,8 +549,8 @@ const AdminDashboard: React.FC = () => {
                   value={currentTab}
                   onChange={(_, newValue) => setCurrentTab(newValue)}
                   sx={{
-                    borderBottom: '2px solid rgba(14, 59, 38, 0.1)',
-                    background: 'linear-gradient(90deg, rgba(14, 59, 38, 0.04) 0%, rgba(184, 227, 197, 0.04) 100%)',
+                    borderBottom: '2px solid rgba(65, 73, 88, 0.12)',
+                    background: 'linear-gradient(90deg, rgba(65, 73, 88, 0.06) 0%, rgba(204, 213, 226, 0.06) 100%)',
                     '& .MuiTab-root': {
                       textTransform: 'none',
                       fontSize: '1rem',
@@ -558,15 +558,15 @@ const AdminDashboard: React.FC = () => {
                       color: '#666',
                       transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                       '&:hover': {
-                        color: '#0E3B26',
+                        color: '#414958',
                       },
                     },
                     '& .MuiTab-root.Mui-selected': {
-                      color: '#0E3B26',
+                      color: '#414958',
                       fontWeight: 800,
                     },
                     '& .MuiTabs-indicator': {
-                      backgroundColor: '#0E3B26',
+                      backgroundColor: '#414958',
                       height: '3px',
                       borderRadius: '2px',
                     },
@@ -631,12 +631,12 @@ const AdminDashboard: React.FC = () => {
                     <TableContainer component={Paper} sx={{
                       borderRadius: '16px',
                       overflow: 'hidden',
-                      boxShadow: '0 4px 20px rgba(14, 59, 38, 0.1)',
-                      border: '1px solid rgba(184, 227, 197, 0.2)',
+                      boxShadow: '0 4px 20px rgba(65, 73, 88, 0.12)',
+                      border: '1px solid rgba(204, 213, 226, 0.24)',
                     }}>
                       <Table>
                         <TableHead sx={{
-                          background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+                          background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
                         }}>
                           <TableRow>
                             <TableCell sx={{ fontWeight: 700, py: 2.5, color: '#FFFFFF' }}>User</TableCell>
@@ -653,17 +653,17 @@ const AdminDashboard: React.FC = () => {
                               sx={{
                                 transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                                 '&:hover': {
-                                  bgcolor: 'rgba(184, 227, 197, 0.1)',
-                                  boxShadow: '0 2px 8px rgba(14, 59, 38, 0.08) inset',
+                                  bgcolor: 'rgba(204, 213, 226, 0.12)',
+                                  boxShadow: '0 2px 8px rgba(65, 73, 88, 0.1) inset',
                                 },
                               }}
                             >
                               <TableCell sx={{ py: 2 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                   <Avatar sx={{
-                                    background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+                                    background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
                                     fontWeight: 700,
-                                    boxShadow: '0 2px 8px rgba(14, 59, 38, 0.3)',
+                                    boxShadow: '0 2px 8px rgba(65, 73, 88, 0.3)',
                                   }}>
                                     {user.name[0]}
                                   </Avatar>
@@ -682,9 +682,9 @@ const AdminDashboard: React.FC = () => {
                                   sx={{
                                     textTransform: 'capitalize',
                                     fontWeight: 700,
-                                    background: 'linear-gradient(135deg, rgba(14, 59, 38, 0.15) 0%, rgba(184, 227, 197, 0.15) 100%)',
-                                    color: '#0E3B26',
-                                    border: '1.5px solid #B8E3C5',
+                                    background: 'linear-gradient(135deg, rgba(65, 73, 88, 0.18) 0%, rgba(204, 213, 226, 0.18) 100%)',
+                                    color: '#414958',
+                                    border: '1.5px solid #CCD5E2',
                                   }}
                                 />
                               </TableCell>
@@ -781,12 +781,12 @@ const AdminDashboard: React.FC = () => {
                     <TableContainer component={Paper} sx={{
                       borderRadius: '16px',
                       overflow: 'hidden',
-                      boxShadow: '0 4px 20px rgba(14, 59, 38, 0.1)',
-                      border: '1px solid rgba(184, 227, 197, 0.2)',
+                      boxShadow: '0 4px 20px rgba(65, 73, 88, 0.12)',
+                      border: '1px solid rgba(204, 213, 226, 0.24)',
                     }}>
                       <Table>
                         <TableHead sx={{
-                          background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+                          background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
                         }}>
                           <TableRow>
                             <TableCell sx={{ fontWeight: 700, py: 2.5, color: '#FFFFFF' }}>Event</TableCell>
@@ -803,14 +803,14 @@ const AdminDashboard: React.FC = () => {
                               sx={{
                                 transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                                 '&:hover': {
-                                  bgcolor: 'rgba(184, 227, 197, 0.1)',
-                                  boxShadow: '0 2px 8px rgba(14, 59, 38, 0.08) inset',
+                                  bgcolor: 'rgba(204, 213, 226, 0.12)',
+                                  boxShadow: '0 2px 8px rgba(65, 73, 88, 0.1) inset',
                                 },
                               }}
                             >
                               <TableCell sx={{ py: 2 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                  <EventIcon sx={{ color: '#0E3B26', fontSize: 20 }} />
+                                  <EventIcon sx={{ color: '#414958', fontSize: 20 }} />
                                   <Box>
                                     <Typography variant="body2" sx={{ fontWeight: 500 }}>
                                       {event.name}
@@ -912,40 +912,40 @@ const AdminDashboard: React.FC = () => {
                   </Typography>
 
                   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
-                    <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(14, 59, 38, 0.12)' }}>
+                    <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(65, 73, 88, 0.14)' }}>
                       <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 700 }}>
                         Total Users
                       </Typography>
-                      <Typography variant="h4" sx={{ fontWeight: 800, color: '#0E3B26', mt: 1 }}>
+                      <Typography variant="h4" sx={{ fontWeight: 800, color: '#414958', mt: 1 }}>
                         {totalUsers}
                       </Typography>
                       <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
                         Registered accounts across all roles
                       </Typography>
                     </Paper>
-                    <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(14, 59, 38, 0.12)' }}>
+                    <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(65, 73, 88, 0.14)' }}>
                       <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 700 }}>
                         Active Events
                       </Typography>
-                      <Typography variant="h4" sx={{ fontWeight: 800, color: '#1B5E3C', mt: 1 }}>
+                      <Typography variant="h4" sx={{ fontWeight: 800, color: '#2B3240', mt: 1 }}>
                         {activeEventsCount}
                       </Typography>
                       <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
                         Published, confirmed, or ongoing
                       </Typography>
                     </Paper>
-                    <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(14, 59, 38, 0.12)' }}>
+                    <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(65, 73, 88, 0.14)' }}>
                       <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 700 }}>
                         Pending Services
                       </Typography>
-                      <Typography variant="h4" sx={{ fontWeight: 800, color: '#ff8c00', mt: 1 }}>
+                      <Typography variant="h4" sx={{ fontWeight: 800, color: '#F19B7D', mt: 1 }}>
                         {pendingServicesCount}
                       </Typography>
                       <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
                         Awaiting review and approval
                       </Typography>
                     </Paper>
-                    <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(14, 59, 38, 0.12)' }}>
+                    <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(65, 73, 88, 0.14)' }}>
                       <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 700 }}>
                         Total Events
                       </Typography>
@@ -959,7 +959,7 @@ const AdminDashboard: React.FC = () => {
                   </Box>
 
                   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.1fr 0.9fr' }, gap: 3, mb: 4 }}>
-                    <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(14, 59, 38, 0.12)' }}>
+                    <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(65, 73, 88, 0.14)' }}>
                       <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
                         Users By Role
                       </Typography>
@@ -974,7 +974,7 @@ const AdminDashboard: React.FC = () => {
                                 {item.value}
                               </Typography>
                             </Box>
-                            <Box sx={{ height: 10, borderRadius: 999, bgcolor: 'rgba(14, 59, 38, 0.08)', overflow: 'hidden' }}>
+                            <Box sx={{ height: 10, borderRadius: 999, bgcolor: 'rgba(65, 73, 88, 0.1)', overflow: 'hidden' }}>
                               <Box
                                 sx={{
                                   height: '100%',
@@ -990,7 +990,7 @@ const AdminDashboard: React.FC = () => {
                       </Box>
                     </Paper>
 
-                    <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(14, 59, 38, 0.12)' }}>
+                    <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(65, 73, 88, 0.14)' }}>
                       <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
                         Event Status Mix
                       </Typography>
@@ -1005,7 +1005,7 @@ const AdminDashboard: React.FC = () => {
                                 {item.value}
                               </Typography>
                             </Box>
-                            <Box sx={{ height: 10, borderRadius: 999, bgcolor: 'rgba(14, 59, 38, 0.08)', overflow: 'hidden' }}>
+                            <Box sx={{ height: 10, borderRadius: 999, bgcolor: 'rgba(65, 73, 88, 0.1)', overflow: 'hidden' }}>
                               <Box
                                 sx={{
                                   height: '100%',
@@ -1022,24 +1022,24 @@ const AdminDashboard: React.FC = () => {
                     </Paper>
                   </Box>
 
-                  <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(14, 59, 38, 0.12)' }}>
+                  <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(65, 73, 88, 0.14)' }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
                       Health Signals
                     </Typography>
                     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
-                      <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(14, 59, 38, 0.06)' }}>
+                      <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(65, 73, 88, 0.08)' }}>
                         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                           Completion Rate
                         </Typography>
-                        <Typography variant="h6" sx={{ fontWeight: 700, color: '#0E3B26' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: '#414958' }}>
                           {totalEvents === 0 ? '0%' : `${Math.round((completedEventsCount / totalEvents) * 100)}%`}
                         </Typography>
                       </Box>
-                      <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(255, 140, 0, 0.08)' }}>
+                      <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(241, 155, 125, 0.1)' }}>
                         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                           Draft & Pending Share
                         </Typography>
-                        <Typography variant="h6" sx={{ fontWeight: 700, color: '#ff8c00' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: '#F19B7D' }}>
                           {totalEvents === 0 ? '0%' : `${Math.round((draftEventsCount / totalEvents) * 100)}%`}
                         </Typography>
                       </Box>
@@ -1530,3 +1530,5 @@ const AdminDashboard: React.FC = () => {
 }
 
 export default AdminDashboard
+
+

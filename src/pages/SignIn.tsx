@@ -174,13 +174,13 @@ const SignIn: React.FC = () => {
               variant="contained"
               disabled={loading}
               sx={{
-                background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+                background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
                 py: 2,
                 fontSize: '1rem',
                 fontWeight: 700,
                 textTransform: 'none',
                 borderRadius: '12px',
-                boxShadow: '0 4px 15px rgba(14, 59, 38, 0.3)',
+                boxShadow: '0 4px 15px rgba(65, 73, 88, 0.3)',
                 transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                 position: 'relative',
                 overflow: 'hidden',
@@ -195,7 +195,7 @@ const SignIn: React.FC = () => {
                   transition: 'left 0.35s ease-out',
                 },
                 '&:hover': {
-                  boxShadow: '0 8px 25px rgba(14, 59, 38, 0.4)',
+                  boxShadow: '0 8px 25px rgba(65, 73, 88, 0.38)',
                   transform: 'translateY(-2px)',
                   '&::before': {
                     left: '100%',
@@ -206,7 +206,7 @@ const SignIn: React.FC = () => {
                 },
                 '&:disabled': {
                   opacity: 0.7,
-                  boxShadow: '0 2px 8px rgba(14, 59, 38, 0.2)',
+                  boxShadow: '0 2px 8px rgba(65, 73, 88, 0.22)',
                 },
               }}
             >
@@ -238,3 +238,4 @@ const SignIn: React.FC = () => {
 }
 
 export default SignIn
+

@@ -288,7 +288,7 @@ const BrowseVendors: React.FC = () => {
       {/* Hero Header */}
       <Box
         sx={{
-          background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)',
+          background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
           color: 'white',
           py: 6,
           mb: 4,
@@ -360,7 +360,7 @@ const BrowseVendors: React.FC = () => {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon sx={{ color: '#ff8c00' }} />
+                    <SearchIcon sx={{ color: '#F19B7D' }} />
                   </InputAdornment>
                 ),
               }}
@@ -368,7 +368,7 @@ const BrowseVendors: React.FC = () => {
                 mb: 3,
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 1.5,
-                  '&:hover fieldset': { borderColor: '#ff8c00' },
+                  '&:hover fieldset': { borderColor: '#F19B7D' },
                 },
               }}
             />
@@ -381,9 +381,9 @@ const BrowseVendors: React.FC = () => {
                 onClick={() => setSelectedServiceType('all')}
                 variant={selectedServiceType === 'all' ? 'filled' : 'outlined'}
                 sx={{
-                  background: selectedServiceType === 'all' ? 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)' : 'transparent',
-                  color: selectedServiceType === 'all' ? 'white' : '#ff8c00',
-                  borderColor: '#ff8c00',
+                  background: selectedServiceType === 'all' ? 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)' : 'transparent',
+                  color: selectedServiceType === 'all' ? 'white' : '#F19B7D',
+                  borderColor: '#F19B7D',
                   cursor: 'pointer',
                   fontWeight: 600,
                 }}
@@ -395,9 +395,9 @@ const BrowseVendors: React.FC = () => {
                   onClick={() => setSelectedServiceType(service)}
                   variant={selectedServiceType === service ? 'filled' : 'outlined'}
                   sx={{
-                    background: selectedServiceType === service ? 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)' : 'transparent',
-                    color: selectedServiceType === service ? 'white' : '#ff8c00',
-                    borderColor: '#ff8c00',
+                    background: selectedServiceType === service ? 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)' : 'transparent',
+                    color: selectedServiceType === service ? 'white' : '#F19B7D',
+                    borderColor: '#F19B7D',
                     cursor: 'pointer',
                     fontWeight: 500,
                   }}
@@ -420,10 +420,10 @@ const BrowseVendors: React.FC = () => {
                   size="small"
                   sx={{
                     '& .MuiToggleButton-root': {
-                      borderColor: '#ff8c00',
-                      color: '#ff8c00',
+                      borderColor: '#F19B7D',
+                      color: '#F19B7D',
                       '&.Mui-selected': {
-                        background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)',
+                        background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
                         color: 'white',
                       },
                     },
@@ -484,12 +484,12 @@ const BrowseVendors: React.FC = () => {
             sx={{
               textAlign: 'center',
               py: 10,
-              background: 'linear-gradient(135deg, rgba(255, 140, 0, 0.05) 0%, rgba(255, 140, 0, 0) 100%)',
-              border: '2px dashed rgba(255, 140, 0, 0.2)',
+              background: 'linear-gradient(135deg, rgba(241, 155, 125, 0.08) 0%, rgba(241, 155, 125, 0) 100%)',
+              border: '2px dashed rgba(241, 155, 125, 0.24)',
               borderRadius: 2,
             }}
           >
-            <SearchIcon sx={{ fontSize: 64, color: 'rgba(255, 140, 0, 0.3)', mb: 2 }} />
+            <SearchIcon sx={{ fontSize: 64, color: 'rgba(241, 155, 125, 0.34)', mb: 2 }} />
             <Typography variant="h6" sx={{ color: '#666', mb: 1, fontWeight: 600 }}>
               No vendors found
             </Typography>
@@ -502,7 +502,7 @@ const BrowseVendors: React.FC = () => {
                 setSearchQuery('')
                 setSelectedServiceType('all')
               }}
-              sx={{ borderColor: '#ff8c00', color: '#ff8c00' }}
+              sx={{ borderColor: '#F19B7D', color: '#F19B7D' }}
             >
               Clear Filters
             </Button>
@@ -525,7 +525,7 @@ const BrowseVendors: React.FC = () => {
                     display: viewMode === 'list' ? 'flex' : 'block',
                     '&:hover': {
                       transform: viewMode === 'grid' ? 'translateY(-12px)' : 'translateX(8px)',
-                      boxShadow: '0 16px 40px rgba(255, 140, 0, 0.25)',
+                      boxShadow: '0 16px 40px rgba(241, 155, 125, 0.28)',
                     },
                   }}
                 >
@@ -545,7 +545,7 @@ const BrowseVendors: React.FC = () => {
                           position: 'absolute',
                           top: 12,
                           left: 12,
-                          background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)',
+                          background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
                           color: 'white',
                           px: 1.5,
                           py: 0.75,
@@ -585,8 +585,8 @@ const BrowseVendors: React.FC = () => {
                         label={vendor.serviceType}
                         size="small"
                         sx={{
-                          background: 'rgba(255, 140, 0, 0.1)',
-                          color: '#ff8c00',
+                          background: 'rgba(241, 155, 125, 0.14)',
+                          color: '#F19B7D',
                           fontWeight: 600,
                         }}
                       />
@@ -616,13 +616,13 @@ const BrowseVendors: React.FC = () => {
                           variant="outlined"
                           size="small"
                           sx={{
-                            borderColor: '#ff8c00',
-                            color: '#ff8c00',
+                            borderColor: '#F19B7D',
+                            color: '#F19B7D',
                             textTransform: 'none',
                             fontWeight: 600,
                             '&:hover': {
-                              borderColor: '#ff6b35',
-                              background: 'rgba(255, 140, 0, 0.05)',
+                              borderColor: '#DD8568',
+                              background: 'rgba(241, 155, 125, 0.08)',
                             },
                           }}
                         >
@@ -634,7 +634,7 @@ const BrowseVendors: React.FC = () => {
                           fullWidth
                           variant="contained"
                           size="small"
-                          sx={{ background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)', textTransform: 'none', fontWeight: 600 }}
+                          sx={{ background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)', textTransform: 'none', fontWeight: 600 }}
                         >
                           View & Book
                         </Button>
@@ -650,7 +650,7 @@ const BrowseVendors: React.FC = () => {
         {/* Vendor Details Dialog */}
         {selectedVendor && (
           <Dialog open={openDetailDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-            <DialogTitle sx={{ background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)', color: 'white' }}>
+            <DialogTitle sx={{ background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)', color: 'white' }}>
               {selectedVendor.name}
               {selectedVendor.verified && (
                 <CheckCircleIcon sx={{ fontSize: 20, ml: 1, verticalAlign: 'middle' }} />
@@ -692,7 +692,7 @@ const BrowseVendors: React.FC = () => {
                   <Typography variant="body2" sx={{ color: '#999', fontWeight: 500, mb: 0.5 }}>
                     Service Type
                   </Typography>
-                  <Chip label={selectedVendor.serviceType} sx={{ background: 'rgba(255, 140, 0, 0.1)', color: '#ff8c00' }} />
+                  <Chip label={selectedVendor.serviceType} sx={{ background: 'rgba(241, 155, 125, 0.14)', color: '#F19B7D' }} />
                 </Box>
 
                 {/* Price */}
@@ -700,7 +700,7 @@ const BrowseVendors: React.FC = () => {
                   <Typography variant="body2" sx={{ color: '#999', fontWeight: 500, mb: 0.5 }}>
                     Price Range
                   </Typography>
-                  <Typography variant="h6" sx={{ color: '#ff8c00', fontWeight: 600 }}>
+                  <Typography variant="h6" sx={{ color: '#F19B7D', fontWeight: 600 }}>
                     {selectedVendor.price}
                   </Typography>
                 </Box>
@@ -728,7 +728,7 @@ const BrowseVendors: React.FC = () => {
                           label={service}
                           size="small"
                           variant="outlined"
-                          sx={{ borderColor: '#ff8c00', color: '#ff8c00' }}
+                          sx={{ borderColor: '#F19B7D', color: '#F19B7D' }}
                         />
                       ))}
                     </Box>
@@ -736,24 +736,24 @@ const BrowseVendors: React.FC = () => {
                 )}
 
                 {/* Contact Info */}
-                <Box sx={{ background: 'rgba(255, 140, 0, 0.05)', p: 2, borderRadius: 1 }}>
+                <Box sx={{ background: 'rgba(241, 155, 125, 0.08)', p: 2, borderRadius: 1 }}>
                   <Typography variant="body2" sx={{ color: '#999', fontWeight: 500, mb: 1 }}>
                     Contact Information
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <PhoneIcon sx={{ fontSize: 16, color: '#ff8c00' }} />
+                    <PhoneIcon sx={{ fontSize: 16, color: '#F19B7D' }} />
                     <Typography variant="body2" sx={{ color: '#666' }}>
                       {selectedVendor.contact?.phone ?? 'Not provided'}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <EmailIcon sx={{ fontSize: 16, color: '#ff8c00' }} />
+                    <EmailIcon sx={{ fontSize: 16, color: '#F19B7D' }} />
                     <Typography variant="body2" sx={{ color: '#666' }}>
                       {selectedVendor.contact?.email ?? 'Not provided'}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <LocationOnIcon sx={{ fontSize: 16, color: '#ff8c00' }} />
+                    <LocationOnIcon sx={{ fontSize: 16, color: '#F19B7D' }} />
                     <Typography variant="body2" sx={{ color: '#666' }}>
                       {selectedVendor.location ?? 'Not specified'}
                     </Typography>
@@ -783,7 +783,7 @@ const BrowseVendors: React.FC = () => {
               <Button
                 variant="contained"
                 onClick={handleBookClick}
-                sx={{ background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)' }}
+                sx={{ background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)' }}
               >
                 Book Now
               </Button>
@@ -793,7 +793,7 @@ const BrowseVendors: React.FC = () => {
 
         {/* Booking Dialog */}
         <Dialog open={openBookingDialog} onClose={handleCloseBookingDialog} maxWidth="sm" fullWidth>
-          <DialogTitle sx={{ background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)', color: 'white' }}>
+          <DialogTitle sx={{ background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)', color: 'white' }}>
             Book Service
           </DialogTitle>
           <DialogContent sx={{ pt: 3 }}>
@@ -858,7 +858,7 @@ const BrowseVendors: React.FC = () => {
               variant="contained"
               onClick={handleBookService}
               disabled={bookingLoading || availabilityLoading || (bookingDate ? blockedDates.includes(bookingDate) : false)}
-              sx={{ background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)' }}
+              sx={{ background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)' }}
             >
               {bookingLoading ? <CircularProgress size={24} /> : 'Book Service'}
             </Button>
@@ -870,3 +870,5 @@ const BrowseVendors: React.FC = () => {
 }
 
 export default BrowseVendors
+
+

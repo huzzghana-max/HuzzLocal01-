@@ -326,7 +326,7 @@ const Messaging: React.FC = () => {
               startIcon={<AddIcon />}
               onClick={() => setShowNewMessageModal(true)}
               sx={{
-                background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)',
+                background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
                 textTransform: 'none',
                 fontWeight: 600,
               }}
@@ -338,7 +338,7 @@ const Messaging: React.FC = () => {
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '320px 1fr' }, gap: 2, flex: 1, minHeight: 0 }}>
           {/* Conversations List */}
           <Paper sx={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 2, boxShadow: 2, minHeight: 0 }}>
-            <Box sx={{ p: 2, borderBottom: '2px solid #f0f0f0', bgcolor: '#fafafa' }}>
+            <Box sx={{ p: 2, borderBottom: '2px solid #E1E7F0', bgcolor: '#F9FBFE' }}>
               <TextField
                 fullWidth
                 placeholder="Search conversations..."
@@ -348,7 +348,7 @@ const Messaging: React.FC = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <SearchIcon sx={{ color: '#ff8c00' }} />
+                      <SearchIcon sx={{ color: '#F19B7D' }} />
                     </InputAdornment>
                   ),
                 }}
@@ -356,10 +356,10 @@ const Messaging: React.FC = () => {
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 1,
                     '&:hover fieldset': {
-                      borderColor: '#ff8c00',
+                      borderColor: '#F19B7D',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: '#ff8c00',
+                      borderColor: '#F19B7D',
                     },
                   },
                 }}
@@ -371,7 +371,7 @@ const Messaging: React.FC = () => {
                 <CircularProgress />
               </Box>
             ) : (
-              <List sx={{ overflow: 'auto', flex: 1, '&::-webkit-scrollbar': { width: '6px' }, '&::-webkit-scrollbar-track': { background: '#f1f1f1' }, '&::-webkit-scrollbar-thumb': { background: '#ff8c00', borderRadius: '3px' } }}>
+              <List sx={{ overflow: 'auto', flex: 1, '&::-webkit-scrollbar': { width: '6px' }, '&::-webkit-scrollbar-track': { background: '#f1f1f1' }, '&::-webkit-scrollbar-thumb': { background: '#F19B7D', borderRadius: '3px' } }}>
                 {filteredConversations.length === 0 ? (
                   <Box sx={{ p: 3, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                     <Typography color="text.secondary">No conversations yet</Typography>
@@ -383,11 +383,11 @@ const Messaging: React.FC = () => {
                       disablePadding
                       sx={{
                         backgroundColor:
-                          selectedConversation?.user_id === conversation.user_id ? '#fff3e0' : 'transparent',
-                        borderLeft: selectedConversation?.user_id === conversation.user_id ? '4px solid #ff8c00' : '4px solid transparent',
+                          selectedConversation?.user_id === conversation.user_id ? '#FCE9E2' : 'transparent',
+                        borderLeft: selectedConversation?.user_id === conversation.user_id ? '4px solid #F19B7D' : '4px solid transparent',
                         transition: 'all 0.2s ease',
                         '&:hover': {
-                          backgroundColor: '#fafafa',
+                          backgroundColor: '#F9FBFE',
                         },
                       }}
                     >
@@ -397,12 +397,12 @@ const Messaging: React.FC = () => {
                             badgeContent={conversation.unread_count} 
                             color="error" 
                             overlap="circular" 
-                            sx={{ '& .MuiBadge-badge': { backgroundColor: '#ff8c00', color: 'white', fontWeight: 700 } }}
+                            sx={{ '& .MuiBadge-badge': { backgroundColor: '#F19B7D', color: 'white', fontWeight: 700 } }}
                           >
                             <Avatar
                               src={conversation.profile_image}
                               alt={conversation.name}
-                              sx={{ width: 40, height: 40, bgcolor: '#ff8c00', fontWeight: 700 }}
+                              sx={{ width: 40, height: 40, bgcolor: '#F19B7D', fontWeight: 700 }}
                             >
                               {conversation.name.charAt(0).toUpperCase()}
                             </Avatar>
@@ -443,7 +443,7 @@ const Messaging: React.FC = () => {
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              backgroundColor: selectedConversation ? 'background.paper' : '#f9f9f9',
+              backgroundColor: selectedConversation ? 'background.paper' : '#F9FBFE',
               borderRadius: 2,
               boxShadow: 2,
               minHeight: 0,
@@ -455,17 +455,17 @@ const Messaging: React.FC = () => {
                 <Box
                   sx={{
                     p: 2,
-                    borderBottom: '2px solid #f0f0f0',
+                    borderBottom: '2px solid #E1E7F0',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 2,
-                    bgcolor: '#fafafa',
+                    bgcolor: '#F9FBFE',
                   }}
                 >
                   <Avatar
                     src={selectedConversation.profile_image}
                     alt={selectedConversation.name}
-                    sx={{ width: 45, height: 45, bgcolor: '#ff8c00', fontWeight: 700 }}
+                    sx={{ width: 45, height: 45, bgcolor: '#F19B7D', fontWeight: 700 }}
                   >
                     {selectedConversation.name.charAt(0)}
                   </Avatar>
@@ -490,7 +490,7 @@ const Messaging: React.FC = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 1.5,
-                    backgroundColor: '#fafafa',
+                    backgroundColor: '#F9FBFE',
                     minHeight: 0,
                     '&::-webkit-scrollbar': { 
                       width: '10px',
@@ -500,11 +500,11 @@ const Messaging: React.FC = () => {
                       borderRadius: '10px',
                     },
                     '&::-webkit-scrollbar-thumb': { 
-                      background: '#ff8c00',
+                      background: '#F19B7D',
                       borderRadius: '10px',
                       border: '2px solid #f1f1f1',
                       '&:hover': {
-                        background: '#ff7700',
+                        background: '#D57B5E',
                       }
                     },
                   }}
@@ -536,7 +536,7 @@ const Messaging: React.FC = () => {
                             sx={{
                               width: 32,
                               height: 32,
-                              bgcolor: '#ff8c00',
+                              bgcolor: '#F19B7D',
                               fontSize: '0.75rem',
                               fontWeight: 700,
                               flexShrink: 0,
@@ -559,7 +559,7 @@ const Messaging: React.FC = () => {
                               variant="caption"
                               sx={{
                                 fontWeight: 600,
-                                color: isCurrentUser ? '#ff8c00' : '#ff8c00',
+                                color: isCurrentUser ? '#F19B7D' : '#F19B7D',
                                 pl: 1.5,
                               }}
                             >
@@ -570,17 +570,17 @@ const Messaging: React.FC = () => {
                             <Card
                               sx={{
                                 background: isCurrentUser
-                                  ? 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)'
+                                  ? 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)'
                                   : 'white',
                                 color: isCurrentUser ? 'white' : 'black',
                                 boxShadow: isCurrentUser
-                                  ? '0 4px 12px rgba(255, 140, 0, 0.4)'
+                                  ? '0 4px 12px rgba(241, 155, 125, 0.4)'
                                   : '0 2px 8px rgba(0, 0, 0, 0.15)',
                                 borderRadius: isCurrentUser ? '18px 4px 18px 18px' : '4px 18px 18px 18px',
                                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                 '&:hover': {
                                   boxShadow: isCurrentUser
-                                    ? '0 6px 16px rgba(255, 140, 0, 0.5)'
+                                    ? '0 6px 16px rgba(241, 155, 125, 0.48)'
                                     : '0 4px 12px rgba(0, 0, 0, 0.2)',
                                   transform: 'translateY(-2px)',
                                 },
@@ -617,7 +617,7 @@ const Messaging: React.FC = () => {
 
                 {/* Input */}
                 <Divider />
-                <Box sx={{ p: 2.5, display: 'flex', gap: 1.5, bgcolor: '#fafafa', borderTop: '2px solid #f0f0f0' }}>
+                <Box sx={{ p: 2.5, display: 'flex', gap: 1.5, bgcolor: '#F9FBFE', borderTop: '2px solid #E1E7F0' }}>
                   <TextField
                     fullWidth
                     placeholder="Type your message..."
@@ -636,10 +636,10 @@ const Messaging: React.FC = () => {
                       '& .MuiOutlinedInput-root': {
                         borderRadius: 1.5,
                         '&:hover fieldset': {
-                          borderColor: '#ff8c00',
+                          borderColor: '#F19B7D',
                         },
                         '&.Mui-focused fieldset': {
-                          borderColor: '#ff8c00',
+                          borderColor: '#F19B7D',
                         },
                       },
                     }}
@@ -650,13 +650,13 @@ const Messaging: React.FC = () => {
                     onClick={handleSendMessage}
                     disabled={!newMessage.trim() || sendingMessage}
                     sx={{
-                      background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)',
+                      background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
                       textTransform: 'none',
                       fontWeight: 600,
                       px: 2,
                       borderRadius: 1.5,
                       '&:hover': {
-                        background: 'linear-gradient(135deg, #ff7700 0%, #ff5722 100%)',
+                        background: 'linear-gradient(135deg, #D57B5E 0%, #C96F54 100%)',
                       },
                     }}
                   >
@@ -694,7 +694,7 @@ const Messaging: React.FC = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon sx={{ color: '#ff8c00' }} />
+                  <SearchIcon sx={{ color: '#F19B7D' }} />
                 </InputAdornment>
               ),
             }}
@@ -720,13 +720,13 @@ const Messaging: React.FC = () => {
                   <ListItemButton 
                     onClick={() => handleStartConversation(user)}
                     sx={{
-                      '&:hover': { bgcolor: 'rgba(255, 140, 0, 0.1)' }
+                      '&:hover': { bgcolor: 'rgba(241, 155, 125, 0.14)' }
                     }}
                   >
                     <ListItemAvatar>
                       <Avatar 
                         src={user.profile_image} 
-                        sx={{ bgcolor: '#ff8c00', width: 40, height: 40 }}
+                        sx={{ bgcolor: '#F19B7D', width: 40, height: 40 }}
                       >
                         {user.name.charAt(0).toUpperCase()}
                       </Avatar>
@@ -747,3 +747,4 @@ const Messaging: React.FC = () => {
 }
 
 export default Messaging
+

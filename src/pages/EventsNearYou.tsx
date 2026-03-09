@@ -236,7 +236,7 @@ const EventsNearYou: React.FC = () => {
               fontWeight: 900,
               letterSpacing: -0.6,
               fontSize: { xs: '2rem', md: '2.6rem' },
-              background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+              background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -285,13 +285,13 @@ const EventsNearYou: React.FC = () => {
                   overflow: 'hidden',
                   backdropFilter: 'blur(6px)',
                   background: 'linear-gradient(160deg, rgba(255,255,255,0.96) 0%, rgba(244,247,246,0.92) 100%)',
-                  boxShadow: '0 10px 26px rgba(14, 59, 38, 0.12)',
+                  boxShadow: '0 10px 26px rgba(65, 73, 88, 0.14)',
                   border: '1px solid rgba(207,217,211,0.8)',
                   transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:hover': {
-                    boxShadow: '0 18px 36px rgba(14, 59, 38, 0.18)',
+                    boxShadow: '0 18px 36px rgba(65, 73, 88, 0.2)',
                     transform: 'translateY(-6px)',
-                    border: '1px solid rgba(14, 59, 38, 0.28)',
+                    border: '1px solid rgba(65, 73, 88, 0.28)',
                   },
                 }}
               >
@@ -311,7 +311,7 @@ const EventsNearYou: React.FC = () => {
                       bottom: 12,
                       bgcolor: 'rgba(255,255,255,0.95)',
                       fontWeight: 700,
-                      border: '1px solid rgba(14,59,38,0.16)',
+                      border: '1px solid rgba(65, 73, 88, 0.16)',
                     }}
                   />
                 </Box>
@@ -321,7 +321,7 @@ const EventsNearYou: React.FC = () => {
                       variant="h6"
                       sx={{
                         fontWeight: 700,
-                        color: '#0E3B26',
+                        color: '#414958',
                         lineHeight: 1.2,
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
@@ -383,13 +383,13 @@ const EventsNearYou: React.FC = () => {
                       size="small"
                       onClick={() => navigate(`/events/${ev.id}`)}
                       sx={{
-                        background: 'linear-gradient(135deg, #145A45 0%, #0F4333 100%)',
+                        background: 'linear-gradient(135deg, #394150 0%, #333B49 100%)',
                         fontWeight: 700,
                         textTransform: 'none',
                         borderRadius: 2,
                         transition: 'all 0.3s ease',
                         '&:hover': {
-                          boxShadow: '0 4px 12px rgba(14, 59, 38, 0.3)',
+                          boxShadow: '0 4px 12px rgba(65, 73, 88, 0.3)',
                           transform: 'translateY(-1px)',
                         },
                       }}
@@ -401,16 +401,16 @@ const EventsNearYou: React.FC = () => {
                       size="small"
                       onClick={() => handleAttend(ev)}
                       sx={{
-                        borderColor: '#0E3B26',
-                        color: '#0E3B26',
+                        borderColor: '#414958',
+                        color: '#414958',
                         fontWeight: 600,
                         textTransform: 'none',
                         borderRadius: 2,
                         border: '2px solid',
                         transition: 'all 0.3s ease',
                         '&:hover': {
-                          backgroundColor: 'rgba(14, 59, 38, 0.08)',
-                          borderColor: '#1B5E3C',
+                          backgroundColor: 'rgba(65, 73, 88, 0.1)',
+                          borderColor: '#2B3240',
                         },
                       }}
                     >
@@ -437,15 +437,15 @@ const EventsNearYou: React.FC = () => {
               variant="contained"
               onClick={() => setVisibleCount((c) => c + 9)}
               sx={{
-                background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+                background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
                 fontWeight: 700,
                 py: 1.5,
                 px: 4,
                 borderRadius: '12px',
-                boxShadow: '0 4px 15px rgba(14, 59, 38, 0.3)',
+                boxShadow: '0 4px 15px rgba(65, 73, 88, 0.3)',
                 transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
-                  boxShadow: '0 8px 25px rgba(14, 59, 38, 0.4)',
+                  boxShadow: '0 8px 25px rgba(65, 73, 88, 0.38)',
                   transform: 'translateY(-2px)',
                 },
               }}
@@ -521,4 +521,6 @@ const EventsNearYou: React.FC = () => {
 }
 
 export default EventsNearYou
+
+
 

@@ -225,12 +225,12 @@ const EventDetail: React.FC = () => {
               borderRadius: '16px',
               overflow: 'hidden',
               boxShadow: theme.palette.mode === 'light'
-                ? '0 8px 32px rgba(14, 59, 38, 0.15)'
+                ? '0 8px 32px rgba(65, 73, 88, 0.18)'
                 : '0 8px 32px rgba(0, 0, 0, 0.4)',
               mb: 4,
               border: theme.palette.mode === 'light'
-                ? '1px solid rgba(184, 227, 197, 0.2)'
-                : '1px solid rgba(184, 227, 197, 0.15)',
+                ? '1px solid rgba(204, 213, 226, 0.24)'
+                : '1px solid rgba(204, 213, 226, 0.18)',
             }}
           >
             {/* Event Image */}
@@ -249,8 +249,8 @@ const EventDetail: React.FC = () => {
                 sx={{
                   height: 400,
                   background: theme.palette.mode === 'light'
-                    ? 'linear-gradient(135deg, #F4F7F6 0%, #B8E3C5 100%)'
-                    : 'linear-gradient(135deg, #0E2620 0%, #1B5E3C 100%)',
+                    ? 'linear-gradient(135deg, #EEF2F8 0%, #CCD5E2 100%)'
+                    : 'linear-gradient(135deg, #232B38 0%, #2B3240 100%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -268,7 +268,7 @@ const EventDetail: React.FC = () => {
                     variant="h3"
                     sx={{
                       fontWeight: 800,
-                      background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+                      background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
                       mb: 1,
@@ -281,10 +281,10 @@ const EventDetail: React.FC = () => {
                       label={event.status}
                       size="small"
                       sx={{
-                        background: 'linear-gradient(135deg, rgba(14, 59, 38, 0.15) 0%, rgba(184, 227, 197, 0.15) 100%)',
-                        color: '#0E3B26',
+                        background: 'linear-gradient(135deg, rgba(65, 73, 88, 0.18) 0%, rgba(204, 213, 226, 0.18) 100%)',
+                        color: '#414958',
                         fontWeight: 700,
-                        border: '1.5px solid #B8E3C5',
+                        border: '1.5px solid #CCD5E2',
                       }}
                     />
                   )}
@@ -304,16 +304,16 @@ const EventDetail: React.FC = () => {
                       p: 2,
                       borderRadius: '12px',
                       background: theme.palette.mode === 'light'
-                        ? 'rgba(14, 59, 38, 0.05)'
-                        : 'rgba(184, 227, 197, 0.05)',
+                        ? 'rgba(65, 73, 88, 0.06)'
+                        : 'rgba(204, 213, 226, 0.07)',
                       border: theme.palette.mode === 'light'
-                        ? '1px solid rgba(14, 59, 38, 0.1)'
-                        : '1px solid rgba(184, 227, 197, 0.1)',
+                        ? '1px solid rgba(65, 73, 88, 0.12)'
+                        : '1px solid rgba(204, 213, 226, 0.12)',
                     }}
                   >
                     <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-                      <CalendarMonthIcon sx={{ color: '#0E3B26' }} />
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0E3B26' }}>
+                      <CalendarMonthIcon sx={{ color: '#414958' }} />
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#414958' }}>
                         Date & Time
                       </Typography>
                     </Stack>
@@ -336,16 +336,16 @@ const EventDetail: React.FC = () => {
                         p: 2,
                         borderRadius: '12px',
                         background: theme.palette.mode === 'light'
-                          ? 'rgba(14, 59, 38, 0.05)'
-                          : 'rgba(184, 227, 197, 0.05)',
+                          ? 'rgba(65, 73, 88, 0.06)'
+                          : 'rgba(204, 213, 226, 0.07)',
                         border: theme.palette.mode === 'light'
-                          ? '1px solid rgba(14, 59, 38, 0.1)'
-                          : '1px solid rgba(184, 227, 197, 0.1)',
+                          ? '1px solid rgba(65, 73, 88, 0.12)'
+                          : '1px solid rgba(204, 213, 226, 0.12)',
                       }}
                     >
                       <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-                        <LocationOnIcon sx={{ color: '#0E3B26' }} />
-                        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0E3B26' }}>
+                        <LocationOnIcon sx={{ color: '#414958' }} />
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#414958' }}>
                           Location
                         </Typography>
                       </Stack>
@@ -412,7 +412,7 @@ const EventDetail: React.FC = () => {
             sx={{
               fontWeight: 800,
               mb: 3,
-              background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+              background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -427,11 +427,11 @@ const EventDetail: React.FC = () => {
                 textAlign: 'center',
                 borderRadius: '16px',
                 background: theme.palette.mode === 'light'
-                  ? 'linear-gradient(135deg, #FFFFFF 0%, #F4F7F6 100%)'
-                  : 'linear-gradient(135deg, #122A1F 0%, #0E2620 100%)',
+                  ? 'linear-gradient(135deg, #FFFFFF 0%, #EEF2F8 100%)'
+                  : 'linear-gradient(135deg, #2D3645 0%, #232B38 100%)',
                 border: theme.palette.mode === 'light'
-                  ? '1px solid rgba(184, 227, 197, 0.2)'
-                  : '1px solid rgba(184, 227, 197, 0.15)',
+                  ? '1px solid rgba(204, 213, 226, 0.24)'
+                  : '1px solid rgba(204, 213, 226, 0.18)',
               }}
             >
               <Typography color="text.secondary" sx={{ fontWeight: 500 }}>
@@ -450,15 +450,15 @@ const EventDetail: React.FC = () => {
                     alignItems: 'center',
                     borderRadius: '12px',
                     background: theme.palette.mode === 'light'
-                      ? 'linear-gradient(135deg, #FFFFFF 0%, #F4F7F6 100%)'
-                      : 'linear-gradient(135deg, #122A1F 0%, #0E2620 100%)',
+                      ? 'linear-gradient(135deg, #FFFFFF 0%, #EEF2F8 100%)'
+                      : 'linear-gradient(135deg, #2D3645 0%, #232B38 100%)',
                     border: theme.palette.mode === 'light'
-                      ? '1px solid rgba(184, 227, 197, 0.2)'
-                      : '1px solid rgba(184, 227, 197, 0.15)',
+                      ? '1px solid rgba(204, 213, 226, 0.24)'
+                      : '1px solid rgba(204, 213, 226, 0.18)',
                     transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                     '&:hover': {
                       boxShadow: theme.palette.mode === 'light'
-                        ? '0 8px 24px rgba(14, 59, 38, 0.12)'
+                        ? '0 8px 24px rgba(65, 73, 88, 0.14)'
                         : '0 8px 24px rgba(0, 0, 0, 0.3)',
                       transform: 'translateY(-2px)',
                     },
@@ -500,11 +500,11 @@ const EventDetail: React.FC = () => {
                       onClick={() => handlePurchase(ticket.id)}
                       disabled={processing || (ticket.quantity - ticket.sold) <= 0}
                       sx={{
-                        background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+                        background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
                         fontWeight: 700,
                         transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                         '&:hover': {
-                          boxShadow: '0 8px 24px rgba(14, 59, 38, 0.3)',
+                          boxShadow: '0 8px 24px rgba(65, 73, 88, 0.3)',
                         },
                       }}
                     >
@@ -542,3 +542,4 @@ const EventDetail: React.FC = () => {
 }
 
 export default EventDetail
+

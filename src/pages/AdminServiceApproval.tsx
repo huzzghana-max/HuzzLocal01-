@@ -222,7 +222,7 @@ const AdminServiceApproval: React.FC = () => {
             <TableContainer component={Paper}>
               <Table>
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableRow sx={{ backgroundColor: '#EEF2F8' }}>
                     <TableCell sx={{ fontWeight: 700 }}>Service Title</TableCell>
                     <TableCell sx={{ fontWeight: 700 }}>Provider</TableCell>
                     <TableCell sx={{ fontWeight: 700 }}>Category</TableCell>
@@ -263,7 +263,7 @@ const AdminServiceApproval: React.FC = () => {
                         <Chip label={service.category} size="small" variant="outlined" />
                       </TableCell>
                       <TableCell>
-                        <Typography sx={{ fontWeight: 700, color: '#ff8c00' }}>
+                        <Typography sx={{ fontWeight: 700, color: '#F19B7D' }}>
                           ${(typeof service.price === 'string' ? service.price : String(service.price))}
                         </Typography>
                       </TableCell>
@@ -280,7 +280,7 @@ const AdminServiceApproval: React.FC = () => {
                             startIcon={<CheckCircleIcon />}
                             onClick={() => handleViewDetails(service)}
                             sx={{
-                              background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)',
+                              background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
                               textTransform: 'none',
                               fontWeight: 600,
                             }}
@@ -330,7 +330,7 @@ const AdminServiceApproval: React.FC = () => {
                 </Box>
               )}
               <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#ff8c00', mb: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#F19B7D', mb: 1 }}>
                   Provider
                 </Typography>
                 <Typography variant="body2">{selectedService.vendor_name}</Typography>
@@ -339,20 +339,20 @@ const AdminServiceApproval: React.FC = () => {
                 </Typography>
               </Box>
               <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#ff8c00', mb: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#F19B7D', mb: 1 }}>
                   Category
                 </Typography>
                 <Chip label={selectedService.category} />
               </Box>
               <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#ff8c00', mb: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#F19B7D', mb: 1 }}>
                   Price
                 </Typography>
                 <Typography variant="h6">${(typeof selectedService.price === 'string' ? selectedService.price : String(selectedService.price))}</Typography>
               </Box>
               {selectedService.duration && (
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#ff8c00', mb: 1 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#F19B7D', mb: 1 }}>
                     Duration
                   </Typography>
                   <Typography variant="body2">{selectedService.duration}</Typography>
@@ -360,7 +360,7 @@ const AdminServiceApproval: React.FC = () => {
               )}
               {selectedService.availability && (
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#ff8c00', mb: 1 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#F19B7D', mb: 1 }}>
                     Availability
                   </Typography>
                   <Typography variant="body2">{selectedService.availability}</Typography>
@@ -368,7 +368,7 @@ const AdminServiceApproval: React.FC = () => {
               )}
               {selectedService.phone && (
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#ff8c00', mb: 1 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#F19B7D', mb: 1 }}>
                     Phone
                   </Typography>
                   <Typography variant="body2">{selectedService.phone}</Typography>
@@ -376,14 +376,14 @@ const AdminServiceApproval: React.FC = () => {
               )}
               {selectedService.location && (
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#ff8c00', mb: 1 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#F19B7D', mb: 1 }}>
                     Location
                   </Typography>
                   <Typography variant="body2">{selectedService.location}</Typography>
                 </Box>
               )}
               <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#ff8c00', mb: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#F19B7D', mb: 1 }}>
                   Description
                 </Typography>
                 <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
@@ -406,7 +406,7 @@ const AdminServiceApproval: React.FC = () => {
                 onClick={() => handleApprove(selectedService)}
                 variant="contained"
                 sx={{
-                  background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)',
+                  background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
                 }}
               >
                 Approve Service
@@ -420,3 +420,4 @@ const AdminServiceApproval: React.FC = () => {
 }
 
 export default AdminServiceApproval
+

@@ -267,7 +267,7 @@ const VendorProfile: React.FC = () => {
               sx={{
                 fontWeight: 700,
                 mb: 1,
-                background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)',
+                background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}
@@ -282,7 +282,7 @@ const VendorProfile: React.FC = () => {
             startIcon={<HomeIcon />}
             variant="outlined"
             onClick={() => navigate('/provider-dashboard')}
-            sx={{ borderColor: '#ff8c00', color: '#ff8c00' }}
+            sx={{ borderColor: '#F19B7D', color: '#F19B7D' }}
           >
             Dashboard
           </Button>
@@ -306,7 +306,7 @@ const VendorProfile: React.FC = () => {
                     width: 200,
                     height: 200,
                     mb: 2,
-                    background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)',
+                    background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
                   }}
                 />
                 <Button
@@ -314,7 +314,7 @@ const VendorProfile: React.FC = () => {
                   component="label"
                   startIcon={<CloudUploadIcon />}
                   sx={{
-                    background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)',
+                    background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
                     textTransform: 'none',
                     fontWeight: 600,
                   }}
@@ -441,7 +441,7 @@ const VendorProfile: React.FC = () => {
                 component="label"
                 startIcon={<AddIcon />}
                 sx={{
-                  background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)',
+                  background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
                   textTransform: 'none',
                   fontWeight: 600,
                 }}
@@ -456,12 +456,12 @@ const VendorProfile: React.FC = () => {
                 sx={{
                   p: 4,
                   textAlign: 'center',
-                  background: 'linear-gradient(135deg, rgba(255, 140, 0, 0.05) 0%, rgba(255, 140, 0, 0) 100%)',
-                  border: '2px dashed rgba(255, 140, 0, 0.2)',
+                  background: 'linear-gradient(135deg, rgba(241, 155, 125, 0.08) 0%, rgba(241, 155, 125, 0) 100%)',
+                  border: '2px dashed rgba(241, 155, 125, 0.24)',
                   borderRadius: 2,
                 }}
               >
-                <CloudUploadIcon sx={{ fontSize: 48, color: '#ff8c00', mb: 1, opacity: 0.5 }} />
+                <CloudUploadIcon sx={{ fontSize: 48, color: '#F19B7D', mb: 1, opacity: 0.5 }} />
                 <Typography sx={{ color: '#999' }}>
                   No portfolio images yet. Add images to showcase your work!
                 </Typography>
@@ -525,7 +525,7 @@ const VendorProfile: React.FC = () => {
                               background: 'rgba(0,0,0,0.7)',
                             }}
                           >
-                            <CircularProgress sx={{ color: '#ff8c00' }} />
+                            <CircularProgress sx={{ color: '#F19B7D' }} />
                           </Box>
                         )}
                       </Box>
@@ -546,7 +546,7 @@ const VendorProfile: React.FC = () => {
           <Button
             variant="outlined"
             onClick={() => navigate('/provider-dashboard')}
-            sx={{ borderColor: '#ff8c00', color: '#ff8c00' }}
+            sx={{ borderColor: '#F19B7D', color: '#F19B7D' }}
           >
             Cancel
           </Button>
@@ -556,7 +556,7 @@ const VendorProfile: React.FC = () => {
             onClick={handleSaveProfile}
             disabled={loading}
             sx={{
-              background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%)',
+              background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
               textTransform: 'none',
               fontWeight: 600,
             }}
@@ -570,4 +570,6 @@ const VendorProfile: React.FC = () => {
 }
 
 export default VendorProfile
+
+
 

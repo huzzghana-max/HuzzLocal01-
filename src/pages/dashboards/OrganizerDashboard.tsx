@@ -516,16 +516,16 @@ const OrganizerDashboard: React.FC = () => {
                   variant="contained"
                   onClick={handleCreateEvent}
                   sx={{
-                    background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)',
+                    background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
                     textTransform: 'none',
                     fontWeight: 700,
                     borderRadius: '12px',
                     py: 1,
                     px: 3,
-                    boxShadow: '0 4px 15px rgba(14, 59, 38, 0.3)',
+                    boxShadow: '0 4px 15px rgba(65, 73, 88, 0.3)',
                     transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                     '&:hover': {
-                      boxShadow: '0 8px 25px rgba(14, 59, 38, 0.4)',
+                      boxShadow: '0 8px 25px rgba(65, 73, 88, 0.38)',
                       transform: 'translateY(-2px)',
                     },
                   }}
@@ -539,14 +539,14 @@ const OrganizerDashboard: React.FC = () => {
                   sx={{
                     textTransform: 'none',
                     fontWeight: 700,
-                    borderColor: '#0E3B26',
-                    color: '#0E3B26',
+                    borderColor: '#414958',
+                    color: '#414958',
                     borderRadius: '12px',
                     border: '2px solid',
                     transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                     '&:hover': {
-                      borderColor: '#1B5E3C',
-                      backgroundColor: 'rgba(14, 59, 38, 0.08)',
+                      borderColor: '#2B3240',
+                      backgroundColor: 'rgba(65, 73, 88, 0.1)',
                       transform: 'translateY(-2px)',
                     },
                   }}
@@ -559,14 +559,14 @@ const OrganizerDashboard: React.FC = () => {
                   sx={{
                     textTransform: 'none',
                     fontWeight: 700,
-                    borderColor: '#0E3B26',
-                    color: '#0E3B26',
+                    borderColor: '#414958',
+                    color: '#414958',
                     borderRadius: '12px',
                     border: '2px solid',
                     transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                     '&:hover': {
-                      borderColor: '#1B5E3C',
-                      backgroundColor: 'rgba(14, 59, 38, 0.08)',
+                      borderColor: '#2B3240',
+                      backgroundColor: 'rgba(65, 73, 88, 0.1)',
                       transform: 'translateY(-2px)',
                     },
                   }}
@@ -922,20 +922,20 @@ const OrganizerDashboard: React.FC = () => {
                   
                   {/* Image Upload Section */}
                   <Box sx={{ mt: 3, mb: 0 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2, color: '#0E3B26', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2, color: '#414958', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: 1 }}>
                       📸 Event Image <Typography variant="caption" sx={{ fontWeight: 400, color: '#999' }}>(Optional)</Typography>
                     </Typography>
                     
                     {!imagePreview ? (
                       <Box
                         sx={{
-                          border: '2.5px dashed #0E3B26',
+                          border: '2.5px dashed #414958',
                           borderRadius: '16px',
                           padding: '32px 20px',
                           textAlign: 'center',
                           cursor: 'pointer',
                           transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
-                          background: 'linear-gradient(135deg, rgba(14, 59, 38, 0.05) 0%, rgba(27, 94, 60, 0.02) 100%)',
+                          background: 'linear-gradient(135deg, rgba(65, 73, 88, 0.06) 0%, rgba(27, 94, 60, 0.02) 100%)',
                           position: 'relative',
                           overflow: 'hidden',
                           '&::before': {
@@ -945,14 +945,14 @@ const OrganizerDashboard: React.FC = () => {
                             left: 0,
                             right: 0,
                             bottom: 0,
-                            background: 'radial-gradient(circle at 20% 50%, rgba(184, 227, 197, 0.1), transparent 50%)',
+                            background: 'radial-gradient(circle at 20% 50%, rgba(204, 213, 226, 0.12), transparent 50%)',
                             pointerEvents: 'none',
                           },
                           '&:hover': {
-                            backgroundColor: 'rgba(14, 59, 38, 0.1)',
-                            borderColor: '#1B5E3C',
+                            backgroundColor: 'rgba(65, 73, 88, 0.12)',
+                            borderColor: '#2B3240',
                             transform: 'translateY(-2px)',
-                            boxShadow: '0 8px 24px rgba(14, 59, 38, 0.12)',
+                            boxShadow: '0 8px 24px rgba(65, 73, 88, 0.14)',
                           },
                           '&:active': {
                             transform: 'translateY(0px)',
@@ -966,8 +966,8 @@ const OrganizerDashboard: React.FC = () => {
                           onChange={handleImageChange}
                           style={{ display: 'none' }}
                         />
-                        <CloudUploadIcon sx={{ fontSize: '3rem', color: '#0E3B26', mb: 1.5, display: 'block' }} />
-                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E3B26', mb: 0.75, fontSize: '1rem' }}>
+                        <CloudUploadIcon sx={{ fontSize: '3rem', color: '#414958', mb: 1.5, display: 'block' }} />
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#414958', mb: 0.75, fontSize: '1rem' }}>
                           Click to upload image
                         </Typography>
                         <Typography variant="caption" sx={{ color: '#666', display: 'block', fontSize: '0.875rem' }}>
@@ -979,13 +979,13 @@ const OrganizerDashboard: React.FC = () => {
                         sx={{
                           borderRadius: '16px',
                           overflow: 'hidden',
-                          border: '2px solid #0E3B26',
+                          border: '2px solid #414958',
                           backgroundColor: '#fff',
-                          boxShadow: '0 4px 16px rgba(14, 59, 38, 0.15)',
+                          boxShadow: '0 4px 16px rgba(65, 73, 88, 0.18)',
                           transition: 'all 0.3s ease',
                         }}
                       >
-                        <Box sx={{ position: 'relative', paddingTop: '62.5%', backgroundColor: '#f5f5f5' }}>
+                        <Box sx={{ position: 'relative', paddingTop: '62.5%', backgroundColor: '#EEF2F8' }}>
                           <img 
                             src={imagePreview} 
                             alt="Preview" 
@@ -1002,7 +1002,7 @@ const OrganizerDashboard: React.FC = () => {
                         <Box sx={{ p: 2, backgroundColor: '#fff' }}>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
                             <Box sx={{ flex: 1, minWidth: 0 }}>
-                              <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E3B26', mb: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <Typography variant="body2" sx={{ fontWeight: 700, color: '#414958', mb: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {imageFile?.name}
                               </Typography>
                               <Typography variant="caption" sx={{ color: '#999', display: 'block', fontWeight: 500 }}>
@@ -1053,7 +1053,7 @@ const OrganizerDashboard: React.FC = () => {
                   <Button
                     onClick={handleSaveEvent}
                     variant="contained"
-                    sx={{ textTransform: 'none', background: 'linear-gradient(135deg, #0E3B26 0%, #1B5E3C 100%)' }}
+                    sx={{ textTransform: 'none', background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)' }}
                   >
                     {editingEventId ? 'Update Event' : 'Create Event'}
                   </Button>
@@ -1107,4 +1107,5 @@ const OrganizerDashboard: React.FC = () => {
 }
 
 export default OrganizerDashboard
+
 
