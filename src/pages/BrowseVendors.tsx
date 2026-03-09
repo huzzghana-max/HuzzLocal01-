@@ -49,6 +49,7 @@ import GridViewIcon from '@mui/icons-material/GridView'
 import ViewListIcon from '@mui/icons-material/ViewList'
 import StarIcon from '@mui/icons-material/Star'
 import api from '../api'
+import { API_CONFIG } from '../config/api.config'
 
 interface Vendor {
   id: number
@@ -106,7 +107,7 @@ const BrowseVendors: React.FC = () => {
         const response = await api.get('/approved-services')
         const servicesData = Array.isArray(response.data) ? response.data : [response.data]
         
-        const apiHost = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').replace(/\/api$/, '')
+        const apiHost = API_CONFIG.getApiHost()
         const vendorsData = servicesData.map((service: any) => {
           const imageUrl = service.image ? (service.image.startsWith('/uploads/') ? `${apiHost}${service.image}` : service.image) : `https://i.pravatar.cc/150?img=${service.vendor_id}`;
           return {

@@ -1,0 +1,64 @@
+services:
+  - type: web
+    name: huzz-backend
+    runtime: node
+    rootDir: server
+    plan: starter
+    autoDeploy: true
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: MYSQL_HOST
+        fromDatabase:
+          name: huzz-mysql
+          property: host
+      - key: MYSQL_PORT
+        fromDatabase:
+          name: huzz-mysql
+          property: port
+      - key: MYSQL_USER
+        fromDatabase:
+          name: huzz-mysql
+          property: user
+      - key: MYSQL_PASSWORD
+        fromDatabase:
+          name: huzz-mysql
+          property: password
+      - key: MYSQL_DATABASE
+        fromDatabase:
+          name: huzz-mysql
+          property: database
+      - key: CORS_ORIGIN
+        sync: false
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        sync: false
+      - key: MAIL_SECURE
+        sync: false
+      - key: MAIL_USER
+        sync: false
+      - key: MAIL_PASS
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: PAYSTACK_CURRENCY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+
+databases:
+  - name: huzz-mysql
+    plan: starter
+    databaseName: huzz_auth
+    user: huzz_user

@@ -47,6 +47,18 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || '0.0.0.0';
 
+function getPublicBaseUrl(req) {
+  if (process.env.PUBLIC_BASE_URL && String(process.env.PUBLIC_BASE_URL).trim() !== '') {
+    return String(process.env.PUBLIC_BASE_URL).replace(/\/+$/, '')
+  }
+  const forwardedProto = req.headers['x-forwarded-proto']
+  const protocol = Array.isArray(forwardedProto)
+    ? forwardedProto[0]
+    : (typeof forwardedProto === 'string' && forwardedProto.length > 0 ? forwardedProto : req.protocol)
+  const host = req.get('host')
+  return `${protocol}://${host}`
+}
+
 function logMailConfigStatus() {
   const required = ['MAIL_HOST', 'MAIL_PORT', 'MAIL_USER', 'MAIL_PASS', 'MAIL_FROM']
   const missing = required.filter((key) => !process.env[key] || String(process.env[key]).trim() === '')
@@ -275,22 +287,38 @@ async function sendTicketPurchaseEmail({
 }
 
 
-// CORS setup for local and ngrok - default to common dev origins when not provided
-const allowedOrigins = (process.env.CORS_ORIGIN && process.env.CORS_ORIGIN.length > 0)
-  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()).filter(Boolean)
-  : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:5174', 'http://localhost:5000']
+// CORS setup:
+// - In production: allow explicit origins from CORS_ORIGIN or sane defaults (localhost + Vercel previews)
+// - In development: allow all origins to simplify local testing
+const configuredOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean)
+
+const defaultAllowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000',
+  'http://localhost:5000',
+  'https://*.vercel.app',
+]
+
+const allowedOrigins = configuredOrigins.length > 0 ? configuredOrigins : defaultAllowedOrigins
+
+function originMatchesPattern(origin, pattern) {
+  if (!pattern) return false
+  if (pattern.includes('*')) {
+    const regex = new RegExp(`^${pattern.replace(/\./g, '\\.').replace(/\*/g, '.*')}$`)
+    return regex.test(origin)
+  }
+  return origin === pattern
+}
 // In development allow all origins to simplify local testing
 if (process.env.NODE_ENV === 'production') {
   app.use(cors({
     origin: function(origin, callback) {
       if (!origin) return callback(null, true);
-      if (allowedOrigins.some(pattern => {
-        if (pattern.includes('*')) {
-          const regex = new RegExp('^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$');
-          return regex.test(origin);
-        }
-        return origin === pattern;
-      })) {
+      if (allowedOrigins.some((pattern) => originMatchesPattern(origin, pattern))) {
         return callback(null, true);
       }
       callback(new Error('Not allowed by CORS'));
@@ -1542,7 +1570,7 @@ app.post('/api/vendor/upload-image', upload.single('file'), async (req, res) => 
     }
 
     console.log('File uploaded successfully:', req.file.filename)
-    const imageUrl = `http://localhost:5000/uploads/${req.file.filename}`
+    const imageUrl = `${getPublicBaseUrl(req)}/uploads/${req.file.filename}`
     console.log('Image URL:', imageUrl)
     res.json({ imageUrl })
   } catch (error) {

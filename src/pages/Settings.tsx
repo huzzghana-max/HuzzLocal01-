@@ -43,6 +43,7 @@ import { alpha, useTheme } from '@mui/material/styles'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useTheme as useAppTheme } from '../themes/ThemeContext'
+import { API_CONFIG } from '../config/api.config'
 import SaveIcon from '@mui/icons-material/Save'
 import CameraAltIcon from '@mui/icons-material/CameraAlt'
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline'
@@ -254,7 +255,7 @@ const Settings: React.FC = () => {
       })
 
       // Update localStorage (normalize any relative image paths)
-      const apiHost = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').replace(/\/api$/, '')
+      const apiHost = API_CONFIG.getApiHost()
       const normalizeProfileImage = (imagePath?: string) => {
         if (!imagePath) return ''
         if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) return imagePath

@@ -45,6 +45,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import SaveIcon from '@mui/icons-material/Save'
 import DashboardSidebar from '../components/DashboardSidebar'
+import { API_CONFIG } from '../config/api.config'
 
 interface Service {
   id: number
@@ -124,7 +125,7 @@ const VendorServices: React.FC = () => {
         return
       }
       const response = await api.get('/vendor/services')
-      const apiHost = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').replace(/\/api$/, '')
+      const apiHost = API_CONFIG.getApiHost()
       const normalized = (response.data || []).map((s: any) => ({
         ...s,
         image: s.image && s.image.startsWith('/uploads/') ? `${apiHost}${s.image}` : s.image,
