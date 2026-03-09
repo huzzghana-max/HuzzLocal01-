@@ -571,8 +571,9 @@ module.exports = function(app, { getPoolOrThrow, verifyToken, isAdmin }) {
       const [result] = await pool.execute(`
         INSERT INTO ticket_waitlist (ticket_id, user_id, quantity, position, requested_at)
         VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-        ON DUPLICATE KEY UPDATE position = ?, quantity = ?
-      `, [ticketId, user.id, quantity, nextPosition, nextPosition, quantity]);
+        ON CONFLICT (ticket_id, user_id)
+        DO UPDATE SET position = EXCLUDED.position, quantity = EXCLUDED.quantity
+      `, [ticketId, user.id, quantity, nextPosition]);
       
       res.status(201).json({
         message: 'Added to waitlist',
