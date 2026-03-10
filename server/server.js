@@ -80,6 +80,18 @@ function isUniqueViolation(error) {
   return error?.code === '23505' || error?.code === 'ER_DUP_ENTRY'
 }
 
+function parseJsonField(value, fallback) {
+  if (value == null) return fallback
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value)
+    } catch {
+      return fallback
+    }
+  }
+  return value
+}
+
 logMailConfigStatus()
 
 
@@ -362,6 +374,9 @@ initializeDatabase()
   .catch(err => {
     console.warn('Database initialization warning:', err.message)
     console.warn('Server will continue running without database. Authentication will fail.')
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1)
+    }
   })
 
 // Middleware: Token verification
@@ -1199,7 +1214,7 @@ app.get('/api/vendor/profile', async (req, res) => {
 
     const token = authHeader.replace('Bearer ', '')
     const jwt = require('jsonwebtoken')
-    const decoded = jwt.verify(token, 'your-secret-key-change-this')
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-this')
     
     const pool = getPoolOrThrow()
     const [vendors] = await pool.execute(
@@ -1223,7 +1238,7 @@ app.get('/api/vendor/profile', async (req, res) => {
       description: vendor.description,
       hourlyRate: vendor.hourly_rate,
       profileImage: vendor.profile_image,
-      portfolioImages: vendor.portfolio_images ? JSON.parse(vendor.portfolio_images) : [],
+      portfolioImages: parseJsonField(vendor.portfolio_images, []),
       phone: vendor.phone,
       email: vendor.email,
       location: vendor.location,
@@ -1245,7 +1260,7 @@ app.put('/api/vendor/profile', async (req, res) => {
 
     const token = authHeader.replace('Bearer ', '')
     const jwt = require('jsonwebtoken')
-    const decoded = jwt.verify(token, 'your-secret-key-change-this')
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-this')
     
     const { businessName, serviceType, description, hourlyRate, profileImage, portfolioImages } = req.body
     
@@ -1571,7 +1586,7 @@ app.put('/api/messages/:conversationUserId/read', async (req, res) => {
 
     const token = authHeader.replace('Bearer ', '')
     const jwt = require('jsonwebtoken')
-    const decoded = jwt.verify(token, 'your-secret-key-change-this')
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-this')
     const userId = decoded.id
     const conversationUserId = parseInt(req.params.conversationUserId)
 
@@ -1628,18 +1643,18 @@ app.get('/api/settings', verifyToken, async (req, res) => {
     }
 
     const user = results[0]
-    const notifications = user.notification_preferences ? JSON.parse(user.notification_preferences) : {
+    const notifications = parseJsonField(user.notification_preferences, {
       emailNotifications: true,
       pushNotifications: true,
       messageNotifications: true,
       bookingNotifications: true,
       paymentNotifications: true,
-    }
+    })
 
-    const privacy = user.privacy_settings ? JSON.parse(user.privacy_settings) : {
+    const privacy = parseJsonField(user.privacy_settings, {
       profileVisibility: 'public',
       allowMessagesFromAnyone: true,
-    }
+    })
 
     res.json({ notifications, privacy })
   } catch (error) {
@@ -3282,38 +3297,6 @@ app.post('/api/contact', async (req, res) => {
 
 // --- Admin Event Management ---
 
-// Get all events in the system (admin only)
-app.get('/api/admin/events', verifyToken, async (req, res) => {
-  try {
-    const pool = getPoolOrThrow()
-    const [events] = await pool.execute(`
-      SELECT 
-        e.id,
-        e.organizer_id,
-        e.name,
-        e.description,
-        e.date,
-        e.location,
-        e.type,
-        e.guest_count,
-        e.budget,
-        e.status,
-        e.image_url,
-        e.created_at,
-        e.updated_at,
-        u.name as organizer_name,
-        u.email as organizer_email
-      FROM events e
-      JOIN users u ON e.organizer_id = u.id
-      ORDER BY e.date DESC
-    `)
-    res.json(events)
-  } catch (error) {
-    console.error('Get admin events error:', error.message)
-    res.status(500).json({ message: error.message })
-  }
-})
-
 // Get single event (admin only)
 app.get('/api/admin/events/:eventId', verifyToken, async (req, res) => {
   try {
@@ -3494,48 +3477,6 @@ app.put('/api/events/:eventId', verifyToken, upload.single('image'), async (req,
 
 // --- Support & FAQ Endpoints ---
 
-// Get all support tickets for current user
-app.get('/api/support/tickets', verifyToken, async (req, res) => {
-  try {
-    const userId = req.user.id
-    const pool = getPoolOrThrow()
-    const [tickets] = await pool.execute(
-      'SELECT id, category, subject, message, status, priority, created_at, updated_at FROM support_tickets WHERE user_id = ? ORDER BY created_at DESC',
-      [userId]
-    )
-    res.json(tickets)
-  } catch (error) {
-    console.error('Get support tickets error:', error.message)
-    res.status(500).json({ message: error.message })
-  }
-})
-
-// Create support ticket
-app.post('/api/support/tickets', verifyToken, async (req, res) => {
-  try {
-    const userId = req.user.id
-    const { category, subject, message, priority } = req.body
-    
-    if (!category || !subject || !message) {
-      return res.status(400).json({ message: 'Category, subject, and message are required' })
-    }
-
-    const pool = getPoolOrThrow()
-    const [result] = await pool.execute(
-      'INSERT INTO support_tickets (user_id, category, subject, message, priority) VALUES (?, ?, ?, ?, ?)',
-      [userId, category, subject, message, priority || 'medium']
-    )
-    
-    res.status(201).json({ 
-      id: result.insertId, 
-      message: 'Support ticket created successfully' 
-    })
-  } catch (error) {
-    console.error('Create support ticket error:', error.message)
-    res.status(500).json({ message: error.message })
-  }
-})
-
 // Get support categories (public)
 app.get('/api/support/categories', async (req, res) => {
   try {
@@ -3551,45 +3492,6 @@ app.get('/api/support/categories', async (req, res) => {
     res.json(categories)
   } catch (error) {
     console.error('Get support categories error:', error.message)
-    res.status(500).json({ message: error.message })
-  }
-})
-
-// Get all FAQs (public)
-app.get('/api/faqs', async (req, res) => {
-  try {
-    const { category } = req.query
-    const pool = getPoolOrThrow()
-
-    let query = 'SELECT id, category, question, answer, views, helpful_count FROM faqs'
-    let params = []
-
-    if (category) {
-      query += ' WHERE category = ?'
-      params.push(category)
-    }
-
-    query += ' ORDER BY views DESC'
-
-    const [faqs] = await pool.execute(query, params)
-    res.json(faqs)
-  } catch (error) {
-    console.error('Get FAQs error:', error.message)
-    res.status(500).json({ message: error.message })
-  }
-})
-
-// Get FAQ categories (public)
-app.get('/api/faqs/categories', async (req, res) => {
-  try {
-    const pool = getPoolOrThrow()
-    const [results] = await pool.execute(
-      'SELECT DISTINCT category FROM faqs WHERE is_active = TRUE ORDER BY category ASC'
-    )
-    const categories = results.map(r => r.category)
-    res.json(categories)
-  } catch (error) {
-    console.error('Get FAQ categories error:', error.message)
     res.status(500).json({ message: error.message })
   }
 })

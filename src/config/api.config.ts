@@ -4,7 +4,7 @@
  * Uses Vite environment variables for environment-specific configuration
  */
 
-const DEFAULT_API_BASE_URL = 'http://localhost:5000/api'
+const DEFAULT_API_BASE_URL = import.meta.env.PROD ? '/api' : 'http://localhost:5000/api'
 
 function normalizeApiBaseUrl(rawValue?: string): string {
   if (!rawValue || typeof rawValue !== 'string') return DEFAULT_API_BASE_URL

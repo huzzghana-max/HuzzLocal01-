@@ -13,7 +13,13 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this'
-const DATABASE_URL = process.env.SUPABASE_DB_URL || process.env.DATABASE_URL || ''
+function normalizeDatabaseUrl(raw) {
+  if (!raw || typeof raw !== 'string') return ''
+  const trimmed = raw.trim().replace(/^['"]|['"]$/g, '')
+  return trimmed
+}
+
+const DATABASE_URL = normalizeDatabaseUrl(process.env.SUPABASE_DB_URL || process.env.DATABASE_URL || '')
 
 let pgPool = null
 let pool = null
@@ -97,6 +103,9 @@ async function initializeDatabase() {
   try {
     if (!DATABASE_URL) {
       throw new Error('Missing SUPABASE_DB_URL/DATABASE_URL environment variable')
+    }
+    if (!/^postgres(ql)?:\/\//i.test(DATABASE_URL)) {
+      throw new Error('SUPABASE_DB_URL must be a full Postgres URI (postgresql://...)')
     }
 
     pgPool = new Pool({
