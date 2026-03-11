@@ -10,6 +10,7 @@
 require('dotenv').config()
 const { Pool } = require('pg')
 const dns = require('dns')
+const net = require('net')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 
@@ -113,18 +114,41 @@ async function initializeDatabase() {
       || process.env.PG_FORCE_IPV4 === 'true'
       || Boolean(process.env.RENDER)
 
-    pgPool = new Pool({
+    if (forceIpv4 && typeof dns.setDefaultResultOrder === 'function') {
+      dns.setDefaultResultOrder('ipv4first')
+    }
+
+    const baseConfig = {
       connectionString: DATABASE_URL,
       ssl: process.env.PGSSLMODE === 'disable' ? false : { rejectUnauthorized: false },
       max: 10,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
-      ...(forceIpv4
-        ? {
-            lookup: (hostname, options, callback) => dns.lookup(hostname, { family: 4 }, callback),
-          }
-        : {}),
-    })
+    }
+
+    let poolConfig = baseConfig
+    if (forceIpv4) {
+      const url = new URL(DATABASE_URL)
+      const hostname = url.hostname
+      const hostIsIpv6 = net.isIP(hostname) === 6
+      if (hostIsIpv6 && !process.env.PGHOSTADDR) {
+        console.warn('PG_FORCE_IPV4 enabled but DB host is an IPv6 literal. Set PGHOSTADDR to an IPv4 address or use a hostname in SUPABASE_DB_URL.')
+      }
+
+      if (process.env.PGHOSTADDR) {
+        poolConfig = {
+          ...baseConfig,
+          host: hostname,
+          hostaddr: process.env.PGHOSTADDR,
+          user: url.username ? decodeURIComponent(url.username) : undefined,
+          password: url.password ? decodeURIComponent(url.password) : undefined,
+          database: url.pathname ? decodeURIComponent(url.pathname.replace(/^\//, '')) : undefined,
+          port: url.port ? Number(url.port) : undefined,
+        }
+      }
+    }
+
+    pgPool = new Pool(poolConfig)
 
     await pgPool.query('SELECT 1')
     pool = createCompatPool(pgPool)
