@@ -9,6 +9,7 @@
 */
 require('dotenv').config()
 const { Pool } = require('pg')
+const dns = require('dns')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 
@@ -108,12 +109,21 @@ async function initializeDatabase() {
       throw new Error('SUPABASE_DB_URL must be a full Postgres URI (postgresql://...)')
     }
 
+    const forceIpv4 = process.env.PG_FORCE_IPV4 === '1'
+      || process.env.PG_FORCE_IPV4 === 'true'
+      || Boolean(process.env.RENDER)
+
     pgPool = new Pool({
       connectionString: DATABASE_URL,
       ssl: process.env.PGSSLMODE === 'disable' ? false : { rejectUnauthorized: false },
       max: 10,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
+      ...(forceIpv4
+        ? {
+            lookup: (hostname, options, callback) => dns.lookup(hostname, { family: 4 }, callback),
+          }
+        : {}),
     })
 
     await pgPool.query('SELECT 1')
