@@ -17,6 +17,7 @@ import {
 } from '@mui/material'
 import { alpha, useTheme } from '@mui/material/styles'
 import MenuIcon from '@mui/icons-material/Menu'
+import CloseIcon from '@mui/icons-material/Close'
 import { NavLink, useNavigate } from 'react-router-dom'
 import ThemeToggle from './themes/ThemeToggle'
 import { useAuth } from './contexts/AuthContext'
@@ -69,10 +70,28 @@ const Navbar: React.FC<NavbarProps> = ({ navState = 'default' }) => {
   }
 
   const MobileDrawer = (
-    <Box sx={{ width: 280, p: 2 }}>
-      <Typography variant="h6" sx={{ fontWeight: 800, mb: 1.5 }}>
-        Navigation
-      </Typography>
+    <Box sx={{ width: '100%', p: 2.5, pt: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: 800 }}>
+          Navigation
+        </Typography>
+        <IconButton onClick={() => setMobileOpen(false)} aria-label="Close menu">
+          <CloseIcon />
+        </IconButton>
+      </Box>
+      {isLoggedIn && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+          <Avatar sx={{ width: 36, height: 36, bgcolor: 'primary.main', color: 'primary.contrastText' }}>
+            {userInitial}
+          </Avatar>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontWeight: 700, fontSize: '0.95rem' }}>{user?.name}</Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              {user?.email}
+            </Typography>
+          </Box>
+        </Box>
+      )}
       <List sx={{ p: 0 }}>
         {navItems.map((item) => (
           <ListItemButton
@@ -82,21 +101,81 @@ const Navbar: React.FC<NavbarProps> = ({ navState = 'default' }) => {
             onClick={() => setMobileOpen(false)}
             sx={{
               borderRadius: 2,
-              mb: 0.5,
+              mb: 0.75,
+              py: 1.1,
               '&.active': {
                 backgroundColor: alpha(theme.palette.primary.main, 0.14),
                 color: 'primary.main',
               },
             }}
           >
-            <ListItemText primary={item.label} />
+            <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: 600 }} />
           </ListItemButton>
         ))}
       </List>
       <Divider sx={{ my: 1.5 }} />
+      {isLoggedIn ? (
+        <Box sx={{ display: 'grid', gap: 1 }}>
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={() => {
+              setMobileOpen(false)
+              handleDashboard()
+            }}
+          >
+            Dashboard
+          </Button>
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={() => {
+              setMobileOpen(false)
+              navigate('/settings')
+            }}
+          >
+            Settings
+          </Button>
+          <Button
+            fullWidth
+            color="error"
+            variant="text"
+            onClick={() => {
+              setMobileOpen(false)
+              handleLogout()
+            }}
+          >
+            Logout
+          </Button>
+        </Box>
+      ) : (
+        <Box sx={{ display: 'grid', gap: 1 }}>
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={() => {
+              setMobileOpen(false)
+              navigate('/signin')
+            }}
+          >
+            Sign In
+          </Button>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={() => {
+              setMobileOpen(false)
+              navigate('/signup')
+            }}
+          >
+            Sign Up
+          </Button>
+        </Box>
+      )}
       <Button
         fullWidth
         variant={isAlternate ? 'outlined' : 'contained'}
+        sx={{ mt: 1.5 }}
         onClick={() => {
           setMobileOpen(false)
           navigate('/contact')
@@ -282,6 +361,8 @@ const Navbar: React.FC<NavbarProps> = ({ navState = 'default' }) => {
         sx={{
           display: { xs: 'block', md: 'none' },
           '& .MuiDrawer-paper': {
+            width: { xs: '85vw', sm: 320 },
+            maxWidth: 360,
             backgroundColor: 'background.paper',
             borderLeft: `1px solid ${theme.palette.divider}`,
           },
