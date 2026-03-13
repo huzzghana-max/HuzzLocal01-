@@ -22,7 +22,9 @@ import {
   TextField,
   Alert,
   Stack,
+  useMediaQuery,
 } from '@mui/material'
+import { useTheme } from '@mui/material/styles'
 import { useNavigate } from 'react-router-dom'
 import AssignmentIcon from '@mui/icons-material/Assignment'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
@@ -70,6 +72,8 @@ interface PayoutRequest {
 
 const ProviderDashboard: React.FC = () => {
   const navigate = useNavigate()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [user, setUser] = useState<User | null>(null)
   const [tabValue, setTabValue] = useState(0)
   const [stats, setStats] = useState<any>(null)
@@ -258,7 +262,7 @@ const ProviderDashboard: React.FC = () => {
 
       {/* Main Content */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', ml: { xs: 0, md: '280px' }, mt: { xs: 60, md: 0 } }}>
-        <Container maxWidth="lg" sx={{ py: 4, flex: 1 }}>
+        <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 }, px: { xs: 2, sm: 3 }, flex: 1 }}>
           {/* Header */}
           <DashboardHeader
             title="Provider Dashboard"
@@ -365,7 +369,14 @@ const ProviderDashboard: React.FC = () => {
 
               {/* Tabs */}
               <Paper sx={{ mb: 3, borderRadius: 2 }}>
-                <Tabs value={tabValue} onChange={handleTabChange} sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                <Tabs
+                  value={tabValue}
+                  onChange={handleTabChange}
+                  variant={isMobile ? 'scrollable' : 'standard'}
+                  scrollButtons="auto"
+                  allowScrollButtonsMobile
+                  sx={{ borderBottom: '1px solid', borderColor: 'divider' }}
+                >
                   <Tab label="Pending Requests" />
                   <Tab label="Confirmed" />
                   <Tab label="Completed" />
@@ -389,6 +400,60 @@ const ProviderDashboard: React.FC = () => {
                     Bookings will appear here once organizers request your services
                   </Typography>
                 </Paper>
+              ) : isMobile ? (
+                <Box sx={{ display: 'grid', gap: 2 }}>
+                  {filteredBookings().map((booking) => (
+                    <Paper
+                      key={booking.id}
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography sx={{ fontWeight: 700, fontSize: '1rem' }}>
+                            {booking.service_title || booking.eventName}
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+                            {booking.organizer_name}
+                          </Typography>
+                        </Box>
+                        <Chip
+                          label={booking.status}
+                          size="small"
+                          sx={{
+                            fontWeight: 700,
+                            background: booking.status === 'pending' 
+                              ? 'rgba(245, 166, 35, 0.2)'
+                              : booking.status === 'confirmed'
+                              ? 'rgba(27, 94, 60, 0.2)'
+                              : 'rgba(107, 114, 128, 0.2)',
+                            color: booking.status === 'pending'
+                              ? '#F5A623'
+                              : booking.status === 'confirmed'
+                              ? '#2B3240'
+                              : '#6B7280',
+                          }}
+                        />
+                      </Box>
+                      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
+                        Booking Date: {new Date(booking.booking_date || booking.date || '').toLocaleDateString()}
+                      </Typography>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => handleViewDetails(booking)}
+                        sx={{ mt: 2 }}
+                        fullWidth
+                      >
+                        View Details
+                      </Button>
+                    </Paper>
+                  ))}
+                </Box>
               ) : (
                 <TableContainer component={Paper} sx={{
                   borderRadius: '16px',

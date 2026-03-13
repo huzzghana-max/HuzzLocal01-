@@ -179,10 +179,11 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ title, subtitl
       sx={{
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        mb: 4,
+        alignItems: { xs: 'stretch', md: 'flex-start' },
+        flexDirection: { xs: 'column', md: 'row' },
+        mb: { xs: 3, md: 4 },
         flexWrap: 'wrap',
-        gap: 2,
+        gap: { xs: 1.5, md: 2 },
       }}
     >
       <Box>
@@ -208,7 +209,21 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ title, subtitl
           </Typography>
         )}
       </Box>
-      {actionButton && <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>{actionButton}</Box>}
+      {actionButton && (
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 1,
+            flexWrap: 'wrap',
+            width: { xs: '100%', md: 'auto' },
+            '& .MuiButton-root': {
+              width: { xs: '100%', sm: 'auto' },
+            },
+          }}
+        >
+          {actionButton}
+        </Box>
+      )}
     </Box>
   )
 }

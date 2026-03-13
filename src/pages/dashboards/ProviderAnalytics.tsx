@@ -281,13 +281,13 @@ const ProviderAnalytics: React.FC = () => {
       />
 
       <Box sx={{ flex: 1, ml: { xs: 0, md: '280px' }, mt: { xs: 60, md: 0 } }}>
-        <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Container maxWidth="xl" sx={{ py: { xs: 3, md: 4 }, px: { xs: 2, sm: 3 } }}>
           <DashboardHeader
             title="Analytics Dashboard"
             subtitle="Clean booking, conversion, and earnings overview"
             actionButton={(
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                <FormControl size="small" sx={{ minWidth: 160 }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: '100%' }}>
+              <FormControl size="small" sx={{ minWidth: 160, width: { xs: '100%', sm: 'auto' } }}>
                   <InputLabel id="provider-range-label">Range</InputLabel>
                   <Select
                     labelId="provider-range-label"
