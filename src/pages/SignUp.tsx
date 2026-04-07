@@ -101,9 +101,7 @@ const SignUp: React.FC = () => {
             sx={{
               fontWeight: 700,
               mb: 1,
-              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              color: theme.palette.primary.main,
             }}
           >
             Create Account
@@ -140,7 +138,7 @@ const SignUp: React.FC = () => {
               onChange={handleChange}
               required
               margin="normal"
-              placeholder="John Doe"
+              placeholder="Kwesi John"
             />
 
             <TextField
@@ -214,7 +212,7 @@ const SignUp: React.FC = () => {
               variant="contained"
               disabled={loading}
               sx={{
-                background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
+                backgroundColor: '#414958',
                 py: 2,
                 fontSize: '1rem',
                 fontWeight: 700,
@@ -235,6 +233,7 @@ const SignUp: React.FC = () => {
                   transition: 'left 0.35s ease-out',
                 },
                 '&:hover': {
+                  backgroundColor: '#2B3240',
                   boxShadow: '0 8px 25px rgba(65, 73, 88, 0.38)',
                   transform: 'translateY(-2px)',
                   '&::before': {
@@ -274,4 +273,3 @@ const SignUp: React.FC = () => {
 }
 
 export default SignUp
-

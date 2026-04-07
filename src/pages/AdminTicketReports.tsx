@@ -50,7 +50,7 @@ const AdminTicketReports: React.FC = () => {
                     <TableCell>{s.id}</TableCell>
                     <TableCell>{s.event_name} ({s.event_id})</TableCell>
                     <TableCell>{s.ticket_type}</TableCell>
-                    <TableCell>{s.buyer_name} • {s.buyer_email}</TableCell>
+                    <TableCell>{s.buyer_name || 'Guest'} • {s.buyer_email || 'N/A'}</TableCell>
                     <TableCell>{s.quantity}</TableCell>
                     <TableCell>${s.amount}</TableCell>
                     <TableCell>{s.validated ? 'Yes' : 'No'}</TableCell>

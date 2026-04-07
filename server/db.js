@@ -178,7 +178,10 @@ async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS ticket_sales (
         id INT AUTO_INCREMENT PRIMARY KEY,
         ticket_id INT NOT NULL,
-        buyer_id INT NOT NULL,
+        buyer_id INT NULL,
+        buyer_name VARCHAR(255),
+        buyer_email VARCHAR(255),
+        buyer_phone VARCHAR(50),
         quantity INT NOT NULL,
         amount DECIMAL(12,2) NOT NULL,
         payment_method VARCHAR(100),
@@ -191,6 +194,28 @@ async function initializeDatabase() {
         FOREIGN KEY (buyer_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `)
+
+    // Allow guest ticket purchases by storing buyer info when no user account exists
+    try {
+      const [ticketSalesCols] = await dbConnection.execute('SHOW COLUMNS FROM ticket_sales')
+      const colNames = ticketSalesCols.map((c) => c.Field)
+      const buyerIdCol = ticketSalesCols.find((c) => c.Field === 'buyer_id')
+
+      if (buyerIdCol && buyerIdCol.Null !== 'YES') {
+        await dbConnection.execute('ALTER TABLE ticket_sales MODIFY buyer_id INT NULL')
+      }
+      if (!colNames.includes('buyer_name')) {
+        await dbConnection.execute('ALTER TABLE ticket_sales ADD COLUMN buyer_name VARCHAR(255) NULL')
+      }
+      if (!colNames.includes('buyer_email')) {
+        await dbConnection.execute('ALTER TABLE ticket_sales ADD COLUMN buyer_email VARCHAR(255) NULL')
+      }
+      if (!colNames.includes('buyer_phone')) {
+        await dbConnection.execute('ALTER TABLE ticket_sales ADD COLUMN buyer_phone VARCHAR(50) NULL')
+      }
+    } catch (err) {
+      console.warn('Ticket sales schema update warning:', err.message || err)
+    }
 
     // Create event registrations table for users who register for events (non-ticketed)
     await dbConnection.execute(`
@@ -281,7 +306,10 @@ async function initializeDatabase() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         service_id INT NOT NULL,
         vendor_id INT NOT NULL,
-        organizer_id INT NOT NULL,
+        organizer_id INT NULL,
+        guest_name VARCHAR(255),
+        guest_email VARCHAR(255),
+        guest_phone VARCHAR(50),
         booking_date DATETIME NOT NULL,
         notes TEXT,
         status ENUM('pending', 'confirmed', 'rejected', 'completed', 'cancelled') DEFAULT 'pending',
@@ -290,6 +318,44 @@ async function initializeDatabase() {
         FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE,
         FOREIGN KEY (vendor_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (organizer_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `)
+
+    // Allow guest service bookings (organizer_id nullable + guest fields)
+    try {
+      const [bookingCols] = await dbConnection.execute('SHOW COLUMNS FROM service_bookings')
+      const colNames = bookingCols.map((c) => c.Field)
+      const organizerCol = bookingCols.find((c) => c.Field === 'organizer_id')
+
+      if (organizerCol && organizerCol.Null !== 'YES') {
+        await dbConnection.execute('ALTER TABLE service_bookings MODIFY organizer_id INT NULL')
+      }
+      if (!colNames.includes('guest_name')) {
+        await dbConnection.execute('ALTER TABLE service_bookings ADD COLUMN guest_name VARCHAR(255) NULL')
+      }
+      if (!colNames.includes('guest_email')) {
+        await dbConnection.execute('ALTER TABLE service_bookings ADD COLUMN guest_email VARCHAR(255) NULL')
+      }
+      if (!colNames.includes('guest_phone')) {
+        await dbConnection.execute('ALTER TABLE service_bookings ADD COLUMN guest_phone VARCHAR(50) NULL')
+      }
+    } catch (err) {
+      console.warn('Service bookings schema update warning:', err.message || err)
+    }
+
+    // Guest booking email verification codes
+    await dbConnection.execute(`
+      CREATE TABLE IF NOT EXISTS guest_booking_verifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        service_id INT NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        code VARCHAR(20) NOT NULL,
+        expires_at DATETIME NOT NULL,
+        verified_at DATETIME NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_email_service (email, service_id),
+        INDEX idx_expires (expires_at),
+        FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
       )
     `)
 

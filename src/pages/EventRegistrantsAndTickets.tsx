@@ -51,7 +51,7 @@ interface Registrant {
 interface TicketSale {
   id: number
   ticket_id: number
-  buyer_id: number
+  buyer_id: number | null
   quantity: number
   amount: number
   transaction_id: string
@@ -62,8 +62,8 @@ interface TicketSale {
   event_id: number
   event_name: string
   event_date: string
-  buyer_name: string
-  buyer_email: string
+  buyer_name: string | null
+  buyer_email: string | null
 }
 
 type AttendeeType = 'all' | 'registration' | 'ticket'
@@ -244,8 +244,8 @@ const EventRegistrantsAndTickets: React.FC = () => {
       saleId: t.id,
       transactionId: t.transaction_id,
       type: 'ticket',
-      name: t.buyer_name,
-      email: t.buyer_email,
+      name: t.buyer_name || 'Guest Ticket Buyer',
+      email: t.buyer_email || 'N/A',
       eventName: t.event_name,
       eventDate: t.event_date,
       createdAt: t.created_at,

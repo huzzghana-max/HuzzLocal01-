@@ -210,7 +210,7 @@ const PaystackPaymentModal: React.FC<PaystackPaymentModalProps> = ({
           <TextField
             fullWidth
             label="Full Name"
-            placeholder="John Doe"
+            placeholder="kwesi John"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             disabled={loading}
@@ -221,7 +221,7 @@ const PaystackPaymentModal: React.FC<PaystackPaymentModalProps> = ({
           <TextField
             fullWidth
             label="Phone Number"
-            placeholder="080xxxxxxxx"
+            placeholder="024xxxxxxxx"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             disabled={loading}

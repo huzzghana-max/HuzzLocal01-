@@ -5,7 +5,7 @@
 
 const express = require('express');
 const { getPool } = require('./db');
-const { verifyToken } = require('./middleware');
+const { verifyToken, optionalVerifyToken } = require('./middleware');
 const {
   initializePaystackTransaction,
   verifyPaystackTransaction,
@@ -84,10 +84,10 @@ router.post('/paystack/initialize', verifyToken, async (req, res) => {
  * GET /api/payments/paystack/verify/:reference
  * Verify a Paystack transaction
  */
-router.get('/paystack/verify/:reference', verifyToken, async (req, res) => {
+router.get('/paystack/verify/:reference', optionalVerifyToken, async (req, res) => {
   try {
     const { reference } = req.params;
-    const userId = req.user.id;
+    const userId = req.user?.id || null;
 
     if (!reference) {
       return res.status(400).json({
@@ -105,12 +105,21 @@ router.get('/paystack/verify/:reference', verifyToken, async (req, res) => {
       const status = paystackResponse.status === 'success' ? 'completed' : 'failed';
       const amountPaidMajor = paystackResponse.amountPaid ? paystackResponse.amountPaid / 100 : 0;
       
-      await pool.execute(
-        `UPDATE payments 
-         SET status = ?, amount_paid = ?, verified_at = NOW() 
-         WHERE reference = ? AND user_id = ?`,
-        [status, amountPaidMajor, reference, userId]
-      );
+      if (userId) {
+        await pool.execute(
+          `UPDATE payments 
+           SET status = ?, amount_paid = ?, verified_at = NOW() 
+           WHERE reference = ? AND user_id = ?`,
+          [status, amountPaidMajor, reference, userId]
+        );
+      } else {
+        await pool.execute(
+          `UPDATE payments 
+           SET status = ?, amount_paid = ?, verified_at = NOW() 
+           WHERE reference = ?`,
+          [status, amountPaidMajor, reference]
+        );
+      }
     } catch (dbError) {
       console.error('Failed to update payment record:', dbError);
     }

@@ -149,10 +149,7 @@ const Navbar: React.FC<NavbarProps> = ({ navState = 'default' }) => {
                 fontWeight: 900,
                 letterSpacing: 0.3,
                 fontSize: { xs: '1.05rem', md: '1.2rem' },
-                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                color: theme.palette.primary.main,
               }}
             >
               HUZZ

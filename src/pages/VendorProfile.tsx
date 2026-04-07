@@ -264,15 +264,13 @@ const VendorProfile: React.FC = () => {
           <Box>
             <Typography
               variant="h3"
-              sx={{
-                fontWeight: 700,
-                mb: 1,
-                background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              Vendor Profile
+            sx={{
+              fontWeight: 700,
+              mb: 1,
+              color: '#F19B7D',
+            }}
+          >
+            Vendor Profile
             </Typography>
             <Typography variant="body1" sx={{ color: '#999' }}>
               Manage your business profile and showcase your work
@@ -306,7 +304,7 @@ const VendorProfile: React.FC = () => {
                     width: 200,
                     height: 200,
                     mb: 2,
-                    background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
+                    backgroundColor: '#F19B7D',
                   }}
                 />
                 <Button
@@ -314,9 +312,10 @@ const VendorProfile: React.FC = () => {
                   component="label"
                   startIcon={<CloudUploadIcon />}
                   sx={{
-                    background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
+                    backgroundColor: '#F19B7D',
                     textTransform: 'none',
                     fontWeight: 600,
+                    '&:hover': { backgroundColor: '#DD8568' },
                   }}
                   fullWidth
                 >
@@ -441,9 +440,10 @@ const VendorProfile: React.FC = () => {
                 component="label"
                 startIcon={<AddIcon />}
                 sx={{
-                  background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
+                  backgroundColor: '#F19B7D',
                   textTransform: 'none',
                   fontWeight: 600,
+                  '&:hover': { backgroundColor: '#DD8568' },
                 }}
               >
                 Add Image
@@ -456,7 +456,7 @@ const VendorProfile: React.FC = () => {
                 sx={{
                   p: 4,
                   textAlign: 'center',
-                  background: 'linear-gradient(135deg, rgba(241, 155, 125, 0.08) 0%, rgba(241, 155, 125, 0) 100%)',
+                  backgroundColor: 'rgba(241, 155, 125, 0.08)',
                   border: '2px dashed rgba(241, 155, 125, 0.24)',
                   borderRadius: 2,
                 }}
@@ -556,9 +556,10 @@ const VendorProfile: React.FC = () => {
             onClick={handleSaveProfile}
             disabled={loading}
             sx={{
-              background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
+              backgroundColor: '#F19B7D',
               textTransform: 'none',
               fontWeight: 600,
+              '&:hover': { backgroundColor: '#DD8568' },
             }}
           >
             {loading ? 'Saving...' : 'Save Profile'}

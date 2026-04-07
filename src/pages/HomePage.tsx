@@ -28,12 +28,6 @@ const floatX = keyframes`
   100% { transform: translate3d(0,0,0); }
 `
 
-const driftBg = keyframes`
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-`
-
 const HomePage: React.FC = () => {
   const navigate = useNavigate()
   const theme = useTheme()
@@ -90,7 +84,7 @@ const HomePage: React.FC = () => {
             position: 'relative',
             overflow: 'hidden',
             borderRadius: { xs: 4, md: 5 },
-            background: `linear-gradient(130deg, ${alpha(theme.palette.background.paper, 0.98)} 0%, ${alpha(theme.palette.background.paper, 0.92)} 45%, ${alpha(theme.palette.primary.main, 0.08)} 100%)`,
+            backgroundColor: theme.palette.background.paper,
             border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
           }}
         >
@@ -98,9 +92,7 @@ const HomePage: React.FC = () => {
             sx={{
               position: 'absolute',
               inset: 0,
-              background: `radial-gradient(circle at 10% 25%, ${alpha(theme.palette.secondary.main, 0.15)}, transparent 45%), radial-gradient(circle at 80% 70%, ${alpha(theme.palette.primary.main, 0.14)}, transparent 48%)`,
-              backgroundSize: '140% 140%',
-              animation: `${driftBg} 22s ease-in-out infinite`,
+              backgroundColor: alpha(theme.palette.primary.main, 0.04),
               pointerEvents: 'none',
             }}
           />
@@ -145,7 +137,7 @@ const HomePage: React.FC = () => {
                       fontWeight: 800,
                       textTransform: 'none',
                       color: 'secondary.contrastText',
-                      background: `linear-gradient(135deg, ${theme.palette.secondary.main} 0%, ${theme.palette.secondary.dark} 100%)`,
+                      backgroundColor: theme.palette.secondary.main,
                     }}
                   >
                     Start now
@@ -295,11 +287,11 @@ const HomePage: React.FC = () => {
         </Grid>
       </Container>
 
-      <Box
+        <Box
         sx={{
           mt: sectionSpacing,
           height: { xs: 18, md: 22 },
-          background: `linear-gradient(90deg, ${alpha(theme.palette.primary.main, 0.95)} 0%, ${alpha(theme.palette.secondary.main, 0.9)} 50%, ${alpha(theme.palette.primary.dark, 0.95)} 100%)`,
+          backgroundColor: theme.palette.primary.main,
           boxShadow: `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.2)}`,
         }}
       />

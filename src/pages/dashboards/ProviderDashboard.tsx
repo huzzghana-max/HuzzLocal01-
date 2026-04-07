@@ -48,6 +48,8 @@ interface Booking {
   amount?: string | number
   service_title?: string
   organizer_name?: string
+  organizer_email?: string
+  organizer_phone?: string
   booking_date?: string
   notes?: string
   organizer_id?: number
@@ -110,6 +112,8 @@ const ProviderDashboard: React.FC = () => {
         id: booking.id,
         service_title: booking.service_title || booking.title,
         organizer_name: booking.organizer_name,
+        organizer_email: booking.organizer_email,
+        organizer_phone: booking.organizer_phone,
         booking_date: booking.booking_date,
         date: booking.booking_date,
         status: booking.status,
@@ -398,7 +402,7 @@ const ProviderDashboard: React.FC = () => {
                 }}>
                   <Table>
                     <TableHead sx={{
-                      background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
+                      backgroundColor: '#414958',
                     }}>
                       <TableRow>
                         <TableCell sx={{ fontWeight: 700, py: 2.5, color: '#FFFFFF' }}>Service</TableCell>
@@ -424,7 +428,7 @@ const ProviderDashboard: React.FC = () => {
                             <Typography sx={{ fontWeight: 500 }}>{booking.service_title || booking.eventName}</Typography>
                           </TableCell>
                           <TableCell sx={{ py: 2 }}>
-                            <Typography>{booking.organizer_name}</Typography>
+                            <Typography>{booking.organizer_name || 'Guest'}</Typography>
                           </TableCell>
                           <TableCell sx={{ py: 2 }}>
                             {new Date(booking.booking_date || booking.date || '').toLocaleDateString()}
@@ -494,9 +498,29 @@ const ProviderDashboard: React.FC = () => {
                           Organizer
                         </Typography>
                         <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                          {selectedBooking.organizer_name}
+                          {selectedBooking.organizer_name || 'Guest'}
                         </Typography>
                       </Box>
+                      {selectedBooking.organizer_email && (
+                        <Box>
+                          <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                            Contact Email
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 400 }}>
+                            {selectedBooking.organizer_email}
+                          </Typography>
+                        </Box>
+                      )}
+                      {selectedBooking.organizer_phone && (
+                        <Box>
+                          <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                            Contact Phone
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 400 }}>
+                            {selectedBooking.organizer_phone}
+                          </Typography>
+                        </Box>
+                      )}
                       <Box>
                         <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
                           Booking Date

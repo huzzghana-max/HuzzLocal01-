@@ -32,6 +32,23 @@ function verifyToken(req, res, next) {
 }
 
 /**
+ * Optionally verify JWT token (non-blocking)
+ * Attaches req.user when valid, but does not error if missing/invalid.
+ */
+function optionalVerifyToken(req, res, next) {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) return next();
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-this');
+    req.user = decoded;
+    return next();
+  } catch (error) {
+    // Ignore auth errors for optional auth flows
+    return next();
+  }
+}
+
+/**
  * Rate limiting middleware
  */
 function rateLimitMiddleware(req, res, next) {
@@ -41,5 +58,6 @@ function rateLimitMiddleware(req, res, next) {
 
 module.exports = {
   verifyToken,
+  optionalVerifyToken,
   rateLimitMiddleware,
 };

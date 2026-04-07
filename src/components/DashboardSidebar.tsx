@@ -172,7 +172,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             icon: <DashboardIcon />,
             path: '/organizer-dashboard',
           },
-          {
+          /**{
             label: 'My Events',
             icon: <EventIcon />,
             submenu: [
@@ -180,13 +180,13 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
               { label: 'Archived Events', icon: <EventIcon />, path: '#events-archived' },
               { label: 'Create Event', icon: <EventIcon />, path: '#events-create' },
             ],
-          },
+          },**/
           {
             label: 'Registrants & Tickets',
             icon: <ReceiptIcon />,
             path: '/organizer/registrants-tickets',
           },
-          {
+          /**{
             label: 'Bookings',
             icon: <AssignmentIcon />,
             badge: notifications,
@@ -195,7 +195,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
               { label: 'Confirmed', icon: <AssignmentIcon />, path: '#bookings-confirmed' },
               { label: 'Completed', icon: <AssignmentIcon />, path: '#bookings-completed' },
             ],
-          },
+          },**/
           {
             label: 'Messages',
             icon: <MessageIcon />,
@@ -210,7 +210,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
           {
             label: 'Providers',
             icon: <PeopleIcon />,
-            path: '#providers',
+            path: '/browse-vendors',
           },
           {
             label: 'Support',
@@ -302,7 +302,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
         display: 'flex',
         flexDirection: 'column',
         bgcolor: 'background.paper',
-        background: `linear-gradient(180deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${theme.palette.background.paper} 22%)`,
+        backgroundColor: theme.palette.background.paper,
       }}
     >
       <Box

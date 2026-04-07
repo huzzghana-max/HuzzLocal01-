@@ -81,6 +81,7 @@ const EventsNearYou: React.FC = () => {
     quantity: 1,
     loading: false,
   })
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -104,6 +105,17 @@ const EventsNearYou: React.FC = () => {
 
     return () => {
       mounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      try {
+        setCurrentUser(JSON.parse(userStr))
+      } catch (e) {
+        console.error('Failed to parse user:', e)
+      }
     }
   }, [])
 
@@ -155,8 +167,8 @@ const EventsNearYou: React.FC = () => {
     setAttendDialog({
       open: true,
       event: ev,
-      name: '',
-      email: '',
+      name: currentUser?.name || '',
+      email: currentUser?.email || '',
       phone: '',
       tickets,
       selectedTicketId: firstAvailable ? firstAvailable.id : '',
@@ -218,8 +230,7 @@ const EventsNearYou: React.FC = () => {
       sx={{
         minHeight: '100vh',
         py: 4,
-        background:
-          'radial-gradient(circle at 0% -10%, rgba(93,214,44,0.14) 0%, transparent 42%), radial-gradient(circle at 100% 0%, rgba(51,116,24,0.12) 0%, transparent 38%)',
+        backgroundColor: 'background.default',
       }}
     >
       <Container maxWidth="lg">
@@ -236,9 +247,7 @@ const EventsNearYou: React.FC = () => {
               fontWeight: 900,
               letterSpacing: -0.6,
               fontSize: { xs: '2rem', md: '2.6rem' },
-              background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              color: '#414958',
             }}
           >
             Events Near You
@@ -284,7 +293,7 @@ const EventsNearYou: React.FC = () => {
                   borderRadius: 3,
                   overflow: 'hidden',
                   backdropFilter: 'blur(6px)',
-                  background: 'linear-gradient(160deg, rgba(255,255,255,0.96) 0%, rgba(244,247,246,0.92) 100%)',
+                  backgroundColor: 'background.paper',
                   boxShadow: '0 10px 26px rgba(65, 73, 88, 0.14)',
                   border: '1px solid rgba(207,217,211,0.8)',
                   transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -309,7 +318,7 @@ const EventsNearYou: React.FC = () => {
                       position: 'absolute',
                       left: 12,
                       bottom: 12,
-                      bgcolor: 'rgba(255,255,255,0.95)',
+                      bgcolor: 'background.paper',
                       fontWeight: 700,
                       border: '1px solid rgba(65, 73, 88, 0.16)',
                     }}
@@ -383,12 +392,13 @@ const EventsNearYou: React.FC = () => {
                       size="small"
                       onClick={() => navigate(`/events/${ev.id}`)}
                       sx={{
-                        background: 'linear-gradient(135deg, #394150 0%, #333B49 100%)',
+                        backgroundColor: '#394150',
                         fontWeight: 700,
                         textTransform: 'none',
                         borderRadius: 2,
                         transition: 'all 0.3s ease',
                         '&:hover': {
+                          backgroundColor: '#333B49',
                           boxShadow: '0 4px 12px rgba(65, 73, 88, 0.3)',
                           transform: 'translateY(-1px)',
                         },
@@ -437,7 +447,7 @@ const EventsNearYou: React.FC = () => {
               variant="contained"
               onClick={() => setVisibleCount((c) => c + 9)}
               sx={{
-                background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
+                backgroundColor: '#414958',
                 fontWeight: 700,
                 py: 1.5,
                 px: 4,
@@ -445,6 +455,7 @@ const EventsNearYou: React.FC = () => {
                 boxShadow: '0 4px 15px rgba(65, 73, 88, 0.3)',
                 transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
+                  backgroundColor: '#2B3240',
                   boxShadow: '0 8px 25px rgba(65, 73, 88, 0.38)',
                   transform: 'translateY(-2px)',
                 },
@@ -464,7 +475,7 @@ const EventsNearYou: React.FC = () => {
             {attendDialog.tickets.length > 0 && (
               <>
                 <Typography variant="body2" color="text.secondary">
-                  Choose a ticket to buy (requires sign-in), or choose register-only.
+                  Choose a ticket to buy (no signup required), or choose register-only.
                 </Typography>
                 <Select
                   value={attendDialog.selectedTicketId}
@@ -494,6 +505,13 @@ const EventsNearYou: React.FC = () => {
               </>
             )}
             {!attendDialog.selectedTicketId && (
+              <>
+                <TextField label="Name" value={attendDialog.name} onChange={(e) => setAttendDialog((s) => ({ ...s, name: e.target.value }))} fullWidth />
+                <TextField label="Email" value={attendDialog.email} onChange={(e) => setAttendDialog((s) => ({ ...s, email: e.target.value }))} fullWidth />
+                <TextField label="Phone" value={attendDialog.phone} onChange={(e) => setAttendDialog((s) => ({ ...s, phone: e.target.value }))} fullWidth />
+              </>
+            )}
+            {attendDialog.selectedTicketId && !currentUser && (
               <>
                 <TextField label="Name" value={attendDialog.name} onChange={(e) => setAttendDialog((s) => ({ ...s, name: e.target.value }))} fullWidth />
                 <TextField label="Email" value={attendDialog.email} onChange={(e) => setAttendDialog((s) => ({ ...s, email: e.target.value }))} fullWidth />

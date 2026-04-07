@@ -222,7 +222,7 @@ const AdminServiceApproval: React.FC = () => {
             <TableContainer component={Paper}>
               <Table>
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: '#EEF2F8' }}>
+                  <TableRow sx={{ backgroundColor: 'action.hover' }}>
                     <TableCell sx={{ fontWeight: 700 }}>Service Title</TableCell>
                     <TableCell sx={{ fontWeight: 700 }}>Provider</TableCell>
                     <TableCell sx={{ fontWeight: 700 }}>Category</TableCell>
@@ -280,9 +280,10 @@ const AdminServiceApproval: React.FC = () => {
                             startIcon={<CheckCircleIcon />}
                             onClick={() => handleViewDetails(service)}
                             sx={{
-                              background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
+                              backgroundColor: '#F19B7D',
                               textTransform: 'none',
                               fontWeight: 600,
+                              '&:hover': { backgroundColor: '#DD8568' },
                             }}
                           >
                             View & Approve
@@ -406,7 +407,8 @@ const AdminServiceApproval: React.FC = () => {
                 onClick={() => handleApprove(selectedService)}
                 variant="contained"
                 sx={{
-                  background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
+                  backgroundColor: '#F19B7D',
+                  '&:hover': { backgroundColor: '#DD8568' },
                 }}
               >
                 Approve Service

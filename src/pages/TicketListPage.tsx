@@ -151,7 +151,7 @@ const TicketListPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#EEF2F8' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'background.default' }}>
       <DashboardSidebar
         userRole="organizer"
         userName={currentUser?.name || 'Organizer'}
@@ -290,7 +290,7 @@ const TicketListPage: React.FC = () => {
             <>
               <TableContainer component={Paper}>
                 <Table>
-                  <TableHead sx={{ backgroundColor: '#EEF2F8' }}>
+                  <TableHead sx={{ backgroundColor: 'action.hover' }}>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Subject</TableCell>
                       <TableCell align="center" sx={{ fontWeight: 'bold' }}>

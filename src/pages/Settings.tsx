@@ -383,7 +383,7 @@ const Settings: React.FC = () => {
             borderRadius: 4,
             border: '1px solid',
             borderColor: alpha(theme.palette.primary.main, 0.22),
-            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, theme.palette.mode === 'light' ? 0.14 : 0.24)} 0%, ${alpha(theme.palette.background.paper, 0.98)} 58%)`,
+            backgroundColor: alpha(theme.palette.primary.main, theme.palette.mode === 'light' ? 0.08 : 0.18),
           }}
         >
           <Box

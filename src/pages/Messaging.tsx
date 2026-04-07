@@ -22,6 +22,7 @@ import {
   DialogContent,
   Chip,
 } from '@mui/material'
+import { alpha, useTheme } from '@mui/material/styles'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { keyframes } from '@mui/system'
 import api from '../api'
@@ -97,6 +98,7 @@ interface User {
 }
 
 const Messaging: React.FC = () => {
+  const theme = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
   const [conversations, setConversations] = useState<Conversation[]>([])
@@ -113,6 +115,13 @@ const Messaging: React.FC = () => {
   const messagesEndRef = React.useRef<HTMLDivElement>(null)
   const messagePollingRef = React.useRef<ReturnType<typeof setInterval> | null>(null)
   const conversationPollingRef = React.useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const isLight = theme.palette.mode === 'light'
+  const panelBg = isLight ? '#F9FBFE' : alpha(theme.palette.background.paper, 0.7)
+  const panelBorder = theme.palette.divider
+  const hoverBg = isLight ? '#F9FBFE' : theme.palette.action.hover
+  const selectedBg = alpha(theme.palette.secondary.main, isLight ? 0.18 : 0.24)
+  const scrollTrack = alpha(theme.palette.background.default, isLight ? 0.6 : 0.35)
 
   useEffect(() => {
     const userStr = localStorage.getItem('user')
@@ -326,9 +335,10 @@ const Messaging: React.FC = () => {
               startIcon={<AddIcon />}
               onClick={() => setShowNewMessageModal(true)}
               sx={{
-                background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
+                backgroundColor: '#F19B7D',
                 textTransform: 'none',
                 fontWeight: 600,
+                '&:hover': { backgroundColor: '#DD8568' },
               }}
             >
               New Message
@@ -338,7 +348,7 @@ const Messaging: React.FC = () => {
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '320px 1fr' }, gap: 2, flex: 1, minHeight: 0 }}>
           {/* Conversations List */}
           <Paper sx={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 2, boxShadow: 2, minHeight: 0 }}>
-            <Box sx={{ p: 2, borderBottom: '2px solid #E1E7F0', bgcolor: '#F9FBFE' }}>
+            <Box sx={{ p: 2, borderBottom: `2px solid ${panelBorder}`, bgcolor: panelBg }}>
               <TextField
                 fullWidth
                 placeholder="Search conversations..."
@@ -371,7 +381,15 @@ const Messaging: React.FC = () => {
                 <CircularProgress />
               </Box>
             ) : (
-              <List sx={{ overflow: 'auto', flex: 1, '&::-webkit-scrollbar': { width: '6px' }, '&::-webkit-scrollbar-track': { background: '#f1f1f1' }, '&::-webkit-scrollbar-thumb': { background: '#F19B7D', borderRadius: '3px' } }}>
+              <List
+                sx={{
+                  overflow: 'auto',
+                  flex: 1,
+                  '&::-webkit-scrollbar': { width: '6px' },
+                  '&::-webkit-scrollbar-track': { background: scrollTrack },
+                  '&::-webkit-scrollbar-thumb': { background: '#F19B7D', borderRadius: '3px' },
+                }}
+              >
                 {filteredConversations.length === 0 ? (
                   <Box sx={{ p: 3, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                     <Typography color="text.secondary">No conversations yet</Typography>
@@ -383,11 +401,11 @@ const Messaging: React.FC = () => {
                       disablePadding
                       sx={{
                         backgroundColor:
-                          selectedConversation?.user_id === conversation.user_id ? '#FCE9E2' : 'transparent',
+                          selectedConversation?.user_id === conversation.user_id ? selectedBg : 'transparent',
                         borderLeft: selectedConversation?.user_id === conversation.user_id ? '4px solid #F19B7D' : '4px solid transparent',
                         transition: 'all 0.2s ease',
                         '&:hover': {
-                          backgroundColor: '#F9FBFE',
+                          backgroundColor: hoverBg,
                         },
                       }}
                     >
@@ -443,7 +461,7 @@ const Messaging: React.FC = () => {
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              backgroundColor: selectedConversation ? 'background.paper' : '#F9FBFE',
+              backgroundColor: selectedConversation ? 'background.paper' : panelBg,
               borderRadius: 2,
               boxShadow: 2,
               minHeight: 0,
@@ -455,11 +473,11 @@ const Messaging: React.FC = () => {
                 <Box
                   sx={{
                     p: 2,
-                    borderBottom: '2px solid #E1E7F0',
+                    borderBottom: `2px solid ${panelBorder}`,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 2,
-                    bgcolor: '#F9FBFE',
+                    bgcolor: panelBg,
                   }}
                 >
                   <Avatar
@@ -490,19 +508,19 @@ const Messaging: React.FC = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 1.5,
-                    backgroundColor: '#F9FBFE',
+                    backgroundColor: panelBg,
                     minHeight: 0,
                     '&::-webkit-scrollbar': { 
                       width: '10px',
                     },
                     '&::-webkit-scrollbar-track': { 
-                      background: '#f1f1f1',
+                      background: scrollTrack,
                       borderRadius: '10px',
                     },
                     '&::-webkit-scrollbar-thumb': { 
                       background: '#F19B7D',
                       borderRadius: '10px',
-                      border: '2px solid #f1f1f1',
+                      border: `2px solid ${scrollTrack}`,
                       '&:hover': {
                         background: '#D57B5E',
                       }
@@ -570,7 +588,7 @@ const Messaging: React.FC = () => {
                             <Card
                               sx={{
                                 background: isCurrentUser
-                                  ? 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)'
+                                  ? '#F19B7D'
                                   : 'white',
                                 color: isCurrentUser ? 'white' : 'black',
                                 boxShadow: isCurrentUser
@@ -617,7 +635,7 @@ const Messaging: React.FC = () => {
 
                 {/* Input */}
                 <Divider />
-                <Box sx={{ p: 2.5, display: 'flex', gap: 1.5, bgcolor: '#F9FBFE', borderTop: '2px solid #E1E7F0' }}>
+                <Box sx={{ p: 2.5, display: 'flex', gap: 1.5, bgcolor: panelBg, borderTop: `2px solid ${panelBorder}` }}>
                   <TextField
                     fullWidth
                     placeholder="Type your message..."
@@ -650,13 +668,13 @@ const Messaging: React.FC = () => {
                     onClick={handleSendMessage}
                     disabled={!newMessage.trim() || sendingMessage}
                     sx={{
-                      background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
+                      backgroundColor: '#F19B7D',
                       textTransform: 'none',
                       fontWeight: 600,
                       px: 2,
                       borderRadius: 1.5,
                       '&:hover': {
-                        background: 'linear-gradient(135deg, #D57B5E 0%, #C96F54 100%)',
+                        backgroundColor: '#DD8568',
                       },
                     }}
                   >

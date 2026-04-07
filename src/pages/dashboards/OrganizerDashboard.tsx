@@ -516,7 +516,7 @@ const OrganizerDashboard: React.FC = () => {
                   variant="contained"
                   onClick={handleCreateEvent}
                   sx={{
-                    background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
+                    backgroundColor: '#414958',
                     textTransform: 'none',
                     fontWeight: 700,
                     borderRadius: '12px',
@@ -525,6 +525,7 @@ const OrganizerDashboard: React.FC = () => {
                     boxShadow: '0 4px 15px rgba(65, 73, 88, 0.3)',
                     transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                     '&:hover': {
+                      backgroundColor: '#2B3240',
                       boxShadow: '0 8px 25px rgba(65, 73, 88, 0.38)',
                       transform: 'translateY(-2px)',
                     },
@@ -629,7 +630,7 @@ const OrganizerDashboard: React.FC = () => {
               ) : (
                 <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: 'hidden' }}>
                   <Table>
-                    <TableHead sx={{ background: 'linear-gradient(135deg, rgba(31, 77, 92, 0.1) 0%, rgba(31, 77, 92, 0.05) 100%)' }}>
+                    <TableHead sx={{ backgroundColor: 'rgba(31, 77, 92, 0.1)' }}>
                       <TableRow>
                         <TableCell sx={{ fontWeight: 600, py: 2 }}>Event Name</TableCell>
                         <TableCell sx={{ fontWeight: 600, py: 2 }}>Date</TableCell>
@@ -744,7 +745,7 @@ const OrganizerDashboard: React.FC = () => {
                 ) : (
                   <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: 'hidden' }}>
                     <Table>
-                      <TableHead sx={{ background: 'linear-gradient(135deg, rgba(31, 77, 92, 0.1) 0%, rgba(31, 77, 92, 0.05) 100%)' }}>
+                      <TableHead sx={{ backgroundColor: 'rgba(31, 77, 92, 0.1)' }}>
                         <TableRow>
                           <TableCell sx={{ fontWeight: 600, py: 2 }}>Service</TableCell>
                           <TableCell sx={{ fontWeight: 600, py: 2 }}>Vendor</TableCell>
@@ -935,19 +936,9 @@ const OrganizerDashboard: React.FC = () => {
                           textAlign: 'center',
                           cursor: 'pointer',
                           transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
-                          background: 'linear-gradient(135deg, rgba(65, 73, 88, 0.06) 0%, rgba(27, 94, 60, 0.02) 100%)',
+                          backgroundColor: 'rgba(65, 73, 88, 0.06)',
                           position: 'relative',
                           overflow: 'hidden',
-                          '&::before': {
-                            content: '""',
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            background: 'radial-gradient(circle at 20% 50%, rgba(204, 213, 226, 0.12), transparent 50%)',
-                            pointerEvents: 'none',
-                          },
                           '&:hover': {
                             backgroundColor: 'rgba(65, 73, 88, 0.12)',
                             borderColor: '#2B3240',
@@ -980,12 +971,12 @@ const OrganizerDashboard: React.FC = () => {
                           borderRadius: '16px',
                           overflow: 'hidden',
                           border: '2px solid #414958',
-                          backgroundColor: '#fff',
+                          backgroundColor: 'background.paper',
                           boxShadow: '0 4px 16px rgba(65, 73, 88, 0.18)',
                           transition: 'all 0.3s ease',
                         }}
                       >
-                        <Box sx={{ position: 'relative', paddingTop: '62.5%', backgroundColor: '#EEF2F8' }}>
+                        <Box sx={{ position: 'relative', paddingTop: '62.5%', backgroundColor: 'action.hover' }}>
                           <img 
                             src={imagePreview} 
                             alt="Preview" 
@@ -999,7 +990,7 @@ const OrganizerDashboard: React.FC = () => {
                             }}
                           />
                         </Box>
-                        <Box sx={{ p: 2, backgroundColor: '#fff' }}>
+                        <Box sx={{ p: 2, backgroundColor: 'background.paper' }}>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
                             <Box sx={{ flex: 1, minWidth: 0 }}>
                               <Typography variant="body2" sx={{ fontWeight: 700, color: '#414958', mb: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1053,7 +1044,7 @@ const OrganizerDashboard: React.FC = () => {
                   <Button
                     onClick={handleSaveEvent}
                     variant="contained"
-                    sx={{ textTransform: 'none', background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)' }}
+                    sx={{ textTransform: 'none', backgroundColor: '#414958', '&:hover': { backgroundColor: '#2B3240' } }}
                   >
                     {editingEventId ? 'Update Event' : 'Create Event'}
                   </Button>

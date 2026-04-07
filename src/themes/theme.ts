@@ -3,45 +3,45 @@ import { alpha, createTheme } from '@mui/material/styles'
 const fontFamily = '"Manrope", "Plus Jakarta Sans", "Avenir Next", "Segoe UI", sans-serif'
 
 const lightTokens = {
-  primary: '#414958',
-  primaryDark: '#2B3240',
-  onPrimary: '#F7F9FC',
-  secondary: '#F19B7D',
-  secondaryDark: '#DD8568',
-  onSecondary: '#1E2633',
-  bg: '#E9EDF3',
-  paper: '#F9FBFE',
-  surface: '#E1E7F0',
-  text: '#1E2634',
-  textMuted: '#647388',
-  border: '#CCD5E2',
-  ring: '#F19B7D',
-  shadow: '0 14px 36px rgba(31, 42, 59, 0.16)',
-  success: '#5E9A75',
-  warning: '#E8B15E',
-  error: '#CC4242',
-  info: '#6D8DB3',
+  primary: '#4D4D4D',
+  primaryDark: '#171717',
+  onPrimary: '#DEDEDE',
+  secondary: '#F25623',
+  secondaryDark: '#171717',
+  onSecondary: '#DEDEDE',
+  bg: '#FFFFFF',
+  paper: '#FFFFFF',
+  surface: '#DEDEDE',
+  text: '#171717',
+  textMuted: '#4D4D4D',
+  border: '#4D4D4D',
+  ring: '#F25623',
+  shadow: '0 14px 36px rgba(23, 23, 23, 0.16)',
+  success: '#4D4D4D',
+  warning: '#F25623',
+  error: '#171717',
+  info: '#4D4D4D',
 }
 
 const darkTokens = {
-  primary: '#AEB8C7',
-  primaryDark: '#697383',
-  onPrimary: '#171D27',
-  secondary: '#F19B7D',
-  secondaryDark: '#DD8568',
-  onSecondary: '#1B212D',
-  bg: '#1A212D',
-  paper: '#232B38',
-  surface: '#2D3645',
-  text: '#EBEFF6',
-  textMuted: '#A7B0BF',
-  border: '#3F4A5D',
-  ring: '#F19B7D',
+  primary: '#DEDEDE',
+  primaryDark: '#4D4D4D',
+  onPrimary: '#171717',
+  secondary: '#F25623',
+  secondaryDark: '#4D4D4D',
+  onSecondary: '#171717',
+  bg: '#171717',
+  paper: '#4D4D4D',
+  surface: '#4D4D4D',
+  text: '#DEDEDE',
+  textMuted: '#DEDEDE',
+  border: '#4D4D4D',
+  ring: '#F25623',
   shadow: '0 14px 36px rgba(0, 0, 0, 0.42)',
-  success: '#76B28F',
-  warning: '#E8B15E',
-  error: '#F27474',
-  info: '#8FB5E2',
+  success: '#DEDEDE',
+  warning: '#F25623',
+  error: '#DEDEDE',
+  info: '#DEDEDE',
 }
 
 const baseComponents = (tokens: typeof lightTokens) => ({
@@ -49,11 +49,7 @@ const baseComponents = (tokens: typeof lightTokens) => ({
     styleOverrides: {
       body: {
         fontFamily,
-        background:
-          `radial-gradient(circle at 14% -8%, ${alpha(tokens.primary, 0.2)} 0%, transparent 40%),` +
-          `radial-gradient(circle at 92% 2%, ${alpha(tokens.secondary, 0.14)} 0%, transparent 34%),` +
-          `radial-gradient(circle at 45% 120%, ${alpha(tokens.primaryDark, 0.12)} 0%, transparent 46%),` +
-          tokens.bg,
+        background: tokens.bg,
         color: tokens.text,
         WebkitFontSmoothing: 'antialiased',
         MozOsxFontSmoothing: 'grayscale',
@@ -76,12 +72,12 @@ const baseComponents = (tokens: typeof lightTokens) => ({
         transition: 'transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease',
       },
       contained: {
-        background: `linear-gradient(135deg, ${tokens.secondary} 0%, ${tokens.secondaryDark} 100%)`,
+        background: tokens.secondary,
         color: tokens.onSecondary,
         boxShadow: tokens.shadow,
         padding: '10px 20px',
         '&:hover': {
-          background: `linear-gradient(135deg, ${tokens.secondaryDark} 0%, ${tokens.secondary} 100%)`,
+          background: tokens.secondaryDark,
           boxShadow: tokens.shadow,
           transform: 'translateY(-1px)',
         },
@@ -90,12 +86,12 @@ const baseComponents = (tokens: typeof lightTokens) => ({
         color: tokens.onSecondary,
       },
       outlined: {
-        border: `1px solid ${alpha(tokens.primary, 0.35)}`,
+        border: 'none',
         color: tokens.primary,
         padding: '10px 20px',
         '&:hover': {
           backgroundColor: alpha(tokens.primary, 0.08),
-          borderColor: tokens.primary,
+          borderColor: 'transparent',
         },
       },
       sizeSmall: {
@@ -108,7 +104,7 @@ const baseComponents = (tokens: typeof lightTokens) => ({
       root: {
         backgroundImage: 'none',
         borderRadius: 14,
-        border: `1px solid ${alpha(tokens.border, 0.8)}`,
+        border: 'none',
         boxShadow: `0 8px 28px ${alpha(tokens.primaryDark, 0.12)}`,
       },
     },
@@ -117,7 +113,7 @@ const baseComponents = (tokens: typeof lightTokens) => ({
     styleOverrides: {
       root: {
         borderRadius: 14,
-        border: `1px solid ${alpha(tokens.border, 0.85)}`,
+        border: 'none',
         backgroundColor: alpha(tokens.surface, 0.8),
         boxShadow: `0 10px 26px ${alpha(tokens.primaryDark, 0.14)}`,
       },
@@ -130,7 +126,7 @@ const baseComponents = (tokens: typeof lightTokens) => ({
         color: tokens.text,
         backdropFilter: 'blur(8px)',
         boxShadow: 'none',
-        borderBottom: `1px solid ${alpha(tokens.border, 0.9)}`,
+        borderBottom: 'none',
       },
     },
   },
@@ -140,6 +136,9 @@ const baseComponents = (tokens: typeof lightTokens) => ({
         fontWeight: 600,
         borderRadius: 10,
         backdropFilter: 'blur(4px)',
+      },
+      outlined: {
+        border: 'none',
       },
     },
   },
@@ -168,9 +167,15 @@ const baseComponents = (tokens: typeof lightTokens) => ({
         '&.Mui-focused': {
           boxShadow: `0 0 0 3px ${alpha(tokens.ring, 0.22)}`,
         },
+        '&:hover .MuiOutlinedInput-notchedOutline': {
+          borderColor: 'transparent',
+        },
+        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+          borderColor: 'transparent',
+        },
       },
       notchedOutline: {
-        borderColor: alpha(tokens.border, 0.95),
+        borderColor: 'transparent',
       },
     },
   },
@@ -183,7 +188,7 @@ const baseComponents = (tokens: typeof lightTokens) => ({
         backgroundColor: alpha(tokens.surface, 0.55),
       },
       body: {
-        borderBottom: `1px solid ${alpha(tokens.border, 0.65)}`,
+        borderBottom: 'none',
       },
     },
   },
@@ -207,14 +212,34 @@ const baseComponents = (tokens: typeof lightTokens) => ({
     styleOverrides: {
       paper: {
         borderRadius: 18,
-        border: `1px solid ${alpha(tokens.border, 0.85)}`,
+        border: 'none',
+      },
+    },
+  },
+  MuiToggleButton: {
+    styleOverrides: {
+      root: {
+        border: 'none',
+        '&.Mui-selected': {
+          border: 'none',
+        },
+      },
+    },
+  },
+  MuiToggleButtonGroup: {
+    styleOverrides: {
+      root: {
+        border: 'none',
+      },
+      grouped: {
+        border: 'none',
       },
     },
   },
   MuiDivider: {
     styleOverrides: {
       root: {
-        borderColor: alpha(tokens.border, 0.72),
+        borderColor: 'transparent',
       },
     },
   },

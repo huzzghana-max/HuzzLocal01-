@@ -3,7 +3,7 @@
   Purpose: Modern vendor discovery page with advanced filtering, sorting, and view modes.
 
   Features:
-  - Hero header with gradient background
+  - Hero header with solid background
   - Sticky filter section with search, category, and sort options
   - Grid and list view modes
   - Skeleton loaders during data fetch
@@ -92,12 +92,20 @@ const BrowseVendors: React.FC = () => {
   const [openBookingDialog, setOpenBookingDialog] = useState(false)
   const [bookingDate, setBookingDate] = useState('')
   const [bookingNotes, setBookingNotes] = useState('')
+  const [guestName, setGuestName] = useState('')
+  const [guestEmail, setGuestEmail] = useState('')
+  const [guestPhone, setGuestPhone] = useState('')
+  const [verificationCode, setVerificationCode] = useState('')
+  const [sendingCode, setSendingCode] = useState(false)
+  const [codeSent, setCodeSent] = useState(false)
   const [bookingLoading, setBookingLoading] = useState(false)
   const [bookingMessage, setBookingMessage] = useState({ type: '', text: '' })
   const [availabilityLoading, setAvailabilityLoading] = useState(false)
   const [blockedDates, setBlockedDates] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [sortBy, setSortBy] = useState<'rating' | 'price' | 'name'>('rating')
+  const [userRatings, setUserRatings] = useState<Record<number, number>>({})
+  const [ratingNotice, setRatingNotice] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
 
   useEffect(() => {
     const fetchVendors = async () => {
@@ -130,6 +138,10 @@ const BrowseVendors: React.FC = () => {
         })
         setVendors(vendorsData)
         setFilteredVendors(vendorsData)
+        setUserRatings((prev) => {
+          if (Object.keys(prev).length > 0) return prev
+          return {}
+        })
       } catch (error) {
         console.error('Error fetching approved services:', error)
       } finally {
@@ -176,6 +188,93 @@ const BrowseVendors: React.FC = () => {
     setOpenDetailDialog(true)
   }
 
+  const handleRatingChange = async (vendor: Vendor, newValue: number | null) => {
+    if (newValue == null) return
+    const providerId = vendor.vendor_id ?? vendor.user_id
+    if (!providerId) {
+      setRatingNotice({ type: 'error', text: 'Unable to rate this provider right now.' })
+      return
+    }
+
+    const previousRating = userRatings[vendor.id]
+    setUserRatings((prev) => ({ ...prev, [vendor.id]: newValue }))
+
+    const token = localStorage.getItem('token')
+    if (!token) {
+      setRatingNotice({ type: 'error', text: 'Please sign in to rate providers.' })
+      setUserRatings((prev) => {
+        const next = { ...prev }
+        if (previousRating == null) delete next[vendor.id]
+        else next[vendor.id] = previousRating
+        return next
+      })
+      navigate('/signin')
+      return
+    }
+
+    try {
+      const bookingsResp = await api.get('/my-bookings', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const reviewsResp = await api.get('/reviews/by-reviewer', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const reviewedIds = new Set((reviewsResp.data || []).map((r: any) => Number(r.booking_id)))
+      const completed = (bookingsResp.data || []).filter((b: any) => b.status === 'completed')
+      const matching = completed.find(
+        (b: any) => Number(b.vendor_id) === Number(providerId) && !reviewedIds.has(Number(b.id))
+      )
+
+      if (!matching) {
+        setRatingNotice({ type: 'info', text: 'You can only rate after completing a booking with this provider.' })
+        setUserRatings((prev) => {
+          const next = { ...prev }
+          if (previousRating == null) delete next[vendor.id]
+          else next[vendor.id] = previousRating
+          return next
+        })
+        return
+      }
+
+      const reviewResp = await api.post(
+        '/reviews',
+        { booking_id: matching.id, rating: newValue, comment: '' },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+
+      const updatedRating = Number(reviewResp.data?.provider?.rating ?? vendor.rating ?? 0)
+      const updatedTotal = Number(reviewResp.data?.provider?.totalRatings ?? vendor.totalRatings ?? 0)
+
+      setVendors((prev) =>
+        prev.map((v) => {
+          const vProviderId = v.vendor_id ?? v.user_id
+          if (vProviderId && Number(vProviderId) === Number(providerId)) {
+            return {
+              ...v,
+              rating: updatedRating,
+              totalRatings: updatedTotal,
+            }
+          }
+          return v
+        })
+      )
+      setRatingNotice({ type: 'success', text: 'Thanks! Your rating was submitted.' })
+    } catch (error: any) {
+      const status = error?.response?.status
+      if (status === 409) {
+        setRatingNotice({ type: 'info', text: 'You already reviewed this booking.' })
+      } else {
+        setRatingNotice({ type: 'error', text: error?.response?.data?.message || 'Failed to submit rating.' })
+      }
+      setUserRatings((prev) => {
+        const next = { ...prev }
+        if (previousRating == null) delete next[vendor.id]
+        else next[vendor.id] = previousRating
+        return next
+      })
+    }
+  }
+
   const handleCloseDialog = () => {
     setOpenDetailDialog(false)
     setSelectedVendor(null)
@@ -219,8 +318,37 @@ const BrowseVendors: React.FC = () => {
     setOpenBookingDialog(false)
     setBookingDate('')
     setBookingNotes('')
+    setGuestName('')
+    setGuestEmail('')
+    setGuestPhone('')
+    setVerificationCode('')
+    setCodeSent(false)
     setBookingMessage({ type: '', text: '' })
     setBlockedDates([])
+  }
+
+  const handleSendVerificationCode = async () => {
+    if (!selectedVendor) return
+    if (!guestEmail.trim()) {
+      setBookingMessage({ type: 'error', text: 'Please enter your email to receive a code.' })
+      return
+    }
+    try {
+      setSendingCode(true)
+      setBookingMessage({ type: '', text: '' })
+      await api.post('/service-bookings/verify-email', {
+        service_id: selectedVendor.id,
+        email: guestEmail,
+        name: guestName,
+      })
+      setCodeSent(true)
+      setBookingMessage({ type: 'success', text: 'Verification code sent. Check your email.' })
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || 'Failed to send verification code'
+      setBookingMessage({ type: 'error', text: errorMessage })
+    } finally {
+      setSendingCode(false)
+    }
   }
 
   const handleBookService = async () => {
@@ -242,11 +370,18 @@ const BrowseVendors: React.FC = () => {
     try {
       setBookingLoading(true)
       const token = localStorage.getItem('token')
-      
+
       if (!token) {
-        setBookingMessage({ type: 'error', text: 'Please login to book a service' })
-        setBookingLoading(false)
-        return
+        if (!guestName.trim() || !guestEmail.trim()) {
+          setBookingMessage({ type: 'error', text: 'Please enter your name and email to book.' })
+          setBookingLoading(false)
+          return
+        }
+        if (!verificationCode.trim()) {
+          setBookingMessage({ type: 'error', text: 'Please enter the verification code.' })
+          setBookingLoading(false)
+          return
+        }
       }
 
       await api.post(
@@ -255,22 +390,30 @@ const BrowseVendors: React.FC = () => {
           service_id: selectedVendor.id,
           booking_date: bookingDate,
           notes: bookingNotes || '',
+          name: token ? undefined : guestName,
+          email: token ? undefined : guestEmail,
+          phone: token ? undefined : guestPhone,
+          verification_code: token ? undefined : verificationCode,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        token
+          ? {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          : undefined
       )
 
       setBookingMessage({ 
         type: 'success', 
-        text: 'Service booked successfully! Check your dashboard for details.' 
+        text: token
+          ? 'Service booked successfully! Check your dashboard for details.'
+          : 'Booking request sent! We will email you updates.' 
       })
       
       setTimeout(() => {
         handleCloseBookingDialog()
-        navigate('/organizer-dashboard')
+        if (token) navigate('/organizer-dashboard')
       }, 2000)
     } catch (error) {
       console.error('Error booking service:', error)
@@ -283,12 +426,13 @@ const BrowseVendors: React.FC = () => {
 
   const serviceTypes = ['Photography', 'Catering', 'Event Planning', 'Entertainment', 'Flowers & Decor', 'Venue']
 
+  const hasAuth = Boolean(localStorage.getItem('token'))
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#f8f9fa' }}>
       {/* Hero Header */}
       <Box
         sx={{
-          background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
+          backgroundColor: '#F19B7D',
           color: 'white',
           py: 6,
           mb: 4,
@@ -337,13 +481,18 @@ const BrowseVendors: React.FC = () => {
       </Box>
 
       <Container maxWidth="lg" sx={{ pb: 6 }}>
+        {ratingNotice && (
+          <Alert severity={ratingNotice.type} sx={{ mb: 2 }} onClose={() => setRatingNotice(null)}>
+            {ratingNotice.text}
+          </Alert>
+        )}
         {/* Sticky Filter Section */}
         <Fade in={true} timeout={500}>
           <Paper
             sx={{
               p: 3,
               mb: 4,
-              background: 'white',
+              backgroundColor: 'background.paper',
               boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
               borderRadius: 2,
               position: 'sticky',
@@ -381,7 +530,7 @@ const BrowseVendors: React.FC = () => {
                 onClick={() => setSelectedServiceType('all')}
                 variant={selectedServiceType === 'all' ? 'filled' : 'outlined'}
                 sx={{
-                  background: selectedServiceType === 'all' ? 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)' : 'transparent',
+                  background: selectedServiceType === 'all' ? '#F19B7D' : 'transparent',
                   color: selectedServiceType === 'all' ? 'white' : '#F19B7D',
                   borderColor: '#F19B7D',
                   cursor: 'pointer',
@@ -395,7 +544,7 @@ const BrowseVendors: React.FC = () => {
                   onClick={() => setSelectedServiceType(service)}
                   variant={selectedServiceType === service ? 'filled' : 'outlined'}
                   sx={{
-                    background: selectedServiceType === service ? 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)' : 'transparent',
+                    background: selectedServiceType === service ? '#F19B7D' : 'transparent',
                     color: selectedServiceType === service ? 'white' : '#F19B7D',
                     borderColor: '#F19B7D',
                     cursor: 'pointer',
@@ -423,7 +572,7 @@ const BrowseVendors: React.FC = () => {
                       borderColor: '#F19B7D',
                       color: '#F19B7D',
                       '&.Mui-selected': {
-                        background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
+                        background: '#F19B7D',
                         color: 'white',
                       },
                     },
@@ -452,7 +601,7 @@ const BrowseVendors: React.FC = () => {
                     fontSize: '0.875rem',
                     fontFamily: 'inherit',
                     cursor: 'pointer',
-                    background: 'white',
+                    backgroundColor: 'background.paper',
                   }}
                 >
                   <option value="rating">Rating (High to Low)</option>
@@ -480,14 +629,14 @@ const BrowseVendors: React.FC = () => {
             ))}
           </Box>
         ) : filteredVendors.length === 0 ? (
-          <Paper
-            sx={{
-              textAlign: 'center',
-              py: 10,
-              background: 'linear-gradient(135deg, rgba(241, 155, 125, 0.08) 0%, rgba(241, 155, 125, 0) 100%)',
-              border: '2px dashed rgba(241, 155, 125, 0.24)',
-              borderRadius: 2,
-            }}
+            <Paper
+              sx={{
+                textAlign: 'center',
+                py: 10,
+                backgroundColor: 'rgba(241, 155, 125, 0.08)',
+                border: '2px dashed rgba(241, 155, 125, 0.24)',
+                borderRadius: 2,
+              }}
           >
             <SearchIcon sx={{ fontSize: 64, color: 'rgba(241, 155, 125, 0.34)', mb: 2 }} />
             <Typography variant="h6" sx={{ color: '#666', mb: 1, fontWeight: 600 }}>
@@ -517,27 +666,36 @@ const BrowseVendors: React.FC = () => {
                     height: '100%',
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     cursor: 'pointer',
-                    borderRadius: 2,
+                    borderRadius: 3,
                     overflow: 'hidden',
                     position: 'relative',
-                    background: 'white',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+                    backgroundColor: 'background.paper',
+                    border: '1px solid rgba(20, 33, 61, 0.08)',
+                    boxShadow: '0 6px 18px rgba(20, 33, 61, 0.08)',
                     display: viewMode === 'list' ? 'flex' : 'block',
                     '&:hover': {
-                      transform: viewMode === 'grid' ? 'translateY(-12px)' : 'translateX(8px)',
-                      boxShadow: '0 16px 40px rgba(241, 155, 125, 0.28)',
+                      transform: viewMode === 'grid' ? 'translateY(-6px)' : 'translateX(6px)',
+                      boxShadow: '0 16px 32px rgba(20, 33, 61, 0.14)',
                     },
                   }}
                 >
                   {/* Image with Badge */}
-                  <Box sx={{ position: 'relative', overflow: 'hidden', flexShrink: 0, width: viewMode === 'list' ? '200px' : '100%' }}>
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      overflow: 'hidden',
+                      flexShrink: 0,
+                      width: viewMode === 'list' ? 220 : '100%',
+                      backgroundColor: 'action.hover',
+                    }}
+                  >
                     <CardMedia
                       component="img"
-                      height={viewMode === 'grid' ? 200 : 'auto'}
-                      width={viewMode === 'list' ? 200 : 'auto'}
+                      height={viewMode === 'grid' ? 200 : 220}
+                      width={viewMode === 'list' ? 220 : 'auto'}
                       image={vendor.image}
                       alt={vendor.name}
-                      sx={{ objectFit: 'cover', height: '100%' }}
+                      sx={{ objectFit: 'cover', height: '100%', width: '100%' }}
                     />
                     {vendor.rating && vendor.rating >= 4.5 && (
                       <Box
@@ -545,7 +703,7 @@ const BrowseVendors: React.FC = () => {
                           position: 'absolute',
                           top: 12,
                           left: 12,
-                          background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
+                          backgroundColor: '#F19B7D',
                           color: 'white',
                           px: 1.5,
                           py: 0.75,
@@ -555,6 +713,7 @@ const BrowseVendors: React.FC = () => {
                           gap: 0.5,
                           fontSize: '0.875rem',
                           fontWeight: 700,
+                          boxShadow: '0 6px 14px rgba(20, 33, 61, 0.2)',
                         }}
                       >
                         <StarIcon sx={{ fontSize: 18 }} />
@@ -563,24 +722,35 @@ const BrowseVendors: React.FC = () => {
                     )}
                   </Box>
 
-                  <CardContent sx={{ flex: 1 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
-                      {vendor.name}
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#999', mb: 1.5, fontWeight: 500 }}>
-                      {vendor.business}
-                    </Typography>
-
-                    {/* Rating */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                      <Rating value={vendor.rating} readOnly size="small" />
-                      <Typography variant="body2" sx={{ color: '#666', fontWeight: 500 }}>
-                        {vendor.rating} ({vendor.totalRatings} reviews)
+                  <CardContent sx={{ flex: 1, p: 2.5, display: 'flex', flexDirection: 'column', gap: 1.2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.3, fontSize: '1.05rem' }} noWrap>
+                          {vendor.name}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#8A9099', fontWeight: 500 }} noWrap>
+                          {vendor.business}
+                        </Typography>
+                      </Box>
+                      <Typography sx={{ fontWeight: 700, color: '#2f6f3e', fontSize: '0.95rem', whiteSpace: 'nowrap' }}>
+                        {vendor.price}
                       </Typography>
                     </Box>
 
-                    {/* Service Type & Price */}
-                    <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                        <Rating
+                          value={userRatings[vendor.id] ?? vendor.rating ?? 0}
+                          onChange={(_e, value) => handleRatingChange(vendor, value)}
+                          size="small"
+                        />
+                      </Box>
+                      <Typography variant="body2" sx={{ color: '#5F6670', fontWeight: 500 }}>
+                        {vendor.rating ?? 0} ({vendor.totalRatings} reviews)
+                      </Typography>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                       <Chip
                         label={vendor.serviceType}
                         size="small"
@@ -590,26 +760,17 @@ const BrowseVendors: React.FC = () => {
                           fontWeight: 600,
                         }}
                       />
-                      <Chip
-                        label={vendor.price}
-                        size="small"
-                        sx={{
-                          background: 'rgba(76, 175, 80, 0.1)',
-                          color: '#4caf50',
-                          fontWeight: 600,
-                        }}
-                      />
+                      {viewMode === 'list' && (
+                        <Chip
+                          label={vendor.location ?? 'Not specified'}
+                          size="small"
+                          variant="outlined"
+                          sx={{ borderColor: '#E4E7EB', color: '#5F6670' }}
+                        />
+                      )}
                     </Box>
 
-                    {viewMode === 'list' && (
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="body2" sx={{ color: '#666', lineHeight: 1.6 }}>
-                          <strong>Location:</strong> {vendor.location ?? 'Not specified'}
-                        </Typography>
-                      </Box>
-                    )}
-
-                    <Box sx={{ display: 'flex', gap: 1, pt: 1 }}>
+                    <Box sx={{ display: 'flex', gap: 1, pt: 0.6 }}>
                       {viewMode === 'grid' && (
                         <Button
                           fullWidth
@@ -634,7 +795,7 @@ const BrowseVendors: React.FC = () => {
                           fullWidth
                           variant="contained"
                           size="small"
-                          sx={{ background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)', textTransform: 'none', fontWeight: 600 }}
+                          sx={{ backgroundColor: '#F19B7D', textTransform: 'none', fontWeight: 600, '&:hover': { backgroundColor: '#DD8568' } }}
                         >
                           View & Book
                         </Button>
@@ -650,7 +811,7 @@ const BrowseVendors: React.FC = () => {
         {/* Vendor Details Dialog */}
         {selectedVendor && (
           <Dialog open={openDetailDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-            <DialogTitle sx={{ background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)', color: 'white' }}>
+            <DialogTitle sx={{ backgroundColor: '#F19B7D', color: 'white' }}>
               {selectedVendor.name}
               {selectedVendor.verified && (
                 <CheckCircleIcon sx={{ fontSize: 20, ml: 1, verticalAlign: 'middle' }} />
@@ -765,14 +926,14 @@ const BrowseVendors: React.FC = () => {
                   <Typography variant="body2" sx={{ color: '#999', fontWeight: 500, mb: 0.5 }}>
                     Availability
                   </Typography>
-                  <Chip
-                    label={selectedVendor.availability}
-                    sx={{
-                      background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(76, 175, 80, 0.05) 100%)',
-                      color: '#4caf50',
-                      fontWeight: 600,
-                    }}
-                  />
+                    <Chip
+                      label={selectedVendor.availability}
+                      sx={{
+                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                        color: '#4caf50',
+                        fontWeight: 600,
+                      }}
+                    />
                 </Box>
               </Box>
             </DialogContent>
@@ -783,7 +944,7 @@ const BrowseVendors: React.FC = () => {
               <Button
                 variant="contained"
                 onClick={handleBookClick}
-                sx={{ background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)' }}
+                sx={{ backgroundColor: '#F19B7D', '&:hover': { backgroundColor: '#DD8568' } }}
               >
                 Book Now
               </Button>
@@ -793,9 +954,9 @@ const BrowseVendors: React.FC = () => {
 
         {/* Booking Dialog */}
         <Dialog open={openBookingDialog} onClose={handleCloseBookingDialog} maxWidth="sm" fullWidth>
-          <DialogTitle sx={{ background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)', color: 'white' }}>
-            Book Service
-          </DialogTitle>
+        <DialogTitle sx={{ backgroundColor: '#F19B7D', color: 'white' }}>
+          Book Service
+        </DialogTitle>
           <DialogContent sx={{ pt: 3 }}>
             {bookingMessage.text && (
               <Alert severity={bookingMessage.type as 'success' | 'error'} sx={{ mb: 2 }}>
@@ -846,6 +1007,45 @@ const BrowseVendors: React.FC = () => {
               onChange={(e) => setBookingNotes(e.target.value)}
               placeholder="Add any special requests or notes..."
             />
+            {!hasAuth && (
+              <Box sx={{ mt: 2, display: 'grid', gap: 2 }}>
+                <TextField
+                  fullWidth
+                  label="Your Name"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                />
+                <TextField
+                  fullWidth
+                  label="Email"
+                  type="email"
+                  value={guestEmail}
+                  onChange={(e) => setGuestEmail(e.target.value)}
+                />
+                <TextField
+                  fullWidth
+                  label="Phone (optional)"
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
+                />
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems="center">
+                  <TextField
+                    fullWidth
+                    label="Verification Code"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value)}
+                  />
+                  <Button
+                    variant="outlined"
+                    onClick={handleSendVerificationCode}
+                    disabled={sendingCode}
+                    sx={{ whiteSpace: 'nowrap' }}
+                  >
+                    {sendingCode ? 'Sending...' : codeSent ? 'Resend Code' : 'Send Code'}
+                  </Button>
+                </Stack>
+              </Box>
+            )}
           </DialogContent>
           <DialogActions sx={{ p: 2, gap: 1 }}>
             <Button 
@@ -858,7 +1058,7 @@ const BrowseVendors: React.FC = () => {
               variant="contained"
               onClick={handleBookService}
               disabled={bookingLoading || availabilityLoading || (bookingDate ? blockedDates.includes(bookingDate) : false)}
-              sx={{ background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)' }}
+              sx={{ backgroundColor: '#F19B7D', '&:hover': { backgroundColor: '#DD8568' } }}
             >
               {bookingLoading ? <CircularProgress size={24} /> : 'Book Service'}
             </Button>

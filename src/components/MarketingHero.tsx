@@ -1,14 +1,7 @@
 import React from 'react'
 import { Box, Button, Grid, Stack, Typography } from '@mui/material'
 import { alpha, useTheme } from '@mui/material/styles'
-import { keyframes } from '@mui/system'
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded'
-
-const driftBg = keyframes`
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-`
 
 type MarketingHeroProps = {
   badge: string
@@ -35,7 +28,7 @@ const MarketingHero: React.FC<MarketingHeroProps> = ({
         position: 'relative',
         overflow: 'hidden',
         borderRadius: { xs: 4, md: 5 },
-        background: `linear-gradient(130deg, ${alpha(theme.palette.background.paper, 0.98)} 0%, ${alpha(theme.palette.background.paper, 0.92)} 45%, ${alpha(theme.palette.primary.main, 0.08)} 100%)`,
+        backgroundColor: theme.palette.background.paper,
         border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
       }}
     >
@@ -43,9 +36,7 @@ const MarketingHero: React.FC<MarketingHeroProps> = ({
         sx={{
           position: 'absolute',
           inset: 0,
-          background: `radial-gradient(circle at 10% 25%, ${alpha(theme.palette.secondary.main, 0.15)}, transparent 45%), radial-gradient(circle at 80% 70%, ${alpha(theme.palette.primary.main, 0.14)}, transparent 48%)`,
-          backgroundSize: '140% 140%',
-          animation: `${driftBg} 22s ease-in-out infinite`,
+          backgroundColor: alpha(theme.palette.primary.main, 0.06),
           pointerEvents: 'none',
         }}
       />
@@ -79,7 +70,8 @@ const MarketingHero: React.FC<MarketingHeroProps> = ({
                   borderRadius: 999,
                   fontWeight: 800,
                   textTransform: 'none',
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                  backgroundColor: theme.palette.primary.main,
+                  '&:hover': { backgroundColor: theme.palette.primary.dark },
                 }}
               >
                 {primaryCtaText}

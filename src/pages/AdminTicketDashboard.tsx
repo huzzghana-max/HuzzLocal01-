@@ -219,7 +219,7 @@ const AdminTicketDashboard: React.FC = () => {
   }
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#EEF2F8' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'background.default' }}>
       <DashboardSidebar
         userRole="admin"
         userName={currentUser?.name || 'Admin User'}
@@ -480,7 +480,7 @@ const AdminTicketDashboard: React.FC = () => {
               <>
                 <TableContainer component={Paper}>
                   <Table>
-                    <TableHead sx={{ backgroundColor: '#EEF2F8' }}>
+                    <TableHead sx={{ backgroundColor: 'action.hover' }}>
                       <TableRow>
                         <TableCell>Subject</TableCell>
                         <TableCell>Priority</TableCell>

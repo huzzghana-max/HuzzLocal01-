@@ -339,9 +339,10 @@ const VendorServices: React.FC = () => {
               startIcon={<AddIcon />}
               onClick={() => handleOpenDialog()}
               sx={{
-                background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
+                backgroundColor: '#F19B7D',
                 textTransform: 'none',
                 fontWeight: 600,
+                '&:hover': { backgroundColor: '#DD8568' },
               }}
             >
               Add Service
@@ -377,9 +378,10 @@ const VendorServices: React.FC = () => {
                 startIcon={<AddIcon />}
                 onClick={() => handleOpenDialog()}
                 sx={{
-                  background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
+                  backgroundColor: '#F19B7D',
                   textTransform: 'none',
                   fontWeight: 600,
+                  '&:hover': { backgroundColor: '#DD8568' },
                 }}
               >
                 Create Your First Service
@@ -625,9 +627,10 @@ const VendorServices: React.FC = () => {
             variant="contained"
             startIcon={<SaveIcon />}
             sx={{
-              background: 'linear-gradient(135deg, #F19B7D 0%, #DD8568 100%)',
+              backgroundColor: '#F19B7D',
               textTransform: 'none',
               fontWeight: 600,
+              '&:hover': { backgroundColor: '#DD8568' },
             }}
           >
             {editingService ? 'Update' : 'Create'} Service

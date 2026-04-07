@@ -16,6 +16,7 @@ import {
   Stack,
   Divider,
   useTheme,
+  TextField,
 } from '@mui/material'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../api'
@@ -46,14 +47,19 @@ const EventDetail: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [qtyMap, setQtyMap] = useState<Record<number, number>>({})
   const [processing, setProcessing] = useState(false)
+  const [registering, setRegistering] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [paymentOpen, setPaymentOpen] = useState(false)
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null)
   const [paymentAmount, setPaymentAmount] = useState(0)
   const [currentUser, setCurrentUser] = useState<any>(null)
+  const [registerForm, setRegisterForm] = useState({ name: '', email: '', phone: '' })
+  const [registeredQr, setRegisteredQr] = useState<string | null>(null)
+  const [registeredToken, setRegisteredToken] = useState<string | null>(null)
   const [shareNotice, setShareNotice] = useState('')
   const publicEventLink = eventId ? `${window.location.origin}/events/public/${encodeURIComponent(eventId)}` : ''
+  const buyerEmail = currentUser?.email || registerForm.email
 
   const fetchEventDetails = async () => {
     try {
@@ -92,7 +98,13 @@ const EventDetail: React.FC = () => {
     const userStr = localStorage.getItem('user')
     if (userStr) {
       try {
-        setCurrentUser(JSON.parse(userStr))
+        const parsed = JSON.parse(userStr)
+        setCurrentUser(parsed)
+        setRegisterForm((prev) => ({
+          name: prev.name || parsed?.name || '',
+          email: prev.email || parsed?.email || '',
+          phone: prev.phone || '',
+        }))
       } catch (e) {
         console.error('Failed to parse user:', e)
       }
@@ -103,9 +115,17 @@ const EventDetail: React.FC = () => {
 
   const handlePurchase = (ticketId: number) => {
     if (!currentUser) {
-      setError('Please login to purchase tickets')
-      navigate('/signin')
-      return
+      const trimmedName = registerForm.name.trim()
+      const trimmedEmail = registerForm.email.trim().toLowerCase()
+      if (!trimmedName || !trimmedEmail) {
+        setError('Please enter your name and email to purchase tickets.')
+        return
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(trimmedEmail)) {
+        setError('Please enter a valid email address.')
+        return
+      }
     }
 
     const ticket = tickets.find(t => t.id === ticketId)
@@ -130,6 +150,9 @@ const EventDetail: React.FC = () => {
         quantity: qty,
         payment_method: 'paystack',
         payment_reference: reference,
+        name: currentUser ? undefined : registerForm.name,
+        email: currentUser ? undefined : registerForm.email,
+        phone: currentUser ? undefined : registerForm.phone,
       })
       
       setMessage(`Purchase successful — ${resp.data.transactionId} — ₵${resp.data.amount}`)
@@ -142,6 +165,34 @@ const EventDetail: React.FC = () => {
       setTimeout(() => setError(''), 4000)
     } finally {
       setProcessing(false)
+    }
+  }
+
+  const handleRegister = async () => {
+    if (!eventId) return
+    try {
+      setRegistering(true)
+      setError('')
+      setMessage('')
+      setRegisteredQr(null)
+      setRegisteredToken(null)
+
+      const resp = await api.post(`/events/${eventId}/attend`, {
+        name: registerForm.name,
+        email: registerForm.email,
+        phone: registerForm.phone,
+      })
+
+      setMessage(resp.data?.message || 'Registration successful')
+      setRegisteredQr(resp.data?.qr || null)
+      setRegisteredToken(resp.data?.token || null)
+      setTimeout(() => setMessage(''), 5000)
+    } catch (err: any) {
+      console.error('Registration failed', err)
+      setError(err?.response?.data?.message || 'Failed to register')
+      setTimeout(() => setError(''), 5000)
+    } finally {
+      setRegistering(false)
     }
   }
 
@@ -248,9 +299,7 @@ const EventDetail: React.FC = () => {
               <Box
                 sx={{
                   height: 400,
-                  background: theme.palette.mode === 'light'
-                    ? 'linear-gradient(135deg, #EEF2F8 0%, #CCD5E2 100%)'
-                    : 'linear-gradient(135deg, #232B38 0%, #2B3240 100%)',
+                  background: theme.palette.mode === 'light' ? '#EEF2F8' : '#232B38',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -268,9 +317,7 @@ const EventDetail: React.FC = () => {
                     variant="h3"
                     sx={{
                       fontWeight: 800,
-                      background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
+                      color: '#414958',
                       mb: 1,
                     }}
                   >
@@ -281,7 +328,7 @@ const EventDetail: React.FC = () => {
                       label={event.status}
                       size="small"
                       sx={{
-                        background: 'linear-gradient(135deg, rgba(65, 73, 88, 0.18) 0%, rgba(204, 213, 226, 0.18) 100%)',
+                        backgroundColor: 'rgba(65, 73, 88, 0.18)',
                         color: '#414958',
                         fontWeight: 700,
                         border: '1.5px solid #CCD5E2',
@@ -405,6 +452,91 @@ const EventDetail: React.FC = () => {
           </Alert>
         )}
 
+        {/* Registration Section (No Signup Required) */}
+        <Box sx={{ mb: 4 }}>
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 800,
+              mb: 2,
+              color: '#414958',
+            }}
+          >
+            Register for This Event
+          </Typography>
+          <Paper
+            sx={{
+              p: { xs: 2, md: 3 },
+              borderRadius: '16px',
+              background: theme.palette.mode === 'light' ? '#FFFFFF' : '#2D3645',
+              border: theme.palette.mode === 'light'
+                ? '1px solid rgba(204, 213, 226, 0.24)'
+                : '1px solid rgba(204, 213, 226, 0.18)',
+            }}
+          >
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              No signup required. We will email your confirmation and QR check-in code.
+            </Typography>
+            <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' } }}>
+              <TextField
+                label="Name"
+                value={registerForm.name}
+                onChange={(e) => setRegisterForm((prev) => ({ ...prev, name: e.target.value }))}
+                fullWidth
+              />
+              <TextField
+                label="Email"
+                type="email"
+                value={registerForm.email}
+                onChange={(e) => setRegisterForm((prev) => ({ ...prev, email: e.target.value }))}
+                fullWidth
+              />
+              <TextField
+                label="Phone (optional)"
+                value={registerForm.phone}
+                onChange={(e) => setRegisterForm((prev) => ({ ...prev, phone: e.target.value }))}
+                fullWidth
+              />
+            </Box>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: 2 }}>
+              <Button
+                variant="contained"
+                onClick={handleRegister}
+                disabled={registering}
+                sx={{
+                  backgroundColor: '#414958',
+                  fontWeight: 700,
+                  '&:hover': {
+                    backgroundColor: '#2B3240',
+                  },
+                }}
+              >
+                {registering ? 'Registering...' : 'Register Now'}
+              </Button>
+              <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
+                Want a paid ticket? Use the ticket options below (sign-in required).
+              </Typography>
+            </Stack>
+            {(registeredToken || registeredQr) && (
+              <Box sx={{ mt: 2, p: 2, borderRadius: 2, bgcolor: 'rgba(65, 73, 88, 0.06)' }}>
+                {registeredToken && (
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                    Your check-in token: {registeredToken}
+                  </Typography>
+                )}
+                {registeredQr && (
+                  <Box
+                    component="img"
+                    src={registeredQr}
+                    alt="Registration QR"
+                    sx={{ mt: 1, maxWidth: 220, borderRadius: 1, border: '1px solid rgba(0,0,0,0.12)' }}
+                  />
+                )}
+              </Box>
+            )}
+          </Paper>
+        </Box>
+
         {/* Tickets Section */}
         <Box>
           <Typography
@@ -412,9 +544,7 @@ const EventDetail: React.FC = () => {
             sx={{
               fontWeight: 800,
               mb: 3,
-              background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              color: '#414958',
             }}
           >
             Available Tickets
@@ -426,9 +556,7 @@ const EventDetail: React.FC = () => {
                 p: 4,
                 textAlign: 'center',
                 borderRadius: '16px',
-                background: theme.palette.mode === 'light'
-                  ? 'linear-gradient(135deg, #FFFFFF 0%, #EEF2F8 100%)'
-                  : 'linear-gradient(135deg, #2D3645 0%, #232B38 100%)',
+                background: theme.palette.mode === 'light' ? '#FFFFFF' : '#2D3645',
                 border: theme.palette.mode === 'light'
                   ? '1px solid rgba(204, 213, 226, 0.24)'
                   : '1px solid rgba(204, 213, 226, 0.18)',
@@ -449,9 +577,7 @@ const EventDetail: React.FC = () => {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     borderRadius: '12px',
-                    background: theme.palette.mode === 'light'
-                      ? 'linear-gradient(135deg, #FFFFFF 0%, #EEF2F8 100%)'
-                      : 'linear-gradient(135deg, #2D3645 0%, #232B38 100%)',
+                    background: theme.palette.mode === 'light' ? '#FFFFFF' : '#2D3645',
                     border: theme.palette.mode === 'light'
                       ? '1px solid rgba(204, 213, 226, 0.24)'
                       : '1px solid rgba(204, 213, 226, 0.18)',
@@ -500,10 +626,11 @@ const EventDetail: React.FC = () => {
                       onClick={() => handlePurchase(ticket.id)}
                       disabled={processing || (ticket.quantity - ticket.sold) <= 0}
                       sx={{
-                        background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
+                        backgroundColor: '#414958',
                         fontWeight: 700,
                         transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                         '&:hover': {
+                          backgroundColor: '#2B3240',
                           boxShadow: '0 8px 24px rgba(65, 73, 88, 0.3)',
                         },
                       }}
@@ -521,7 +648,7 @@ const EventDetail: React.FC = () => {
         <PaystackPaymentModal
           open={paymentOpen}
           amount={paymentAmount}
-          email={currentUser?.email || ''}
+          email={buyerEmail || ''}
           title="Purchase Event Ticket"
           description={`Complete your purchase for ${event?.name}`}
           metadata={{

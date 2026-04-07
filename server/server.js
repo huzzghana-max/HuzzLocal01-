@@ -113,6 +113,10 @@ function toDateOnly(value) {
   return formatDateOnly(date)
 }
 
+function generateVerificationCode() {
+  return Math.floor(100000 + Math.random() * 900000).toString()
+}
+
 function normalizeRange(fromRaw, toRaw, fallbackDays = 90) {
   const now = new Date()
   const from = new Date(fromRaw || now)
@@ -219,6 +223,8 @@ async function getOrganizerPayoutSummary(pool, organizerId, eventId = null) {
 async function sendTicketPurchaseEmail({
   pool,
   buyerId,
+  buyerEmail,
+  buyerName,
   eventId,
   ticket,
   quantity,
@@ -228,13 +234,18 @@ async function sendTicketPurchaseEmail({
   saleId,
   qrDataUrl,
 }) {
-  const [users] = await pool.execute('SELECT name, email FROM users WHERE id = ? LIMIT 1', [buyerId])
-  if (!users || users.length === 0 || !users[0].email) return
+  let user = null
+  if (buyerId) {
+    const [users] = await pool.execute('SELECT name, email FROM users WHERE id = ? LIMIT 1', [buyerId])
+    if (users && users.length > 0) user = users[0]
+  } else if (buyerEmail) {
+    user = { name: buyerName || 'Attendee', email: buyerEmail }
+  }
+  if (!user || !user.email) return
 
   const [events] = await pool.execute('SELECT name, date, location FROM events WHERE id = ? LIMIT 1', [eventId])
   if (!events || events.length === 0) return
 
-  const user = users[0]
   const event = events[0]
   const eventDateTime = event.date ? new Date(event.date).toLocaleString() : 'TBD'
   const unitPrice = parseFloat(ticket.price || 0)
@@ -335,6 +346,18 @@ const verifyToken = (req, res, next) => {
   } catch (error) {
     console.error('Token verification error:', error.message)
     return res.status(401).json({ message: 'Invalid or expired token' })
+  }
+}
+
+function getOptionalAuthUser(req) {
+  const authHeader = req.headers.authorization
+  if (!authHeader) return { id: null, role: null }
+  try {
+    const token = authHeader.split(' ')[1]
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-this')
+    return { id: decoded?.id || null, role: decoded?.role || null }
+  } catch {
+    return { id: null, role: null }
   }
 }
 
@@ -1979,7 +2002,15 @@ app.post('/api/events/:eventId/attend', registerLimiter, async (req, res) => {
 
     // Purchase path (ticket + attendance)
     if (ticket_id) {
-      if (!authUserId) return res.status(401).json({ message: 'Login required to purchase ticket' })
+      if (!authUserId) {
+        email = (email || '').trim().toLowerCase()
+        name = (name || '').trim()
+        phone = (phone || '').trim()
+        if (!email) return res.status(400).json({ message: 'Email is required' })
+        if (!name) return res.status(400).json({ message: 'Name is required' })
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!emailRegex.test(email)) return res.status(400).json({ message: 'Invalid email format' })
+      }
       if (!quantity || Number(quantity) <= 0) {
         return res.status(400).json({ message: 'Positive quantity is required for ticket purchase' })
       }
@@ -1997,8 +2028,19 @@ app.post('/api/events/:eventId/attend', registerLimiter, async (req, res) => {
       const amount = (parseFloat(ticket.price || 0) * qty) || 0
       const transactionId = `tx_${Date.now()}_${Math.round(Math.random() * 1e6)}`
       const [saleResult] = await pool.execute(
-        'INSERT INTO ticket_sales (ticket_id, buyer_id, quantity, amount, payment_method, transaction_id, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [ticket_id, authUserId, qty, amount, payment_method || 'offline', transactionId, 'completed']
+        'INSERT INTO ticket_sales (ticket_id, buyer_id, buyer_name, buyer_email, buyer_phone, quantity, amount, payment_method, transaction_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          ticket_id,
+          authUserId,
+          authUserId ? null : name || null,
+          authUserId ? null : email || null,
+          authUserId ? null : phone || null,
+          qty,
+          amount,
+          payment_method || 'offline',
+          transactionId,
+          'completed',
+        ]
       )
       const saleId = saleResult.insertId
 
@@ -2014,6 +2056,8 @@ app.post('/api/events/:eventId/attend', registerLimiter, async (req, res) => {
         await sendTicketPurchaseEmail({
           pool,
           buyerId: authUserId,
+          buyerEmail: authUserId ? null : email,
+          buyerName: authUserId ? null : name,
           eventId: parseInt(eventId, 10),
           ticket,
           quantity: qty,
@@ -2212,11 +2256,12 @@ app.get('/api/organizer/ticket-sales', verifyToken, async (req, res) => {
              ts.payment_method, ts.validated, ts.created_at,
              t.ticket_type, t.event_id,
              e.name as event_name, e.date as event_date,
-             u.name as buyer_name, u.email as buyer_email
+             COALESCE(u.name, ts.buyer_name) as buyer_name,
+             COALESCE(u.email, ts.buyer_email) as buyer_email
       FROM ticket_sales ts
       JOIN tickets t ON ts.ticket_id = t.id
       JOIN events e ON t.event_id = e.id
-      JOIN users u ON ts.buyer_id = u.id
+      LEFT JOIN users u ON ts.buyer_id = u.id
       WHERE e.organizer_id = ?`
     const params = [organizer_id]
     if (eventId) {
@@ -2278,15 +2323,25 @@ app.get('/api/events/:eventId/tickets', async (req, res) => {
   }
 })
 
-// Purchase ticket(s) for an event
-app.post('/api/events/:eventId/purchase', verifyToken, async (req, res) => {
+// Purchase ticket(s) for an event (allows guest purchase)
+app.post('/api/events/:eventId/purchase', async (req, res) => {
   try {
     const { eventId } = req.params
-    const { ticket_id, quantity, payment_method } = req.body
-    const buyer_id = req.userId
+    let { ticket_id, quantity, payment_method, name, email, phone } = req.body
+    const { id: authUserId } = getOptionalAuthUser(req)
 
     if (!ticket_id || !quantity || quantity <= 0) {
       return res.status(400).json({ message: 'ticket_id and positive quantity are required' })
+    }
+
+    if (!authUserId) {
+      email = (email || '').trim().toLowerCase()
+      name = (name || '').trim()
+      phone = (phone || '').trim()
+      if (!email) return res.status(400).json({ message: 'Email is required' })
+      if (!name) return res.status(400).json({ message: 'Name is required' })
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email)) return res.status(400).json({ message: 'Invalid email format' })
     }
 
     const pool = getPoolOrThrow()
@@ -2307,8 +2362,19 @@ app.post('/api/events/:eventId/purchase', verifyToken, async (req, res) => {
 
     // create sale record with completed status
     const [saleResult] = await pool.execute(
-      'INSERT INTO ticket_sales (ticket_id, buyer_id, quantity, amount, payment_method, transaction_id, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [ticket_id, buyer_id, quantity, amount, payment_method || 'offline', transactionId, 'completed']
+      'INSERT INTO ticket_sales (ticket_id, buyer_id, buyer_name, buyer_email, buyer_phone, quantity, amount, payment_method, transaction_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        ticket_id,
+        authUserId,
+        authUserId ? null : name || null,
+        authUserId ? null : email || null,
+        authUserId ? null : phone || null,
+        quantity,
+        amount,
+        payment_method || 'offline',
+        transactionId,
+        'completed',
+      ]
     )
 
     const saleId = saleResult.insertId
@@ -2327,7 +2393,9 @@ app.post('/api/events/:eventId/purchase', verifyToken, async (req, res) => {
     try {
       await sendTicketPurchaseEmail({
         pool,
-        buyerId: buyer_id,
+        buyerId: authUserId,
+        buyerEmail: authUserId ? null : email,
+        buyerName: authUserId ? null : name,
         eventId: parseInt(eventId, 10),
         ticket,
         quantity: parseInt(quantity, 10),
@@ -2384,11 +2452,13 @@ app.get('/api/admin/ticket-sales', verifyToken, async (req, res) => {
     if (req.userRole !== 'admin') return res.status(403).json({ message: 'Only admins can view ticket sales' })
     const { from, to } = req.query
     const pool = getPoolOrThrow()
-    let query = `SELECT ts.id, ts.ticket_id, ts.buyer_id, ts.quantity, ts.amount, ts.payment_method, ts.transaction_id, ts.validated, ts.created_at, t.ticket_type, t.event_id, e.name as event_name, u.name as buyer_name, u.email as buyer_email
+    let query = `SELECT ts.id, ts.ticket_id, ts.buyer_id, ts.quantity, ts.amount, ts.payment_method, ts.transaction_id, ts.validated, ts.created_at, t.ticket_type, t.event_id, e.name as event_name, 
+                 COALESCE(u.name, ts.buyer_name) as buyer_name,
+                 COALESCE(u.email, ts.buyer_email) as buyer_email
                  FROM ticket_sales ts
                  JOIN tickets t ON ts.ticket_id = t.id
                  JOIN events e ON t.event_id = e.id
-                 JOIN users u ON ts.buyer_id = u.id`
+                 LEFT JOIN users u ON ts.buyer_id = u.id`
     const params = []
     if (from && to) {
       query += ' WHERE ts.created_at BETWEEN ? AND ?'
@@ -2427,11 +2497,11 @@ app.post('/api/events/:eventId/create-payment-intent', verifyToken, async (req, 
 })
 
 // Confirm payment and record ticket sale (client calls after successful Stripe payment)
-app.post('/api/events/:eventId/confirm-payment', verifyToken, async (req, res) => {
+app.post('/api/events/:eventId/confirm-payment', async (req, res) => {
   try {
     const { eventId } = req.params
-    const { ticket_id, quantity, payment_intent_id } = req.body
-    const buyer_id = req.userId
+    let { ticket_id, quantity, payment_intent_id, name, email, phone } = req.body
+    const { id: authUserId } = getOptionalAuthUser(req)
 
     if (!ticket_id || !quantity || !payment_intent_id) return res.status(400).json({ message: 'ticket_id, quantity and payment_intent_id are required' })
 
@@ -2463,9 +2533,30 @@ app.post('/api/events/:eventId/confirm-payment', verifyToken, async (req, res) =
     const amount = (parseFloat(ticket.price || 0) * parseInt(quantity)) || 0
 
     const transactionId = payment_intent_id
+    if (!authUserId) {
+      email = (email || '').trim().toLowerCase()
+      name = (name || '').trim()
+      phone = (phone || '').trim()
+      if (!email) return res.status(400).json({ message: 'Email is required' })
+      if (!name) return res.status(400).json({ message: 'Name is required' })
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email)) return res.status(400).json({ message: 'Invalid email format' })
+    }
+
     const [saleResult] = await pool.execute(
-      'INSERT INTO ticket_sales (ticket_id, buyer_id, quantity, amount, payment_method, transaction_id, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [ticket_id, buyer_id, quantity, amount, 'stripe', transactionId, 'completed']
+      'INSERT INTO ticket_sales (ticket_id, buyer_id, buyer_name, buyer_email, buyer_phone, quantity, amount, payment_method, transaction_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        ticket_id,
+        authUserId,
+        authUserId ? null : name || null,
+        authUserId ? null : email || null,
+        authUserId ? null : phone || null,
+        quantity,
+        amount,
+        'stripe',
+        transactionId,
+        'completed',
+      ]
     )
 
     const saleId = saleResult.insertId
@@ -2482,7 +2573,9 @@ app.post('/api/events/:eventId/confirm-payment', verifyToken, async (req, res) =
     try {
       await sendTicketPurchaseEmail({
         pool,
-        buyerId: buyer_id,
+        buyerId: authUserId,
+        buyerEmail: authUserId ? null : email,
+        buyerName: authUserId ? null : name,
         eventId: parseInt(eventId, 10),
         ticket,
         quantity: parseInt(quantity, 10),
@@ -2503,14 +2596,24 @@ app.post('/api/events/:eventId/confirm-payment', verifyToken, async (req, res) =
   }
 })
 
-// Book a service
-app.post('/api/service-bookings', verifyToken, async (req, res) => {
+// Book a service (allows guest bookings)
+app.post('/api/service-bookings', async (req, res) => {
   try {
-    const { service_id, booking_date, notes } = req.body
-    const organizer_id = req.userId
+    let { service_id, booking_date, notes, name, email, phone, verification_code } = req.body
+    const { id: authUserId } = getOptionalAuthUser(req)
     
     if (!service_id || !booking_date) {
       return res.status(400).json({ message: 'Service ID and booking date are required' })
+    }
+
+    if (!authUserId) {
+      email = (email || '').trim().toLowerCase()
+      name = (name || '').trim()
+      phone = (phone || '').trim()
+      if (!email) return res.status(400).json({ message: 'Email is required' })
+      if (!name) return res.status(400).json({ message: 'Name is required' })
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email)) return res.status(400).json({ message: 'Invalid email format' })
     }
 
     const pool = getPoolOrThrow()
@@ -2559,11 +2662,39 @@ app.post('/api/service-bookings', verifyToken, async (req, res) => {
       return res.status(409).json({ message: 'Vendor is unavailable on the selected date' })
     }
 
+    // Require verified email for guest bookings
+    if (!authUserId) {
+      if (!verification_code) return res.status(400).json({ message: 'Verification code is required' })
+      const [verRows] = await pool.execute(
+        `SELECT id, expires_at
+         FROM guest_booking_verifications
+         WHERE service_id = ? AND email = ? AND code = ? AND verified_at IS NULL
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [service_id, email, verification_code],
+      )
+      if (verRows.length === 0) return res.status(400).json({ message: 'Invalid verification code' })
+      const expiresAt = new Date(verRows[0].expires_at)
+      if (Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() < Date.now()) {
+        return res.status(400).json({ message: 'Verification code expired' })
+      }
+      await pool.execute('UPDATE guest_booking_verifications SET verified_at = NOW() WHERE id = ?', [verRows[0].id])
+    }
+
     // Create booking
     const [result] = await pool.execute(
-      `INSERT INTO service_bookings (service_id, ${serviceBookingOwnerColumn}, organizer_id, booking_date, notes, status) 
-       VALUES (?, ?, ?, ?, ?, 'pending')`,
-      [service_id, serviceOwnerId, organizer_id, booking_date, notes || null]
+      `INSERT INTO service_bookings (service_id, ${serviceBookingOwnerColumn}, organizer_id, guest_name, guest_email, guest_phone, booking_date, notes, status) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      [
+        service_id,
+        serviceOwnerId,
+        authUserId || null,
+        authUserId ? null : name || null,
+        authUserId ? null : email || null,
+        authUserId ? null : phone || null,
+        booking_date,
+        notes || null,
+      ]
     )
 
     // Auto-create booking hold in availability calendar
@@ -2591,6 +2722,50 @@ app.post('/api/service-bookings', verifyToken, async (req, res) => {
   }
 })
 
+// Guest booking email verification (send code)
+app.post('/api/service-bookings/verify-email', async (req, res) => {
+  try {
+    const { service_id, email, name } = req.body
+    if (!service_id) return res.status(400).json({ message: 'Service ID is required' })
+    const cleanedEmail = (email || '').trim().toLowerCase()
+    if (!cleanedEmail) return res.status(400).json({ message: 'Email is required' })
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(cleanedEmail)) return res.status(400).json({ message: 'Invalid email format' })
+
+    const pool = getPoolOrThrow()
+    const code = generateVerificationCode()
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
+
+    await pool.execute(
+      `INSERT INTO guest_booking_verifications (service_id, email, code, expires_at)
+       VALUES (?, ?, ?, ?)`,
+      [service_id, cleanedEmail, code, expiresAt],
+    )
+
+    const displayName = (name || '').trim() || 'Guest'
+    const html = `
+      <p>Hi ${displayName},</p>
+      <p>Your verification code for booking a provider is:</p>
+      <p style="font-size:20px;font-weight:700;letter-spacing:2px;">${code}</p>
+      <p>This code expires in 10 minutes.</p>
+    `
+    try {
+      await sendMail({
+        to: cleanedEmail,
+        subject: 'Verify your booking request',
+        html,
+      })
+    } catch (mailErr) {
+      console.warn('Guest booking verification email failed:', mailErr && mailErr.message ? mailErr.message : mailErr)
+    }
+
+    res.json({ message: 'Verification code sent' })
+  } catch (error) {
+    console.error('Send booking verification error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
 // Get bookings for organizer
 app.get('/api/my-bookings', verifyToken, async (req, res) => {
   try {
@@ -2612,6 +2787,7 @@ app.get('/api/my-bookings', verifyToken, async (req, res) => {
         s.price, 
         s.image,
         s.duration,
+        u.id as vendor_id,
         u.name as vendor_name, 
         u.email as vendor_email
        FROM service_bookings sb
@@ -2648,11 +2824,12 @@ app.get('/api/provider-bookings', verifyToken, async (req, res) => {
         s.description, 
         s.category, 
         s.price,
-        u.name as organizer_name, 
-        u.email as organizer_email
+        COALESCE(u.name, sb.guest_name) as organizer_name, 
+        COALESCE(u.email, sb.guest_email) as organizer_email,
+        COALESCE(u.phone, sb.guest_phone) as organizer_phone
        FROM service_bookings sb
        JOIN services s ON sb.service_id = s.id
-       JOIN users u ON sb.organizer_id = u.id
+       LEFT JOIN users u ON sb.organizer_id = u.id
        WHERE sb.${serviceBookingOwnerColumn} = ?
        ORDER BY sb.booking_date DESC`,
       [vendor_id]

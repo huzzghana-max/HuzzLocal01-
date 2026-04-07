@@ -453,7 +453,7 @@ const AdminDashboard: React.FC = () => {
                     variant="contained"
                     onClick={handleOpenCreateDialog}
                     sx={{
-                      background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
+                      backgroundColor: '#414958',
                       textTransform: 'none',
                       fontWeight: 700,
                       borderRadius: '12px',
@@ -462,6 +462,7 @@ const AdminDashboard: React.FC = () => {
                       boxShadow: '0 4px 15px rgba(65, 73, 88, 0.3)',
                       transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                       '&:hover': {
+                        backgroundColor: '#2B3240',
                         boxShadow: '0 8px 25px rgba(65, 73, 88, 0.38)',
                         transform: 'translateY(-2px)',
                       },
@@ -550,7 +551,7 @@ const AdminDashboard: React.FC = () => {
                   onChange={(_, newValue) => setCurrentTab(newValue)}
                   sx={{
                     borderBottom: '2px solid rgba(65, 73, 88, 0.12)',
-                    background: 'linear-gradient(90deg, rgba(65, 73, 88, 0.06) 0%, rgba(204, 213, 226, 0.06) 100%)',
+                    backgroundColor: 'rgba(65, 73, 88, 0.06)',
                     '& .MuiTab-root': {
                       textTransform: 'none',
                       fontSize: '1rem',
@@ -636,7 +637,7 @@ const AdminDashboard: React.FC = () => {
                     }}>
                       <Table>
                         <TableHead sx={{
-                          background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
+                          backgroundColor: '#414958',
                         }}>
                           <TableRow>
                             <TableCell sx={{ fontWeight: 700, py: 2.5, color: '#FFFFFF' }}>User</TableCell>
@@ -661,7 +662,7 @@ const AdminDashboard: React.FC = () => {
                               <TableCell sx={{ py: 2 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                   <Avatar sx={{
-                                    background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
+                                    backgroundColor: '#414958',
                                     fontWeight: 700,
                                     boxShadow: '0 2px 8px rgba(65, 73, 88, 0.3)',
                                   }}>
@@ -676,17 +677,17 @@ const AdminDashboard: React.FC = () => {
                                 {user.email}
                               </TableCell>
                               <TableCell sx={{ py: 2 }}>
-                                <Chip
-                                  label={user.role}
-                                  size="small"
-                                  sx={{
-                                    textTransform: 'capitalize',
-                                    fontWeight: 700,
-                                    background: 'linear-gradient(135deg, rgba(65, 73, 88, 0.18) 0%, rgba(204, 213, 226, 0.18) 100%)',
-                                    color: '#414958',
-                                    border: '1.5px solid #CCD5E2',
-                                  }}
-                                />
+                                  <Chip
+                                    label={user.role}
+                                    size="small"
+                                    sx={{
+                                      textTransform: 'capitalize',
+                                      fontWeight: 700,
+                                      backgroundColor: 'rgba(65, 73, 88, 0.18)',
+                                      color: '#414958',
+                                      border: '1.5px solid #CCD5E2',
+                                    }}
+                                  />
                               </TableCell>
                               <TableCell sx={{ py: 2, color: 'text.secondary', fontSize: '0.9rem' }}>
                                 {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
@@ -786,7 +787,7 @@ const AdminDashboard: React.FC = () => {
                     }}>
                       <Table>
                         <TableHead sx={{
-                          background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
+                          backgroundColor: '#414958',
                         }}>
                           <TableRow>
                             <TableCell sx={{ fontWeight: 700, py: 2.5, color: '#FFFFFF' }}>Event</TableCell>
@@ -845,10 +846,10 @@ const AdminDashboard: React.FC = () => {
                                     textTransform: 'capitalize',
                                     fontWeight: 700,
                                     background: event.status === 'published' || event.status === 'confirmed' 
-                                      ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(129, 199, 132, 0.15) 100%)'
+                                      ? 'rgba(76, 175, 80, 0.15)'
                                       : event.status === 'cancelled'
-                                      ? 'linear-gradient(135deg, rgba(244, 67, 54, 0.15) 0%, rgba(229, 57, 53, 0.15) 100%)'
-                                      : 'linear-gradient(135deg, rgba(255, 152, 0, 0.15) 0%, rgba(255, 167, 38, 0.15) 100%)',
+                                      ? 'rgba(244, 67, 54, 0.15)'
+                                      : 'rgba(255, 152, 0, 0.15)',
                                     color: event.status === 'published' || event.status === 'confirmed'
                                       ? '#2e7d32'
                                       : event.status === 'cancelled'
@@ -1362,10 +1363,10 @@ const AdminDashboard: React.FC = () => {
                             textTransform: 'capitalize',
                             fontWeight: 700,
                             background: selectedEvent.status === 'published' || selectedEvent.status === 'confirmed'
-                              ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(129, 199, 132, 0.15) 100%)'
+                              ? 'rgba(76, 175, 80, 0.15)'
                               : selectedEvent.status === 'cancelled'
-                              ? 'linear-gradient(135deg, rgba(244, 67, 54, 0.15) 0%, rgba(229, 57, 53, 0.15) 100%)'
-                              : 'linear-gradient(135deg, rgba(255, 152, 0, 0.15) 0%, rgba(255, 167, 38, 0.15) 100%)',
+                              ? 'rgba(244, 67, 54, 0.15)'
+                              : 'rgba(255, 152, 0, 0.15)',
                             color: selectedEvent.status === 'published' || selectedEvent.status === 'confirmed'
                               ? '#2e7d32'
                               : selectedEvent.status === 'cancelled'

@@ -196,8 +196,9 @@ const CreateEvent: React.FC = () => {
               onClick={handleSubmit} 
               disabled={loading || !name || !date}
               sx={{
-                background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
+                backgroundColor: '#414958',
                 fontWeight: 700,
+                '&:hover': { backgroundColor: '#2B3240' },
               }}
             >
               {loading ? <CircularProgress size={20} /> : 'Create Event'}
