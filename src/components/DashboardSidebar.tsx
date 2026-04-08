@@ -20,7 +20,6 @@ import { alpha, useTheme } from '@mui/material/styles'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import PeopleIcon from '@mui/icons-material/People'
 import EventIcon from '@mui/icons-material/Event'
-import AssignmentIcon from '@mui/icons-material/Assignment'
 import AnalyticsIcon from '@mui/icons-material/Analytics'
 import SettingsIcon from '@mui/icons-material/Settings'
 import LogoutIcon from '@mui/icons-material/Logout'
@@ -116,17 +115,6 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             icon: <DashboardIcon />,
             path: '/admin-dashboard',
           },
-          
-          /*{
-            label: 'Users',
-            icon: <PeopleIcon />,
-            submenu: [
-              { label: 'All Users', icon: <PeopleIcon />, path: '#users-all' },
-              { label: 'Organizers', icon: <EventIcon />, path: '#users-organizers' },
-              { label: 'Providers', icon: <VerifiedUserIcon />, path: '#users-providers' },
-            ],
-          },*/
-
           {
             label: 'Analytics',
             icon: <AnalyticsIcon />,
@@ -137,12 +125,6 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             icon: <PaymentIcon />,
             path: '/admin/payout-requests',
           },
-          /*{
-            label: 'Notifications',
-            icon: <NotificationsIcon />,
-            badge: notifications,
-            path: '#notifications',
-          },*/
           {
             label: 'Messages',
             icon: <MessageIcon />,
@@ -172,30 +154,11 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             icon: <DashboardIcon />,
             path: '/organizer-dashboard',
           },
-          /**{
-            label: 'My Events',
-            icon: <EventIcon />,
-            submenu: [
-              { label: 'Active Events', icon: <EventIcon />, path: '#events-active' },
-              { label: 'Archived Events', icon: <EventIcon />, path: '#events-archived' },
-              { label: 'Create Event', icon: <EventIcon />, path: '#events-create' },
-            ],
-          },**/
           {
             label: 'Registrants & Tickets',
             icon: <ReceiptIcon />,
             path: '/organizer/registrants-tickets',
           },
-          /**{
-            label: 'Bookings',
-            icon: <AssignmentIcon />,
-            badge: notifications,
-            submenu: [
-              { label: 'Pending', icon: <AssignmentIcon />, path: '#bookings-pending' },
-              { label: 'Confirmed', icon: <AssignmentIcon />, path: '#bookings-confirmed' },
-              { label: 'Completed', icon: <AssignmentIcon />, path: '#bookings-completed' },
-            ],
-          },**/
           {
             label: 'Messages',
             icon: <MessageIcon />,
@@ -230,17 +193,6 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             icon: <DashboardIcon />,
             path: '/provider-dashboard',
           },
-          /*{
-            label: 'My Bookings',
-            icon: <AssignmentIcon />,
-            badge: notifications,
-            submenu: [
-              { label: 'Pending Requests', icon: <AssignmentIcon />, path: '#bookings-pending' },
-              { label: 'Confirmed', icon: <AssignmentIcon />, path: '#bookings-confirmed' },
-              { label: 'Completed', icon: <AssignmentIcon />, path: '#bookings-completed' },
-              { label: 'Cancelled', icon: <AssignmentIcon />, path: '#bookings-cancelled' },
-            ],
-          },*/
           {
             label: 'Messages',
             icon: <MessageIcon />,
@@ -331,11 +283,11 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', textOverflow: 'ellipsis', overflow: 'hidden' }}>
               {userName}
             </Typography>
-            <Typography 
-              sx={{ 
-                fontSize: '0.8rem', 
+            <Typography
+              sx={{
+                fontSize: '0.8rem',
                 color: 'text.secondary',
-                textOverflow: 'ellipsis', 
+                textOverflow: 'ellipsis',
                 overflow: 'hidden',
                 backgroundColor: alpha(theme.palette.background.paper, 0.8),
                 px: 1,
@@ -429,8 +381,8 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                   }}
                 >
                   {item.badge ? (
-                    <Badge 
-                      badgeContent={item.badge} 
+                    <Badge
+                      badgeContent={item.badge}
                       color="error"
                       sx={{ '& .MuiBadge-badge': { fontWeight: 700, fontSize: '0.65rem' } }}
                     >
@@ -544,14 +496,14 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
           <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
             <LogoutIcon />
           </ListItemIcon>
-          <ListItemText 
-            primary="Logout" 
-            sx={{ 
-              '& .MuiTypography-root': { 
-                fontSize: '0.95rem', 
+          <ListItemText
+            primary="Logout"
+            sx={{
+              '& .MuiTypography-root': {
+                fontSize: '0.95rem',
                 fontWeight: 700,
-              } 
-            }} 
+              },
+            }}
           />
         </ListItemButton>
       </Box>

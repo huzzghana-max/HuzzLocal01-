@@ -36,7 +36,10 @@ import {
   Skeleton,
   ToggleButton,
   ToggleButtonGroup,
+  Stack,
+  useMediaQuery,
 } from '@mui/material'
+import { useTheme } from '@mui/material/styles'
 import { useNavigate } from 'react-router-dom'
 import SearchIcon from '@mui/icons-material/Search'
 import FilterListIcon from '@mui/icons-material/FilterList'
@@ -49,6 +52,7 @@ import GridViewIcon from '@mui/icons-material/GridView'
 import ViewListIcon from '@mui/icons-material/ViewList'
 import StarIcon from '@mui/icons-material/Star'
 import api from '../api'
+import { API_CONFIG } from '../config/api.config'
 
 interface Vendor {
   id: number
@@ -82,6 +86,8 @@ interface Vendor {
 
 const BrowseVendors: React.FC = () => {
   const navigate = useNavigate()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [filteredVendors, setFilteredVendors] = useState<Vendor[]>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -114,7 +120,7 @@ const BrowseVendors: React.FC = () => {
         const response = await api.get('/approved-services')
         const servicesData = Array.isArray(response.data) ? response.data : [response.data]
         
-        const apiHost = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').replace(/\/api$/, '')
+        const apiHost = API_CONFIG.getApiHost()
         const vendorsData = servicesData.map((service: any) => {
           const imageUrl = service.image ? (service.image.startsWith('/uploads/') ? `${apiHost}${service.image}` : service.image) : `https://i.pravatar.cc/150?img=${service.vendor_id}`;
           return {
@@ -451,12 +457,12 @@ const BrowseVendors: React.FC = () => {
         }}
       >
         <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'stretch', md: 'flex-start' }, gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
             <Box>
-              <Typography variant="h3" sx={{ fontWeight: 800, mb: 1 }}>
+              <Typography variant="h3" sx={{ fontWeight: 800, mb: 1, fontSize: { xs: '2rem', md: '3rem' } }}>
                 Find Your Perfect Vendor
               </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 300, opacity: 0.95 }}>
+              <Typography variant="h6" sx={{ fontWeight: 300, opacity: 0.95, fontSize: { xs: '1rem', md: '1.25rem' } }}>
                 Browse and book from our curated collection of service providers
               </Typography>
             </Box>
@@ -469,6 +475,7 @@ const BrowseVendors: React.FC = () => {
                 color: 'white',
                 backdropFilter: 'blur(10px)',
                 border: '1px solid rgba(255, 255, 255, 0.3)',
+                width: { xs: '100%', md: 'auto' },
                 '&:hover': {
                   background: 'rgba(255, 255, 255, 0.3)',
                 },
@@ -480,7 +487,7 @@ const BrowseVendors: React.FC = () => {
         </Container>
       </Box>
 
-      <Container maxWidth="lg" sx={{ pb: 6 }}>
+      <Container maxWidth="lg" sx={{ pb: 6, px: { xs: 2, sm: 3 } }}>
         {ratingNotice && (
           <Alert severity={ratingNotice.type} sx={{ mb: 2 }} onClose={() => setRatingNotice(null)}>
             {ratingNotice.text}
@@ -490,13 +497,13 @@ const BrowseVendors: React.FC = () => {
         <Fade in={true} timeout={500}>
           <Paper
             sx={{
-              p: 3,
+              p: { xs: 2, sm: 3 },
               mb: 4,
               backgroundColor: 'background.paper',
               boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
               borderRadius: 2,
               position: 'sticky',
-              top: 0,
+              top: { xs: 76, md: 0 },
               zIndex: 10,
             }}
           >
@@ -514,7 +521,7 @@ const BrowseVendors: React.FC = () => {
                 ),
               }}
               sx={{
-                mb: 3,
+                mb: { xs: 2.5, sm: 3 },
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 1.5,
                   '&:hover fieldset': { borderColor: '#F19B7D' },
@@ -523,7 +530,21 @@ const BrowseVendors: React.FC = () => {
             />
 
             {/* Service Type Filter */}
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 3 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                gap: 1,
+                flexWrap: { xs: 'nowrap', sm: 'wrap' },
+                overflowX: { xs: 'auto', sm: 'visible' },
+                pb: { xs: 1, sm: 0 },
+                mb: { xs: 2.5, sm: 3 },
+                '&::-webkit-scrollbar': { height: 6 },
+                '&::-webkit-scrollbar-thumb': {
+                  background: 'rgba(241, 155, 125, 0.4)',
+                  borderRadius: 999,
+                },
+              }}
+            >
               <Chip
                 icon={<FilterListIcon />}
                 label="All Services"
@@ -535,6 +556,7 @@ const BrowseVendors: React.FC = () => {
                   borderColor: '#F19B7D',
                   cursor: 'pointer',
                   fontWeight: 600,
+                  flex: '0 0 auto',
                 }}
               />
               {serviceTypes.map((service) => (
@@ -549,14 +571,15 @@ const BrowseVendors: React.FC = () => {
                     borderColor: '#F19B7D',
                     cursor: 'pointer',
                     fontWeight: 500,
+                    flex: '0 0 auto',
                   }}
                 />
               ))}
             </Box>
 
             {/* View & Sort Controls */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2 }}>
-              <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' }, gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                 <Typography variant="caption" sx={{ fontWeight: 600, color: '#666', alignSelf: 'center' }}>
                   View:
                 </Typography>
@@ -587,7 +610,7 @@ const BrowseVendors: React.FC = () => {
                 </ToggleButtonGroup>
               </Box>
 
-              <Box sx={{ display: 'flex', gap: 1 }}>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', width: { xs: '100%', sm: 'auto' } }}>
                 <Typography variant="caption" sx={{ fontWeight: 600, color: '#666', alignSelf: 'center' }}>
                   Sort by:
                 </Typography>
@@ -601,7 +624,8 @@ const BrowseVendors: React.FC = () => {
                     fontSize: '0.875rem',
                     fontFamily: 'inherit',
                     cursor: 'pointer',
-                    backgroundColor: 'background.paper',
+                    backgroundColor: theme.palette.background.paper,
+                    width: isMobile ? '100%' : undefined,
                   }}
                 >
                   <option value="rating">Rating (High to Low)</option>
@@ -669,10 +693,10 @@ const BrowseVendors: React.FC = () => {
                     borderRadius: 3,
                     overflow: 'hidden',
                     position: 'relative',
-                    backgroundColor: 'background.paper',
+                    backgroundColor: theme.palette.background.paper,
                     border: '1px solid rgba(20, 33, 61, 0.08)',
                     boxShadow: '0 6px 18px rgba(20, 33, 61, 0.08)',
-                    display: viewMode === 'list' ? 'flex' : 'block',
+                    display: viewMode === 'list' ? { xs: 'block', sm: 'flex' } : 'block',
                     '&:hover': {
                       transform: viewMode === 'grid' ? 'translateY(-6px)' : 'translateX(6px)',
                       boxShadow: '0 16px 32px rgba(20, 33, 61, 0.14)',
@@ -685,17 +709,18 @@ const BrowseVendors: React.FC = () => {
                       position: 'relative',
                       overflow: 'hidden',
                       flexShrink: 0,
-                      width: viewMode === 'list' ? 220 : '100%',
+                      width: viewMode === 'list' ? { xs: '100%', sm: '220px' } : '100%',
+                      height: viewMode === 'list' ? { xs: 220, sm: 220 } : 220,
                       backgroundColor: 'action.hover',
                     }}
                   >
                     <CardMedia
                       component="img"
-                      height={viewMode === 'grid' ? 200 : 220}
-                      width={viewMode === 'list' ? 220 : 'auto'}
+                      height="220"
+                      width="220"
                       image={vendor.image}
                       alt={vendor.name}
-                      sx={{ objectFit: 'cover', height: '100%', width: '100%' }}
+                      sx={{ objectFit: 'cover', width: '100%', height: '100%', display: 'block' }}
                     />
                     {vendor.rating && vendor.rating >= 4.5 && (
                       <Box

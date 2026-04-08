@@ -24,7 +24,9 @@ import {
   CircularProgress,
   Rating,
   Alert,
+  useMediaQuery,
 } from '@mui/material'
+import { useTheme } from '@mui/material/styles'
 import { useNavigate } from 'react-router-dom'
 import AddIcon from '@mui/icons-material/Add'
 import EventIcon from '@mui/icons-material/Event'
@@ -85,6 +87,8 @@ interface Conversation {
 
 const OrganizerDashboard: React.FC = () => {
   const navigate = useNavigate()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [user, setUser] = useState<User | null>(null)
   const [stats, setStats] = useState<any>(null)
   const [events, setEvents] = useState<Event[]>([])
@@ -504,13 +508,13 @@ const OrganizerDashboard: React.FC = () => {
 
       {/* Main Content */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', ml: { xs: 0, md: '280px' }, mt: { xs: 60, md: 0 } }}>
-        <Container maxWidth="lg" sx={{ py: 4, flex: 1 }}>
+        <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 }, px: { xs: 2, sm: 3 }, flex: 1 }}>
           {/* Header */}
           <DashboardHeader
             title="Organizer Dashboard"
             subtitle="Manage your events, bookings, and service providers"
             actionButton={
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' }, width: '100%' }}>
                 <Button
                   startIcon={<AddIcon />}
                   variant="contained"
@@ -627,6 +631,78 @@ const OrganizerDashboard: React.FC = () => {
                     Create Event
                   </Button>
                 </Paper>
+              ) : isMobile ? (
+                <Box sx={{ display: 'grid', gap: 2 }}>
+                  {events.map((event) => (
+                    <Paper
+                      key={event.id}
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography sx={{ fontWeight: 700, fontSize: '1rem' }}>{event.name}</Typography>
+                          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+                            {new Date(event.date).toLocaleDateString()}
+                          </Typography>
+                        </Box>
+                        <Chip
+                          label={event.status}
+                          size="small"
+                          color={event.status === 'confirmed' ? 'success' : event.status === 'pending' ? 'warning' : 'error'}
+                          variant="outlined"
+                        />
+                      </Box>
+                      <Box sx={{ mt: 1.5, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        <Chip label={`${event.vendors} vendors`} variant="outlined" size="small" />
+                        {event.type && <Chip label={event.type} variant="outlined" size="small" />}
+                      </Box>
+                      <Box sx={{ mt: 2, display: 'grid', gap: 1 }}>
+                        <Button
+                          size="small"
+                          startIcon={<EditIcon />}
+                          variant="contained"
+                          onClick={() => handleEditEvent(event)}
+                          fullWidth
+                        >
+                          Edit Event
+                        </Button>
+                        <Button
+                          size="small"
+                          startIcon={<PeopleIcon />}
+                          variant="outlined"
+                          onClick={() => openTicketsDialog(event.id)}
+                          fullWidth
+                        >
+                          Manage Tickets
+                        </Button>
+                        <Button
+                          size="small"
+                          startIcon={<ShareIcon />}
+                          variant="outlined"
+                          onClick={() => handleShareEvent(event.id)}
+                          fullWidth
+                        >
+                          Share Event
+                        </Button>
+                        <Button
+                          size="small"
+                          startIcon={<DeleteIcon />}
+                          variant="text"
+                          color="error"
+                          onClick={() => handleDeleteEvent(event.id)}
+                          fullWidth
+                        >
+                          Delete Event
+                        </Button>
+                      </Box>
+                    </Paper>
+                  ))}
+                </Box>
               ) : (
                 <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: 'hidden' }}>
                   <Table>
@@ -742,6 +818,83 @@ const OrganizerDashboard: React.FC = () => {
                       Browse Vendors
                     </Button>
                   </Paper>
+                ) : isMobile ? (
+                  <Box sx={{ display: 'grid', gap: 2 }}>
+                    {bookings.map((booking) => (
+                      <Paper
+                        key={booking.id}
+                        sx={{
+                          p: 2,
+                          borderRadius: 2,
+                          border: '1px solid',
+                          borderColor: 'divider',
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography sx={{ fontWeight: 700, fontSize: '1rem' }}>{booking.service_title}</Typography>
+                            <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+                              {booking.vendor_name}
+                            </Typography>
+                          </Box>
+                          <Chip
+                            label={booking.status}
+                            size="small"
+                            color={
+                              booking.status === 'confirmed'
+                                ? 'success'
+                                : booking.status === 'pending'
+                                ? 'warning'
+                                : booking.status === 'completed'
+                                ? 'info'
+                                : 'error'
+                            }
+                            variant="outlined"
+                          />
+                        </Box>
+                        <Box sx={{ mt: 1.5, display: 'grid', gap: 0.5 }}>
+                          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                            Booking Date: {new Date(booking.booking_date).toLocaleDateString()}
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                            Notes: {booking.notes || 'No notes'}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ mt: 2, display: 'grid', gap: 1 }}>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => navigate(`/messaging?vendorId=${booking.vendor_id}`)}
+                            fullWidth
+                          >
+                            Message Vendor
+                          </Button>
+                          {(booking.status === 'pending' || booking.status === 'confirmed') && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="error"
+                              onClick={() => handleCancelBooking(booking.id)}
+                              fullWidth
+                            >
+                              Cancel Booking
+                            </Button>
+                          )}
+                          {booking.status === 'completed' && !reviewedBookings.includes(booking.id) && (
+                            <Button
+                              size="small"
+                              variant="contained"
+                              color="primary"
+                              onClick={() => handleOpenReviewDialog(booking)}
+                              fullWidth
+                            >
+                              Leave Review
+                            </Button>
+                          )}
+                        </Box>
+                      </Paper>
+                    ))}
+                  </Box>
                 ) : (
                   <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: 'hidden' }}>
                     <Table>

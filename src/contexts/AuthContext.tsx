@@ -30,6 +30,30 @@ export interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+const clearStoredAuth = () => {
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+  localStorage.removeItem('rememberMe')
+}
+
+const decodeJwtPayload = (token: string) => {
+  try {
+    const parts = token.split('.')
+    if (parts.length !== 3) return null
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
+    return JSON.parse(window.atob(padded))
+  } catch {
+    return null
+  }
+}
+
+const isTokenExpired = (token: string) => {
+  const payload = decodeJwtPayload(token)
+  if (!payload?.exp) return false
+  return payload.exp * 1000 <= Date.now()
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
@@ -44,14 +68,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (storedToken && storedUserStr) {
       try {
+        if (isTokenExpired(storedToken)) {
+          clearStoredAuth()
+          setIsLoading(false)
+          return
+        }
         const storedUser = JSON.parse(storedUserStr)
         setToken(storedToken)
         setUser(storedUser)
         setRememberMeState(storedRememberMe)
       } catch (error) {
         console.error('Failed to parse stored user:', error)
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
+        clearStoredAuth()
       }
     }
     setIsLoading(false)
@@ -76,9 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setRememberMeState(false)
 
     // Clear localStorage
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    localStorage.removeItem('rememberMe')
+    clearStoredAuth()
   }, [])
 
   const updateUser = useCallback((updates: Partial<User>) => {

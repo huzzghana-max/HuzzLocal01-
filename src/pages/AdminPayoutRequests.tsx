@@ -22,7 +22,9 @@ import {
   TableRow,
   TextField,
   Typography,
+  useMediaQuery,
 } from '@mui/material'
+import { useTheme } from '@mui/material/styles'
 import { useNavigate } from 'react-router-dom'
 import DashboardSidebar from '../components/DashboardSidebar'
 import { DashboardHeader } from '../components/DashboardComponents'
@@ -54,6 +56,8 @@ interface PayoutRequestItem {
 
 const AdminPayoutRequests: React.FC = () => {
   const navigate = useNavigate()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [loading, setLoading] = useState(true)
   const [requests, setRequests] = useState<PayoutRequestItem[]>([])
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -147,7 +151,7 @@ const AdminPayoutRequests: React.FC = () => {
       />
 
       <Box sx={{ flex: 1, ml: { xs: 0, md: '280px' }, mt: { xs: 60, md: 0 } }}>
-        <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Container maxWidth="xl" sx={{ py: { xs: 3, md: 4 }, px: { xs: 2, sm: 3 } }}>
           <DashboardHeader
             title="Payout Requests"
             subtitle="Review and process provider + organizer payout requests"
@@ -171,94 +175,175 @@ const AdminPayoutRequests: React.FC = () => {
           ) : (
             <Stack spacing={2.5}>
               <Paper sx={{ p: 2.2, borderRadius: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Pending: {stats.pending} | Approved: {stats.approved} | Paid: {stats.paid} | Requested Volume: ${stats.totalAmount.toFixed(2)}
-                </Typography>
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(4, 1fr)' },
+                    gap: 1.5,
+                  }}
+                >
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Pending</Typography>
+                    <Typography sx={{ fontWeight: 700 }}>{stats.pending}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Approved</Typography>
+                    <Typography sx={{ fontWeight: 700 }}>{stats.approved}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Paid</Typography>
+                    <Typography sx={{ fontWeight: 700 }}>{stats.paid}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Requested</Typography>
+                    <Typography sx={{ fontWeight: 700 }}>${stats.totalAmount.toFixed(2)}</Typography>
+                  </Box>
+                </Box>
               </Paper>
 
-              <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>Requester</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Organizer Contact</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Event Details</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Source</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Amount</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Requested</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Admin Note</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }} align="right">Action</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {requests.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
-                          No payout requests found.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      requests.map((request) => (
-                        <TableRow key={request.id} hover>
-                          <TableCell>
-                            <Typography sx={{ fontWeight: 600 }}>{request.requester_name}</Typography>
+              {isMobile ? (
+                <Box sx={{ display: 'grid', gap: 2 }}>
+                  {requests.length === 0 ? (
+                    <Paper sx={{ p: 3, textAlign: 'center', borderRadius: 2 }}>
+                      <Typography>No payout requests found.</Typography>
+                    </Paper>
+                  ) : (
+                    requests.map((request) => (
+                      <Paper key={request.id} sx={{ p: 2, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography sx={{ fontWeight: 700 }}>{request.requester_name}</Typography>
                             <Typography variant="body2" color="text.secondary">{request.requester_email}</Typography>
                             <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>
                               {request.requester_role}
                             </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" color="text.secondary">
-                              Email: {request.requester_email}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              Phone: {request.requester_phone || '-'}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            {request.source_event_name ? (
-                              <>
-                                <Typography sx={{ fontWeight: 600 }}>{request.source_event_name}</Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  Date: {request.source_event_date ? new Date(request.source_event_date).toLocaleString() : '-'}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  Location: {request.source_event_location || '-'}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {request.source_event_type || 'event'} • {request.source_event_status || 'n/a'}
-                                </Typography>
-                              </>
-                            ) : (
-                              <Typography variant="body2" color="text.secondary">No event linked</Typography>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Typography sx={{ textTransform: 'capitalize' }}>
-                              {request.source_type === 'ticket_sales' ? 'Ticket Sales' : 'Service Bookings'}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {request.requester_role === 'organizer' ? 'Organizer request' : 'Provider request'}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>${Number(request.amount || 0).toFixed(2)}</TableCell>
-                          <TableCell>
-                            <Chip size="small" label={request.status} color={statusColor(request.status) as any} />
-                          </TableCell>
-                          <TableCell>{new Date(request.requested_at).toLocaleString()}</TableCell>
-                          <TableCell>{request.admin_note || '-'}</TableCell>
-                          <TableCell align="right">
-                            <Button size="small" variant="contained" onClick={() => openReview(request)}>
-                              Review
-                            </Button>
+                          </Box>
+                          <Chip size="small" label={request.status} color={statusColor(request.status) as any} />
+                        </Box>
+                        <Box sx={{ mt: 1.5, display: 'grid', gap: 0.5 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            Amount: ${Number(request.amount || 0).toFixed(2)}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Source: {request.source_type === 'ticket_sales' ? 'Ticket Sales' : 'Service Bookings'}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Requested: {new Date(request.requested_at).toLocaleString()}
+                          </Typography>
+                          {request.source_event_name ? (
+                            <>
+                              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                {request.source_event_name}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {request.source_event_date ? new Date(request.source_event_date).toLocaleString() : '-'} • {request.source_event_location || '-'}
+                              </Typography>
+                            </>
+                          ) : (
+                            <Typography variant="body2" color="text.secondary">No event linked</Typography>
+                          )}
+                          <Typography variant="body2" color="text.secondary">
+                            Admin Note: {request.admin_note || '-'}
+                          </Typography>
+                        </Box>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          onClick={() => openReview(request)}
+                          fullWidth
+                          sx={{ mt: 2 }}
+                        >
+                          Review
+                        </Button>
+                      </Paper>
+                    ))
+                  )}
+                </Box>
+              ) : (
+                <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 700 }}>Requester</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Organizer Contact</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Event Details</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Source</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Amount</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Requested</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Admin Note</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }} align="right">Action</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {requests.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
+                            No payout requests found.
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                      ) : (
+                        requests.map((request) => (
+                          <TableRow key={request.id} hover>
+                            <TableCell>
+                              <Typography sx={{ fontWeight: 600 }}>{request.requester_name}</Typography>
+                              <Typography variant="body2" color="text.secondary">{request.requester_email}</Typography>
+                              <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>
+                                {request.requester_role}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" color="text.secondary">
+                                Email: {request.requester_email}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                Phone: {request.requester_phone || '-'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              {request.source_event_name ? (
+                                <>
+                                  <Typography sx={{ fontWeight: 600 }}>{request.source_event_name}</Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    Date: {request.source_event_date ? new Date(request.source_event_date).toLocaleString() : '-'}
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    Location: {request.source_event_location || '-'}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {request.source_event_type || 'event'} • {request.source_event_status || 'n/a'}
+                                  </Typography>
+                                </>
+                              ) : (
+                                <Typography variant="body2" color="text.secondary">No event linked</Typography>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Typography sx={{ textTransform: 'capitalize' }}>
+                                {request.source_type === 'ticket_sales' ? 'Ticket Sales' : 'Service Bookings'}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {request.requester_role === 'organizer' ? 'Organizer request' : 'Provider request'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>${Number(request.amount || 0).toFixed(2)}</TableCell>
+                            <TableCell>
+                              <Chip size="small" label={request.status} color={statusColor(request.status) as any} />
+                            </TableCell>
+                            <TableCell>{new Date(request.requested_at).toLocaleString()}</TableCell>
+                            <TableCell>{request.admin_note || '-'}</TableCell>
+                            <TableCell align="right">
+                              <Button size="small" variant="contained" onClick={() => openReview(request)}>
+                                Review
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
             </Stack>
           )}
         </Container>
@@ -283,9 +368,9 @@ const AdminPayoutRequests: React.FC = () => {
             />
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={submitReview} disabled={submitting}>
+        <DialogActions sx={{ p: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 1 }}>
+          <Button onClick={() => setDialogOpen(false)} fullWidth={isMobile}>Cancel</Button>
+          <Button variant="contained" onClick={submitReview} disabled={submitting} fullWidth={isMobile}>
             {submitting ? 'Saving...' : 'Save'}
           </Button>
         </DialogActions>

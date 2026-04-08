@@ -27,7 +27,9 @@ import {
   Alert,
   Tabs,
   Tab,
+  useMediaQuery,
 } from '@mui/material'
+import { useTheme } from '@mui/material/styles'
 import { useNavigate } from 'react-router-dom'
 import PersonIcon from '@mui/icons-material/Person'
 import PaymentIcon from '@mui/icons-material/Payment'
@@ -71,6 +73,8 @@ interface Event {
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [loading, setLoading] = useState(true)
   const [currentTab, setCurrentTab] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
@@ -433,7 +437,7 @@ const AdminDashboard: React.FC = () => {
 
       {/* Main Content */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', ml: { xs: 0, md: '280px' }, mt: { xs: 60, md: 0 } }}>
-        <Container maxWidth="lg" sx={{ py: 4, flex: 1 }}>
+        <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 }, px: { xs: 2, sm: 3 }, flex: 1 }}>
           {/* Success Message */}
           {successMessage && (
             <Alert severity="success" onClose={() => setSuccessMessage('')} sx={{ mb: 3 }}>
@@ -549,6 +553,9 @@ const AdminDashboard: React.FC = () => {
                 <Tabs
                   value={currentTab}
                   onChange={(_, newValue) => setCurrentTab(newValue)}
+                  variant={isMobile ? 'scrollable' : 'standard'}
+                  scrollButtons="auto"
+                  allowScrollButtonsMobile
                   sx={{
                     borderBottom: '2px solid rgba(65, 73, 88, 0.12)',
                     backgroundColor: 'rgba(65, 73, 88, 0.06)',
@@ -628,6 +635,74 @@ const AdminDashboard: React.FC = () => {
                         No users found
                       </Typography>
                     </Paper>
+                  ) : isMobile ? (
+                    <Box sx={{ display: 'grid', gap: 2 }}>
+                      {filteredUsers.map((user) => (
+                        <Paper
+                          key={user.id}
+                          sx={{
+                            p: 2,
+                            borderRadius: 2,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Avatar
+                              sx={{
+                                background: 'linear-gradient(135deg, #414958 0%, #2B3240 100%)',
+                                fontWeight: 700,
+                              }}
+                            >
+                              {user.name[0]}
+                            </Avatar>
+                            <Box sx={{ minWidth: 0 }}>
+                              <Typography sx={{ fontWeight: 700 }}>{user.name}</Typography>
+                              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                {user.email}
+                              </Typography>
+                            </Box>
+                          </Box>
+                          <Box sx={{ mt: 1.5, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            <Chip
+                              label={user.role}
+                              size="small"
+                              sx={{
+                                textTransform: 'capitalize',
+                                fontWeight: 700,
+                                background: 'linear-gradient(135deg, rgba(65, 73, 88, 0.18) 0%, rgba(204, 213, 226, 0.18) 100%)',
+                                color: '#414958',
+                                border: '1.5px solid #CCD5E2',
+                              }}
+                            />
+                            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                              Joined: {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
+                            </Typography>
+                          </Box>
+                          <Box sx={{ mt: 2, display: 'grid', gap: 1 }}>
+                            <Button
+                              size="small"
+                              startIcon={<VisibilityIcon />}
+                              variant="outlined"
+                              onClick={() => handleOpenUserDialog(user)}
+                              fullWidth
+                            >
+                              View User
+                            </Button>
+                            <Button
+                              size="small"
+                              startIcon={<DeleteIcon />}
+                              variant="text"
+                              color="error"
+                              onClick={() => handleOpenDeleteDialog(user)}
+                              fullWidth
+                            >
+                              Delete User
+                            </Button>
+                          </Box>
+                        </Paper>
+                      ))}
+                    </Box>
                   ) : (
                     <TableContainer component={Paper} sx={{
                       borderRadius: '16px',
@@ -778,6 +853,91 @@ const AdminDashboard: React.FC = () => {
                         No events found
                       </Typography>
                     </Paper>
+                  ) : isMobile ? (
+                    <Box sx={{ display: 'grid', gap: 2 }}>
+                      {filteredEvents.map((event) => (
+                        <Paper
+                          key={event.id}
+                          sx={{
+                            p: 2,
+                            borderRadius: 2,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
+                            <Box sx={{ minWidth: 0 }}>
+                              <Typography sx={{ fontWeight: 700 }}>{event.name}</Typography>
+                              <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+                                {event.location}
+                              </Typography>
+                            </Box>
+                            <Chip
+                              label={event.status}
+                              size="small"
+                              sx={{
+                                textTransform: 'capitalize',
+                                fontWeight: 700,
+                                background: event.status === 'published' || event.status === 'confirmed' 
+                                  ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(129, 199, 132, 0.15) 100%)'
+                                  : event.status === 'cancelled'
+                                  ? 'linear-gradient(135deg, rgba(244, 67, 54, 0.15) 0%, rgba(229, 57, 53, 0.15) 100%)'
+                                  : 'linear-gradient(135deg, rgba(255, 152, 0, 0.15) 0%, rgba(255, 167, 38, 0.15) 100%)',
+                                color: event.status === 'published' || event.status === 'confirmed'
+                                  ? '#2e7d32'
+                                  : event.status === 'cancelled'
+                                  ? '#c62828'
+                                  : '#e65100',
+                                border: `1.5px solid ${event.status === 'published' || event.status === 'confirmed'
+                                  ? '#81c784'
+                                  : event.status === 'cancelled'
+                                  ? '#ef5350'
+                                  : '#ffb74d'}`,
+                              }}
+                            />
+                          </Box>
+                          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
+                            Organizer: {event.organizer_name}
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                            {event.organizer_email}
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
+                            Date: {event.date ? new Date(event.date).toLocaleDateString() : 'N/A'}
+                          </Typography>
+                          <Box sx={{ mt: 2, display: 'grid', gap: 1 }}>
+                            <Button
+                              size="small"
+                              startIcon={<VisibilityIcon />}
+                              variant="outlined"
+                              onClick={() => handleOpenEventDialog(event)}
+                              fullWidth
+                            >
+                              View Event
+                            </Button>
+                            <Button
+                              size="small"
+                              startIcon={<EditIcon />}
+                              variant="outlined"
+                              onClick={() => handleOpenEditEventDialog(event)}
+                              fullWidth
+                            >
+                              Edit Event
+                            </Button>
+                            <Button
+                              size="small"
+                              startIcon={<DeleteIcon />}
+                              variant="text"
+                              color="error"
+                              onClick={() => handleOpenDeleteEventDialog(event)}
+                              fullWidth
+                            >
+                              Delete Event
+                            </Button>
+                          </Box>
+                        </Paper>
+                      ))}
+                    </Box>
                   ) : (
                     <TableContainer component={Paper} sx={{
                       borderRadius: '16px',
