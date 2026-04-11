@@ -132,9 +132,14 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             path: '/messaging',
           },
           {
-            label: 'Reviews & Reports',
+            label: 'Reports',
             icon: <ReviewsIcon />,
-            path: '#reviews',
+            path: '/admin/reports',
+          },
+          {
+            label: 'Organizer Reports',
+            icon: <ReviewsIcon />,
+            path: '/organizer/reports',
           },
           {
             label: 'Support',
@@ -200,9 +205,9 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             path: '/messaging',
           },
           {
-            label: 'Reviews & Ratings',
+            label: 'Reports',
             icon: <ReviewsIcon />,
-            path: '#reviews',
+            path: '/provider/reports',
           },
           {
             label: 'Portfolio',
@@ -259,20 +264,20 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
     >
       <Box
         sx={{
-          p: 2.5,
+          p: 1.5,
           borderBottom: `1px solid ${theme.palette.divider}`,
           bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.16 : 0.06),
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
           <Avatar
             src={avatarSrc}
             sx={{
-              width: 56,
-              height: 56,
+              width: 40,
+              height: 40,
               bgcolor: theme.palette.primary.main,
               fontWeight: 700,
-              fontSize: '1.2rem',
+              fontSize: '1rem',
               color: theme.palette.primary.contrastText,
               border: `2px solid ${alpha(theme.palette.background.paper, 0.8)}`,
             }}
@@ -280,18 +285,18 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             {userName.charAt(0).toUpperCase()}
           </Avatar>
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+            <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', textOverflow: 'ellipsis', overflow: 'hidden' }}>
               {userName}
             </Typography>
             <Typography
               sx={{
-                fontSize: '0.8rem',
+                fontSize: '0.75rem',
                 color: 'text.secondary',
                 textOverflow: 'ellipsis',
                 overflow: 'hidden',
                 backgroundColor: alpha(theme.palette.background.paper, 0.8),
-                px: 1,
-                py: 0.25,
+                px: 0.75,
+                py: 0.2,
                 borderRadius: 999,
                 display: 'inline-block',
                 border: `1px solid ${theme.palette.divider}`,
@@ -308,16 +313,16 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
 
       <Box
         sx={{
-          p: 2,
+          p: 1.5,
           display: 'grid',
           gridTemplateColumns: notifications || messages ? '1fr 1fr' : '1fr',
-          gap: 1,
+          gap: 0.75,
         }}
       >
         {notifications > 0 && (
           <Box
             sx={{
-              p: 1.25,
+              p: 1,
               backgroundColor: alpha(theme.palette.primary.main, 0.08),
               border: `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
               borderRadius: 2,
@@ -327,14 +332,14 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
               },
             }}
           >
-            <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', fontWeight: 600 }}>Notifications</Typography>
-            <Typography sx={{ fontWeight: 800, fontSize: '1.2rem', mt: 0.5 }}>{notifications}</Typography>
+            <Typography sx={{ fontSize: '0.65rem', color: 'text.secondary', fontWeight: 600 }}>Notifications</Typography>
+            <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', mt: 0.25 }}>{notifications}</Typography>
           </Box>
         )}
         {messages > 0 && (
           <Box
             sx={{
-              p: 1.25,
+              p: 1,
               backgroundColor: alpha(theme.palette.primary.main, 0.08),
               border: `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
               borderRadius: 2,
@@ -344,23 +349,23 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
               },
             }}
           >
-            <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', fontWeight: 600 }}>Messages</Typography>
-            <Typography sx={{ fontWeight: 800, fontSize: '1.2rem', mt: 0.5 }}>{messages}</Typography>
+            <Typography sx={{ fontSize: '0.65rem', color: 'text.secondary', fontWeight: 600 }}>Messages</Typography>
+            <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', mt: 0.25 }}>{messages}</Typography>
           </Box>
         )}
       </Box>
 
       <Divider />
 
-      <List sx={{ flex: 1, overflow: 'auto', py: 1.5, px: 1.5 }}>
+      <List sx={{ flex: 1, overflow: 'auto', py: 1, px: 1 }}>
         {menuItems.map((item, index) => (
           <React.Fragment key={index}>
-            <ListItem disablePadding sx={{ display: 'block', mb: 0.75 }}>
+            <ListItem disablePadding sx={{ display: 'block', mb: 0.5 }}>
               <ListItemButton
                 onClick={() => handleItemClick(item)}
                 sx={{
-                  py: 1.1,
-                  px: 2,
+                  py: 0.8,
+                  px: 1.5,
                   borderRadius: 2,
                   bgcolor: isActive(item.path) ? alpha(theme.palette.primary.main, 0.14) : 'transparent',
                   color: isActive(item.path) ? 'primary.main' : 'text.primary',
@@ -375,7 +380,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
               >
                 <ListItemIcon
                   sx={{
-                    minWidth: 40,
+                    minWidth: 32,
                     color: isActive(item.path) ? 'primary.main' : 'text.secondary',
                     fontWeight: 600,
                   }}
@@ -384,7 +389,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                     <Badge
                       badgeContent={item.badge}
                       color="error"
-                      sx={{ '& .MuiBadge-badge': { fontWeight: 700, fontSize: '0.65rem' } }}
+                      sx={{ '& .MuiBadge-badge': { fontWeight: 700, fontSize: '0.6rem' } }}
                     >
                       {item.icon}
                     </Badge>

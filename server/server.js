@@ -438,6 +438,7 @@ app.get('/api/dashboard/organizer-stats', verifyToken, async (req, res) => {
   try {
     const pool = getPoolOrThrow()
     const userId = req.userId
+    const serviceBookingOwnerColumn = await getServiceBookingsOwnerColumn(pool)
 
     // Get total events count
     const [eventCounts] = await pool.execute(
@@ -453,7 +454,15 @@ app.get('/api/dashboard/organizer-stats', verifyToken, async (req, res) => {
 
     // Get pending bookings count
     const [pendingBookings] = await pool.execute(
-      "SELECT COUNT(*) AS pendingBookings FROM bookings WHERE organizer_id = ? AND status = 'pending'",
+      "SELECT COUNT(*) AS pendingBookings FROM service_bookings WHERE organizer_id = ? AND status = 'pending'",
+      [userId]
+    )
+
+    // Get total vendors booked by this organizer from current service booking data
+    const [vendorCounts] = await pool.execute(
+      `SELECT COUNT(DISTINCT ${serviceBookingOwnerColumn}) AS totalVendors
+       FROM service_bookings
+       WHERE organizer_id = ?`,
       [userId]
     )
 
@@ -473,6 +482,7 @@ app.get('/api/dashboard/organizer-stats', verifyToken, async (req, res) => {
       totalEvents: eventCounts[0]?.totalEvents || 0,
       pendingBookings: pendingBookings[0]?.pendingBookings || 0,
       upcomingEvents: upcomingCounts[0]?.upcomingEvents || 0,
+      totalVendors: vendorCounts[0]?.totalVendors || 0,
       totalRevenue: revenue[0]?.totalRevenue || 0,
       events: events || []
     })
@@ -2761,6 +2771,7 @@ app.get('/api/provider-bookings', verifyToken, async (req, res) => {
       `SELECT 
         sb.id, 
         sb.service_id, 
+        sb.organizer_id,
         sb.booking_date, 
         sb.notes, 
         sb.status,
@@ -2769,6 +2780,7 @@ app.get('/api/provider-bookings', verifyToken, async (req, res) => {
         s.description, 
         s.category, 
         s.price,
+        CASE WHEN sb.organizer_id IS NULL THEN TRUE ELSE FALSE END as is_guest_booking,
         COALESCE(u.name, sb.guest_name, 'Guest') as organizer_name, 
         COALESCE(u.email, sb.guest_email) as organizer_email,
         sb.guest_phone as organizer_phone

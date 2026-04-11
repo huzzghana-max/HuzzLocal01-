@@ -596,10 +596,10 @@ const OrganizerDashboard: React.FC = () => {
             <>
               {/* Stats Grid */}
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 3, mb: 5 }}>
-                <StatCard title="Total Events" value={stats?.totalEvents || 0} icon={<EventIcon />} color="primary" change={8} />
-                <StatCard title="Pending Bookings" value={stats?.pendingBookings || 0} icon={<PendingIcon />} color="warning" change={-2} />
-                <StatCard title="Upcoming Events" value={stats?.upcomingEvents || 0} icon={<CalendarMonthIcon />} color="info" change={15} />
-                <StatCard title="Total Vendors" value={stats?.totalVendors || 0} icon={<PeopleIcon />} color="secondary" change={5} />
+                <StatCard title="Total Events" value={stats?.totalEvents || 0} icon={<EventIcon />} color="primary" />
+                <StatCard title="Pending Bookings" value={stats?.pendingBookings || 0} icon={<PendingIcon />} color="warning" />
+                <StatCard title="Upcoming Events" value={stats?.upcomingEvents || 0} icon={<CalendarMonthIcon />} color="info" />
+                <StatCard title="Total Vendors" value={stats?.totalVendors || 0} icon={<PeopleIcon />} color="secondary" />
               </Box>
 
               {/* Events Section */}

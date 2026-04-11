@@ -55,6 +55,7 @@ interface Booking {
   booking_date?: string
   notes?: string
   organizer_id?: number
+  is_guest_booking?: boolean
 }
 
 interface PayoutSummary {
@@ -123,6 +124,7 @@ const ProviderDashboard: React.FC = () => {
         status: booking.status,
         notes: booking.notes,
         organizer_id: booking.organizer_id,
+        is_guest_booking: Boolean(booking.is_guest_booking),
         amount: booking.amount ?? booking.price ?? 0,
       }))
       setBookings(transformedBookings)
@@ -421,9 +423,14 @@ const ProviderDashboard: React.FC = () => {
                           <Typography sx={{ fontWeight: 700, fontSize: '1rem' }}>
                             {booking.service_title || booking.eventName}
                           </Typography>
-                          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-                            {booking.organizer_name}
-                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.75, flexWrap: 'wrap' }}>
+                            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                              {booking.organizer_name || 'Guest'}
+                            </Typography>
+                            {booking.is_guest_booking && (
+                              <Chip size="small" label="Guest Booking" variant="outlined" color="info" />
+                            )}
+                          </Box>
                         </Box>
                         <Chip
                           label={booking.status}
@@ -446,6 +453,11 @@ const ProviderDashboard: React.FC = () => {
                       <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
                         Booking Date: {new Date(booking.booking_date || booking.date || '').toLocaleDateString()}
                       </Typography>
+                      {(booking.organizer_email || booking.organizer_phone) && (
+                        <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.75 }}>
+                          {[booking.organizer_email, booking.organizer_phone].filter(Boolean).join(' • ')}
+                        </Typography>
+                      )}
                       <Button
                         size="small"
                         variant="outlined"
@@ -493,7 +505,17 @@ const ProviderDashboard: React.FC = () => {
                             <Typography sx={{ fontWeight: 500 }}>{booking.service_title || booking.eventName}</Typography>
                           </TableCell>
                           <TableCell sx={{ py: 2 }}>
-                            <Typography>{booking.organizer_name || 'Guest'}</Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                              <Typography>{booking.organizer_name || 'Guest'}</Typography>
+                              {booking.is_guest_booking && (
+                                <Chip size="small" label="Guest" variant="outlined" color="info" />
+                              )}
+                            </Box>
+                            {(booking.organizer_email || booking.organizer_phone) && (
+                              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.35 }}>
+                                {[booking.organizer_email, booking.organizer_phone].filter(Boolean).join(' • ')}
+                              </Typography>
+                            )}
                           </TableCell>
                           <TableCell sx={{ py: 2 }}>
                             {new Date(booking.booking_date || booking.date || '').toLocaleDateString()}
@@ -560,11 +582,16 @@ const ProviderDashboard: React.FC = () => {
                       </Box>
                       <Box>
                         <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                          Organizer
+                          {selectedBooking.is_guest_booking ? 'Guest' : 'Organizer'}
                         </Typography>
-                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                          {selectedBooking.organizer_name || 'Guest'}
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                          <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                            {selectedBooking.organizer_name || 'Guest'}
+                          </Typography>
+                          {selectedBooking.is_guest_booking && (
+                            <Chip size="small" label="Guest Booking" variant="outlined" color="info" />
+                          )}
+                        </Box>
                       </Box>
                       {selectedBooking.organizer_email && (
                         <Box>

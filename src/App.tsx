@@ -14,6 +14,9 @@ import ProviderDashboard from './pages/dashboards/ProviderDashboard'
 import AdminDashboard from './pages/dashboards/AdminDashboard'
 import OrganizerAnalytics from './pages/dashboards/OrganizerAnalytics'
 import ProviderAnalytics from './pages/dashboards/ProviderAnalytics'
+import OrganizerReports from './pages/dashboards/OrganizerReports'
+import ProviderReports from './pages/dashboards/ProviderReports'
+import AdminReports from './pages/dashboards/AdminReports'
 import AdminServiceApproval from './pages/AdminServiceApproval'
 import AdminTicketReports from './pages/AdminTicketReports'
 import AdminPayoutRequests from './pages/AdminPayoutRequests'
@@ -102,10 +105,34 @@ function App() {
             }
           />
           <Route
+            path="/organizer/reports"
+            element={
+              <ProtectedRoute requiredRole="organizer">
+                <OrganizerReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/provider/reports"
+            element={
+              <ProtectedRoute requiredRole="provider">
+                <ProviderReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin-dashboard"
             element={
               <ProtectedRoute requiredRole="admin">
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/reports"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminReports />
               </ProtectedRoute>
             }
           />
