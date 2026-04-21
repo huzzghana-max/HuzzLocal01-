@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   Box,
   Container,
@@ -29,6 +29,7 @@ import {
   Tab,
   Tabs,
 } from '@mui/material'
+import { useNavigate } from 'react-router-dom'
 import {
   PieChart,
   Pie,
@@ -76,7 +77,14 @@ interface AnalyticsData {
   resolutionDistribution: any[]
 }
 
+interface StaffMember {
+  id: number
+  name: string
+  email: string
+}
+
 const AdminTicketDashboard: React.FC = () => {
+  const navigate = useNavigate()
   const currentUser = (() => {
     try {
       return JSON.parse(localStorage.getItem('user') || '{}')
@@ -100,6 +108,12 @@ const AdminTicketDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
+  const [staffLoading, setStaffLoading] = useState(false)
+
+  // Refs for focus management in dialogs
+  const assignInputRef = useRef<HTMLInputElement>(null)
+  const escalateInputRef = useRef<HTMLInputElement>(null)
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
 
@@ -146,7 +160,10 @@ const AdminTicketDashboard: React.FC = () => {
   }
 
   const handleAssignTicket = async () => {
-    if (!selectedTicket || !assignTo) return
+    if (!selectedTicket || !assignTo) {
+      alert('Please select a staff member')
+      return
+    }
 
     try {
       await api.post(`/support/tickets/${selectedTicket.id}/assign`, {
@@ -156,9 +173,25 @@ const AdminTicketDashboard: React.FC = () => {
       setAssignTo('')
       fetchTickets()
       alert('Ticket assigned successfully')
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to assign ticket:', error)
-      alert('Failed to assign ticket')
+      alert(error?.response?.data?.message || 'Failed to assign ticket')
+    }
+  }
+
+  const handleAssignDialogOpen = () => {
+    fetchStaffMembers()
+  }
+
+  const fetchStaffMembers = async () => {
+    try {
+      setStaffLoading(true)
+      const response = await api.get('/support/staff')
+      setStaffMembers(response.data)
+    } catch (error) {
+      console.error('Failed to fetch staff members:', error)
+    } finally {
+      setStaffLoading(false)
     }
   }
 
@@ -178,6 +211,12 @@ const AdminTicketDashboard: React.FC = () => {
       console.error('Failed to escalate ticket:', error)
       alert('Failed to escalate ticket')
     }
+  }
+
+  const handleEscalateDialogOpen = () => {
+    setTimeout(() => {
+      escalateInputRef.current?.focus()
+    }, 0)
   }
 
   const getStatusColor = (status: string) => {
@@ -227,10 +266,11 @@ const AdminTicketDashboard: React.FC = () => {
         userImage={currentUser?.profile_image}
         onLogout={() => {}}
       />
-      <Container maxWidth="lg" sx={{ py: 4, width: '100%' }}>
-        <Typography variant="h4" sx={{ mb: 4, fontWeight: 'bold' }}>
-          Admin Ticket Dashboard
-        </Typography>
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', ml: { xs: 0, md: '280px' }, mt: { xs: 60, md: 0 } }}>
+        <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 }, px: { xs: 2, sm: 3 }, flex: 1 }}>
+          <Typography variant="h4" sx={{ mb: 4, fontWeight: 'bold' }}>
+            Admin Ticket Dashboard
+          </Typography>
 
         {/* Summary Cards */}
         {analytics && (
@@ -517,6 +557,12 @@ const AdminTicketDashboard: React.FC = () => {
                           <TableCell>
                             <Button
                               size="small"
+                              onClick={() => navigate(`/admin/support-tickets/${ticket.id}`)}
+                            >
+                              View
+                            </Button>
+                            <Button
+                              size="small"
                               onClick={() => {
                                 setSelectedTicket(ticket)
                                 setAssignDialog(true)
@@ -592,37 +638,65 @@ const AdminTicketDashboard: React.FC = () => {
         )}
 
         {/* Assign Dialog */}
-        <Dialog open={assignDialog} onClose={() => setAssignDialog(false)} maxWidth="sm" fullWidth>
+        <Dialog 
+          open={assignDialog} 
+          onClose={() => setAssignDialog(false)}
+          onOpen={handleAssignDialogOpen}
+          maxWidth="sm" 
+          fullWidth
+          keepMounted={false}
+          disableEnforceFocus={false}
+        >
           <DialogTitle>Assign Ticket</DialogTitle>
           <DialogContent>
             <Typography sx={{ mb: 2 }}>
               Ticket: {selectedTicket?.subject}
             </Typography>
-            <TextField
-              label="Assign To (User ID)"
-              value={assignTo}
-              onChange={(e) => setAssignTo(e.target.value)}
-              fullWidth
-              type="number"
-              sx={{ mt: 2 }}
-            />
+            {staffLoading ? (
+              <CircularProgress />
+            ) : (
+              <FormControl fullWidth sx={{ mt: 2 }}>
+                <InputLabel>Assign To</InputLabel>
+                <Select
+                  value={assignTo}
+                  label="Assign To"
+                  onChange={(e) => setAssignTo(e.target.value)}
+                >
+                  <MenuItem value="">Select a staff member</MenuItem>
+                  {staffMembers.map((staff) => (
+                    <MenuItem key={staff.id} value={staff.id.toString()}>
+                      {staff.name} ({staff.email})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setAssignDialog(false)}>Cancel</Button>
-            <Button onClick={handleAssignTicket} variant="contained">
+            <Button onClick={handleAssignTicket} variant="contained" disabled={!assignTo || staffLoading}>
               Assign
             </Button>
           </DialogActions>
         </Dialog>
 
         {/* Escalate Dialog */}
-        <Dialog open={escalateDialog} onClose={() => setEscalateDialog(false)} maxWidth="sm" fullWidth>
+        <Dialog 
+          open={escalateDialog} 
+          onClose={() => setEscalateDialog(false)}
+          onOpen={handleEscalateDialogOpen}
+          maxWidth="sm" 
+          fullWidth
+          keepMounted={false}
+          disableEnforceFocus={false}
+        >
           <DialogTitle>Escalate Ticket</DialogTitle>
           <DialogContent>
             <Typography sx={{ mb: 2 }}>
               Ticket: {selectedTicket?.subject}
             </Typography>
             <TextField
+              inputRef={escalateInputRef}
               label="Escalation Notes"
               value={escalateNotes}
               onChange={(e) => setEscalateNotes(e.target.value)}
@@ -639,7 +713,8 @@ const AdminTicketDashboard: React.FC = () => {
             </Button>
           </DialogActions>
         </Dialog>
-      </Container>
+        </Container>
+      </Box>
     </Box>
   )
 }

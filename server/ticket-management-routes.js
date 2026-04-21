@@ -168,6 +168,8 @@ module.exports = function(app, { getPoolOrThrow, verifyToken, isAdmin }) {
       const allowedSortFields = ['created_at', 'updated_at', 'priority', 'status'];
       const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'created_at';
       const order = sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+      const pageNumber = Math.max(1, parseInt(page, 10) || 1);
+      const pageSize = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
       
       // Get total count
       const [countResult] = await pool.execute(
@@ -176,7 +178,7 @@ module.exports = function(app, { getPoolOrThrow, verifyToken, isAdmin }) {
       );
       
       const total = countResult[0].total;
-      const offset = (parseInt(page) - 1) * parseInt(limit);
+      const offset = (pageNumber - 1) * pageSize;
       
       // Get paginated results
       const [tickets] = await pool.execute(`
@@ -190,16 +192,16 @@ module.exports = function(app, { getPoolOrThrow, verifyToken, isAdmin }) {
         LEFT JOIN users a ON st.assigned_to = a.id
         ${whereClause}
         ORDER BY st.${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `, [...params, parseInt(limit), offset]);
+        LIMIT ${pageSize} OFFSET ${offset}
+      `, params);
       
       res.json({
         tickets,
         pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
+          page: pageNumber,
+          limit: pageSize,
           total,
-          pages: Math.ceil(total / parseInt(limit))
+          pages: Math.ceil(total / pageSize)
         }
       });
     } catch (error) {
@@ -211,7 +213,147 @@ module.exports = function(app, { getPoolOrThrow, verifyToken, isAdmin }) {
   // ============================================================================
   // ADMIN TICKET MANAGEMENT
   // ============================================================================
-  
+
+  // Get available staff members for ticket assignment
+  app.get('/api/support/staff', verifyToken, async (req, res) => {
+    try {
+      const user = req.user;
+      if (user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      const pool = getPoolOrThrow();
+      const [staff] = await pool.execute(`
+        SELECT id, name, email FROM users 
+        WHERE role IN ('admin', 'provider') 
+        ORDER BY name ASC
+      `);
+
+      res.json(staff);
+    } catch (error) {
+      console.error('Staff list error:', error.message);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get a single ticket with conversation for admin review
+  app.get('/api/admin/support/tickets/:ticketId', verifyToken, async (req, res) => {
+    try {
+      const user = req.user;
+      if (user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      const { ticketId } = req.params;
+      const pool = getPoolOrThrow();
+
+      const [tickets] = await pool.execute(`
+        SELECT st.id, st.subject, st.description, st.status, st.priority, st.created_at, st.updated_at,
+               st.time_to_respond_minutes, st.time_to_resolve_minutes, st.sla_breached,
+               c.name as category, u.name as user_name, u.email as user_email, a.name as assigned_to_name
+        FROM support_tickets st
+        LEFT JOIN support_categories c ON st.category_id = c.id
+        LEFT JOIN users u ON st.user_id = u.id
+        LEFT JOIN users a ON st.assigned_to = a.id
+        WHERE st.id = ?
+        LIMIT 1
+      `, [ticketId]);
+
+      if (tickets.length === 0) {
+        return res.status(404).json({ message: 'Ticket not found' });
+      }
+
+      const [messages] = await pool.execute(`
+        SELECT m.id, m.message, m.created_at, m.attachment_path,
+               u.id as user_id, u.name, u.role
+        FROM support_messages m
+        LEFT JOIN users u ON m.user_id = u.id
+        WHERE m.ticket_id = ?
+        ORDER BY m.created_at ASC
+      `, [ticketId]);
+
+      res.json({
+        ticket: tickets[0],
+        messages,
+      });
+    } catch (error) {
+      console.error('Admin ticket detail error:', error.message);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Add an admin message to a support ticket
+  app.post('/api/admin/support/tickets/:ticketId/messages', verifyToken, async (req, res) => {
+    try {
+      const user = req.user;
+      if (user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      const { ticketId } = req.params;
+      const { message } = req.body;
+
+      if (!message || !String(message).trim()) {
+        return res.status(400).json({ message: 'Message content is required' });
+      }
+
+      const pool = getPoolOrThrow();
+      const [tickets] = await pool.execute('SELECT id FROM support_tickets WHERE id = ? LIMIT 1', [ticketId]);
+
+      if (tickets.length === 0) {
+        return res.status(404).json({ message: 'Ticket not found' });
+      }
+
+      const [result] = await pool.execute(
+        'INSERT INTO support_messages (ticket_id, user_id, message) VALUES (?, ?, ?)',
+        [ticketId, user.id, String(message).trim()],
+      );
+
+      res.status(201).json({
+        id: result.insertId,
+        ticket_id: Number(ticketId),
+        user_id: user.id,
+        message: String(message).trim(),
+        created_at: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('Admin add ticket message error:', error.message);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Update ticket status from the admin console
+  app.put('/api/admin/support/tickets/:ticketId/status', verifyToken, async (req, res) => {
+    try {
+      const user = req.user;
+      if (user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      const { ticketId } = req.params;
+      const { status } = req.body;
+
+      if (!['open', 'in_progress', 'resolved', 'closed'].includes(status)) {
+        return res.status(400).json({ message: 'Invalid status' });
+      }
+
+      const pool = getPoolOrThrow();
+      const [result] = await pool.execute(
+        'UPDATE support_tickets SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [status, ticketId],
+      );
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'Ticket not found' });
+      }
+
+      res.json({ message: 'Ticket status updated successfully', status });
+    } catch (error) {
+      console.error('Admin ticket status update error:', error.message);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Assign ticket to staff member
   app.post('/api/support/tickets/:ticketId/assign', verifyToken, async (req, res) => {
     try {
@@ -222,23 +364,37 @@ module.exports = function(app, { getPoolOrThrow, verifyToken, isAdmin }) {
       
       const { ticketId } = req.params;
       const { assigned_to } = req.body;
+      const assignedToId = parseInt(assigned_to, 10);
       
       if (!assigned_to) {
         return res.status(400).json({ message: 'assigned_to is required' });
       }
+
+      if (Number.isNaN(assignedToId) || assignedToId < 1) {
+        return res.status(400).json({ message: 'assigned_to must be a valid user ID' });
+      }
       
       const pool = getPoolOrThrow();
+
+      const [assignees] = await pool.execute(
+        'SELECT id FROM users WHERE id = ? LIMIT 1',
+        [assignedToId],
+      );
+
+      if (assignees.length === 0) {
+        return res.status(404).json({ message: 'Assigned user not found' });
+      }
       
       // Record assignment history
       await pool.execute(`
         INSERT INTO ticket_assignments (ticket_id, assigned_to, assigned_by, assigned_at)
         VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-      `, [ticketId, assigned_to, user.id]);
+      `, [ticketId, assignedToId, user.id]);
       
       // Update ticket
       await pool.execute(
         'UPDATE support_tickets SET assigned_to = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-        [assigned_to, ticketId]
+        [assignedToId, ticketId]
       );
       
       res.json({ message: 'Ticket assigned successfully' });

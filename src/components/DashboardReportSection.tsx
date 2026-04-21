@@ -3,7 +3,6 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   FormControl,
   InputLabel,
   MenuItem,
@@ -19,6 +18,11 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
+import { alpha, useTheme } from '@mui/material/styles'
+import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded'
+import DescriptionRoundedIcon from '@mui/icons-material/DescriptionRounded'
+import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded'
+import html2pdf from 'html2pdf.js'
 
 export interface ReportOption {
   value: string
@@ -35,6 +39,7 @@ export interface ReportFilter {
   key: string
   label: string
   options: ReportFilterOption[]
+  appliesTo?: string[]
 }
 
 export interface ReportSummaryItem {
@@ -58,7 +63,6 @@ export interface GeneratedReport {
 }
 
 interface DashboardReportSectionProps {
-  title: string
   description: string
   reportTypes: ReportOption[]
   filters?: ReportFilter[]
@@ -82,7 +86,6 @@ function escapeHtml(value: string) {
 }
 
 export const DashboardReportSection: React.FC<DashboardReportSectionProps> = ({
-  title,
   description,
   reportTypes,
   filters = [],
@@ -90,6 +93,7 @@ export const DashboardReportSection: React.FC<DashboardReportSectionProps> = ({
   hideHeader = false,
   buildReport,
 }) => {
+  const theme = useTheme()
   const [reportType, setReportType] = useState(defaultReportType || reportTypes[0]?.value || '')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
@@ -99,10 +103,56 @@ export const DashboardReportSection: React.FC<DashboardReportSectionProps> = ({
       return acc
     }, {}),
   )
+  const [appliedParams, setAppliedParams] = useState(() => ({
+    reportType: defaultReportType || reportTypes[0]?.value || '',
+    dateFrom: '',
+    dateTo: '',
+    filters: filters.reduce<Record<string, string>>((acc, filter) => {
+      acc[filter.key] = filter.options[0]?.value || ''
+      return acc
+    }, {}),
+  }))
   const [lastGeneratedAt, setLastGeneratedAt] = useState(() => new Date())
-  const previewReport = buildReport({ reportType, dateFrom, dateTo, filters: filterValues })
 
-  const handleGenerate = () => {
+  const visibleFilters = filters.filter((filter) => !filter.appliesTo || filter.appliesTo.includes(reportType))
+  const previewReport = buildReport(appliedParams)
+  const activeReportType = reportTypes.find((option) => option.value === appliedParams.reportType)
+  const hasInvalidDateRange = Boolean(dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo))
+  const hasPendingChanges =
+    reportType !== appliedParams.reportType ||
+    dateFrom !== appliedParams.dateFrom ||
+    dateTo !== appliedParams.dateTo ||
+    filters.some((filter) => filterValues[filter.key] !== appliedParams.filters[filter.key])
+
+  const handleGenerateReport = () => {
+    if (hasInvalidDateRange) return
+
+    setAppliedParams({
+      reportType,
+      dateFrom,
+      dateTo,
+      filters: { ...filterValues },
+    })
+    setLastGeneratedAt(new Date())
+  }
+
+  const resetFilters = () => {
+    setDateFrom('')
+    setDateTo('')
+    const resetValues = filters.reduce<Record<string, string>>((acc, filter) => {
+      acc[filter.key] = filter.options[0]?.value || ''
+      return acc
+    }, {})
+    const defaultType = defaultReportType || reportTypes[0]?.value || ''
+
+    setReportType(defaultType)
+    setFilterValues(resetValues)
+    setAppliedParams({
+      reportType: defaultType,
+      dateFrom: '',
+      dateTo: '',
+      filters: resetValues,
+    })
     setLastGeneratedAt(new Date())
   }
 
@@ -128,212 +178,302 @@ export const DashboardReportSection: React.FC<DashboardReportSectionProps> = ({
   }
 
   const handleExportPdf = () => {
-    const reportWindow = window.open('', '_blank', 'noopener,noreferrer,width=1000,height=800')
-    if (!reportWindow) return
-
     const summaryHtml = previewReport.summaries
       .map(
         (item) => `
-          <div style="border:1px solid #d7dde7;border-radius:12px;padding:16px;min-width:180px">
-            <div style="font-size:12px;color:#5b6474;text-transform:uppercase;letter-spacing:.08em">${escapeHtml(item.label)}</div>
+          <div style="border:1px solid #d7dde7;border-radius:12px;padding:16px;min-width:180px;margin-bottom:12px;font-family:Arial,sans-serif;color:#23313d;">
+            <div style="font-size:12px;color:#5b6474;text-transform:uppercase;letter-spacing:0.08em">${escapeHtml(item.label)}</div>
             <div style="font-size:28px;font-weight:700;color:#1f3f4a;margin-top:6px">${escapeHtml(String(item.value))}</div>
             <div style="font-size:12px;color:#6f7684;margin-top:6px">${escapeHtml(item.helper || '')}</div>
           </div>`,
       )
       .join('')
 
-    const tableHeaderHtml = previewReport.columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join('')
+    const tableHeaderHtml = previewReport.columns
+      .map((column) => `<th style="border:1px solid #d7dde7;padding:10px;text-align:left;font-size:14px;background:#eff4f8;font-family:Arial,sans-serif;color:#23313d;">${escapeHtml(column.label)}</th>`)
+      .join('')
     const tableRowHtml = previewReport.rows
       .map(
         (row) => `
           <tr>
             ${previewReport.columns
-              .map((column) => `<td>${escapeHtml(String(row[column.key] ?? ''))}</td>`)
+              .map((column) => `<td style="border:1px solid #d7dde7;padding:10px;text-align:left;font-size:14px;font-family:Arial,sans-serif;color:#23313d;">${escapeHtml(String(row[column.key] ?? ''))}</td>`)
               .join('')}
           </tr>`,
       )
       .join('')
-    const insightsHtml = previewReport.insights.map((item) => `<li>${escapeHtml(item)}</li>`).join('')
+    const insightsHtml = previewReport.insights
+      .map((item) => `<li style="margin-bottom:8px;font-family:Arial,sans-serif;color:#23313d;">${escapeHtml(item)}</li>`)
+      .join('')
 
-    reportWindow.document.write(`
-      <html>
-        <head>
-          <title>${escapeHtml(previewReport.title)}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 32px; color: #23313d; }
-            h1 { margin: 0 0 8px; }
-            p { color: #576273; }
-            .summary-grid { display: flex; gap: 12px; flex-wrap: wrap; margin: 24px 0; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #d7dde7; padding: 10px; text-align: left; font-size: 14px; }
-            th { background: #eff4f8; }
-            ul { margin-top: 12px; }
-          </style>
-        </head>
-        <body>
-          <h1>${escapeHtml(previewReport.title)}</h1>
-          <p>${escapeHtml(previewReport.subtitle || description)}</p>
-          <div class="summary-grid">${summaryHtml}</div>
-          <h2>Details</h2>
-          <table>
-            <thead><tr>${tableHeaderHtml}</tr></thead>
-            <tbody>${tableRowHtml}</tbody>
-          </table>
-          <h2>Insights</h2>
-          <ul>${insightsHtml}</ul>
-        </body>
-      </html>
-    `)
-    reportWindow.document.close()
-    reportWindow.focus()
-    reportWindow.print()
+    const htmlContent = `
+      <div style="font-family:Arial,sans-serif;padding:32px;color:#23313d;">
+        <h1 style="margin:0 0 8px 0;font-family:Arial,sans-serif;color:#23313d;">${escapeHtml(previewReport.title)}</h1>
+        <p style="color:#576273;font-family:Arial,sans-serif;margin:0 0 24px 0;">${escapeHtml(previewReport.subtitle || description)}</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin:24px 0;">${summaryHtml}</div>
+        <h2 style="font-family:Arial,sans-serif;color:#23313d;margin:20px 0 0 0;">Details</h2>
+        <table style="width:100%;border-collapse:collapse;margin-top:20px;font-family:Arial,sans-serif;color:#23313d;">
+          <thead><tr>${tableHeaderHtml}</tr></thead>
+          <tbody>${tableRowHtml}</tbody>
+        </table>
+        <h2 style="font-family:Arial,sans-serif;color:#23313d;margin:12px 0 0 0;">Insights</h2>
+        <ul style="margin-top:12px;font-family:Arial,sans-serif;color:#23313d;">${insightsHtml}</ul>
+      </div>
+    `
+
+    const element = document.createElement('div')
+    element.innerHTML = htmlContent
+    element.style.position = 'absolute'
+    element.style.left = '-9999px'
+    element.style.top = '0'
+    element.style.width = '800px'
+    document.body.appendChild(element)
+
+    const opt = {
+      margin: 1,
+      filename: `${previewReport.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'report'}.pdf`,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { scale: 2, width: 800 },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' as const },
+    }
+
+    html2pdf().set(opt).from(element).save().then(() => {
+      document.body.removeChild(element)
+    })
   }
 
   return (
-    <Paper sx={{ p: 1.5, borderRadius: 3, mb: 3, boxShadow: 'none' }}>
-      {!hideHeader && (
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap', mb: 1.5 }}>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
-              {title}
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary', maxWidth: 720 }}>
-              {description}
-            </Typography>
+    <Box sx={{ mb: 3 }}>
+      <Paper
+        sx={{
+          p: { xs: 1.5, md: 2 },
+          mb: 1.5,
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: 'divider',
+          boxShadow: 'none',
+        }}
+      >
+        <Stack spacing={1.5}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: { xs: 'flex-start', md: 'center' },
+              flexDirection: { xs: 'column', md: 'row' },
+              gap: 1.5,
+            }}
+          >
+            <Box>
+              {!hideHeader && (
+                <Typography sx={{ fontSize: { xs: '1.2rem', md: '1.4rem' }, fontWeight: 800, color: 'text.primary' }}>
+                  {previewReport.title}
+                </Typography>
+              )}
+              <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5, maxWidth: 720 }}>
+                {activeReportType?.description || previewReport.subtitle || description}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.75 }}>
+                Last generated: {lastGeneratedAt.toLocaleString()}
+              </Typography>
+            </Box>
+
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: { xs: '100%', md: 'auto' } }}>
+              <Button
+                variant="contained"
+                onClick={handleGenerateReport}
+                fullWidth
+                size="small"
+                disabled={hasInvalidDateRange || !hasPendingChanges}
+                sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2, minHeight: 36 }}
+              >
+                Generate Report
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<DownloadRoundedIcon />}
+                onClick={handleExportCsv}
+                fullWidth
+                size="small"
+                sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2, minHeight: 36 }}
+              >
+                CSV
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<DescriptionRoundedIcon />}
+                onClick={handleExportPdf}
+                fullWidth
+                size="small"
+                sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2, minHeight: 36 }}
+              >
+                PDF
+              </Button>
+            </Stack>
           </Box>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: 'center' }}>
-            <Button variant="outlined" size="small" onClick={handleExportCsv}>
-              Export CSV
+
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: `minmax(220px, 1.4fr) repeat(${Math.max(2, visibleFilters.length + 2)}, minmax(160px, 1fr)) auto` },
+              gap: 0.9,
+            }}
+          >
+            <FormControl fullWidth>
+              <InputLabel>Report Type</InputLabel>
+              <Select
+                value={reportType}
+                label="Report Type"
+                onChange={(event) => setReportType(String(event.target.value))}
+                size="small"
+                sx={{ borderRadius: 2 }}
+              >
+                {reportTypes.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <TextField
+              label="From"
+              type="date"
+              value={dateFrom}
+              onChange={(event) => setDateFrom(event.target.value)}
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              size="small"
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+            />
+
+            <TextField
+              label="To"
+              type="date"
+              value={dateTo}
+              onChange={(event) => setDateTo(event.target.value)}
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              size="small"
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+            />
+
+            {visibleFilters.map((filter) => (
+              <FormControl key={filter.key} fullWidth>
+                <InputLabel>{filter.label}</InputLabel>
+                <Select
+                  value={filterValues[filter.key] || ''}
+                  label={filter.label}
+                  onChange={(event) =>
+                    setFilterValues((prev) => ({
+                      ...prev,
+                      [filter.key]: String(event.target.value),
+                    }))
+                  }
+                  size="small"
+                  sx={{ borderRadius: 2 }}
+                >
+                  {filter.options.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            ))}
+
+            <Button
+              variant="text"
+              startIcon={<RestartAltRoundedIcon />}
+              onClick={resetFilters}
+              sx={{ textTransform: 'none', fontWeight: 700, justifySelf: { lg: 'start' }, minHeight: 36 }}
+            >
+              Reset
             </Button>
-            <Button variant="contained" size="small" onClick={handleExportPdf}>
-              Export PDF
-            </Button>
-          </Stack>
-        </Box>
-      )}
+          </Box>
+
+          {hasInvalidDateRange && (
+            <Alert severity="warning" sx={{ borderRadius: 2 }}>
+              The end date must be on or after the start date before generating or exporting this report.
+            </Alert>
+          )}
+
+          {hasPendingChanges && !hasInvalidDateRange && (
+            <Alert severity="info" sx={{ borderRadius: 2 }}>
+              The preview below still shows the last generated snapshot. Select Generate Report to apply your latest filters.
+            </Alert>
+          )}
+        </Stack>
+      </Paper>
 
       <Box
         sx={{
-          display: 'flex',
-          justifyContent: hideHeader ? 'space-between' : 'space-between',
-          flexWrap: 'wrap',
-          gap: 2,
-          alignItems: 'center',
-          mb: hideHeader ? 1.5 : 1.5,
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(4, minmax(0, 1fr))' },
+          gap: 1,
+          mb: 1.5,
         }}
       >
-        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          Last generated: {lastGeneratedAt.toLocaleString()}
-        </Typography>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-          {hideHeader && (
-            <Button variant="outlined" size="small" onClick={handleExportCsv}>
-              Export CSV
-            </Button>
-          )}
-          {hideHeader && (
-            <Button variant="contained" size="small" onClick={handleExportPdf}>
-              Export PDF
-            </Button>
-          )}
-          <Button variant="contained" size="small" onClick={handleGenerate} sx={{ minWidth: 150 }}>
-            Generate Report
-          </Button>
-        </Stack>
-      </Box>
-
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5, mb: 2.5 }}>
-        <FormControl fullWidth>
-          <InputLabel>Report Type</InputLabel>
-          <Select value={reportType} label="Report Type" onChange={(event) => setReportType(String(event.target.value))}>
-            {reportTypes.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <TextField
-          label="From"
-          type="date"
-          value={dateFrom}
-          onChange={(event) => setDateFrom(event.target.value)}
-          fullWidth
-          InputLabelProps={{ shrink: true }}
-          size="small"
-        />
-        <TextField
-          label="To"
-          type="date"
-          value={dateTo}
-          onChange={(event) => setDateTo(event.target.value)}
-          fullWidth
-          InputLabelProps={{ shrink: true }}
-          size="small"
-        />
-        {filters.map((filter) => (
-          <FormControl key={filter.key} fullWidth>
-            <InputLabel>{filter.label}</InputLabel>
-            <Select
-              value={filterValues[filter.key] || ''}
-              label={filter.label}
-              onChange={(event) =>
-                setFilterValues((prev) => ({
-                  ...prev,
-                  [filter.key]: String(event.target.value),
-                }))
-              }
-              size="small"
-            >
-              {filter.options.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        ))}
-      </Box>
-
-      {reportTypes.find((option) => option.value === reportType)?.description && (
-        <Alert severity="info" sx={{ mb: 2.5 }}>
-          {reportTypes.find((option) => option.value === reportType)?.description}
-        </Alert>
-      )}
-
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(4, minmax(0, 1fr))' }, gap: 1.5, mb: 2.5 }}>
         {previewReport.summaries.map((item) => (
-          <Paper key={item.label} variant="outlined" sx={{ p: 1.5, borderRadius: 2, minHeight: 100, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-            <Box>
-              <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                {item.label}
-              </Typography>
-              <Typography sx={{ fontSize: '1.4rem', fontWeight: 800, mt: 0.75, lineHeight: 1.05 }}>
-                {item.value}
-              </Typography>
-            </Box>
-            <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.75 }}>
-              {item.helper || 'Live preview from current dashboard data'}
+          <Paper
+            key={item.label}
+            sx={{
+              p: 1.25,
+              borderRadius: 2.5,
+              border: '1px solid',
+              borderColor: 'divider',
+              boxShadow: 'none',
+            }}
+          >
+            <Typography sx={{ fontSize: '0.72rem', fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              {item.label}
+            </Typography>
+            <Typography sx={{ fontSize: '1.45rem', fontWeight: 800, mt: 0.6, color: 'text.primary' }}>
+              {item.value}
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.6, display: 'block' }}>
+              {item.helper || 'Live preview from current filters'}
             </Typography>
           </Paper>
         ))}
       </Box>
 
-      <Paper variant="outlined" sx={{ borderRadius: 2, mb: 2.5, overflow: 'hidden' }}>
+      <Paper
+        sx={{
+          mb: 1.5,
+          borderRadius: 3,
+          overflow: 'hidden',
+          border: '1px solid',
+          borderColor: 'divider',
+          boxShadow: 'none',
+        }}
+      >
         <Box sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-            {previewReport.title}
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          <Typography sx={{ fontWeight: 800, color: 'text.primary' }}>Preview</Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
             {previewReport.subtitle || description}
           </Typography>
+          <Typography variant="caption" sx={{ color: alpha(theme.palette.text.secondary, 0.9), display: 'block', mt: 0.6 }}>
+            {previewReport.rows.length} rows - {previewReport.columns.length} columns
+          </Typography>
         </Box>
-        <TableContainer sx={{ maxHeight: 320 }}>
-          <Table size="small">
+
+        <TableContainer sx={{ maxHeight: 420 }}>
+          <Table stickyHeader size="small">
             <TableHead>
               <TableRow>
                 {previewReport.columns.map((column) => (
-                  <TableCell key={column.key} sx={{ fontWeight: 700, py: 1, px: 1.25 }}>
+                  <TableCell
+                    key={column.key}
+                    sx={{
+                      fontWeight: 700,
+                      py: 0.9,
+                      px: 1.2,
+                      bgcolor: theme.palette.background.paper,
+                      borderBottom: '1px solid',
+                      borderColor: 'divider',
+                    }}
+                  >
                     {column.label}
                   </TableCell>
                 ))}
@@ -342,7 +482,7 @@ export const DashboardReportSection: React.FC<DashboardReportSectionProps> = ({
             <TableBody>
               {previewReport.rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={Math.max(1, previewReport.columns.length)} sx={{ py: 1.5, px: 1.25 }}>
+                  <TableCell colSpan={Math.max(1, previewReport.columns.length)} sx={{ py: 2.4, px: 1.2 }}>
                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                       No rows match the current report filters.
                     </Typography>
@@ -352,7 +492,7 @@ export const DashboardReportSection: React.FC<DashboardReportSectionProps> = ({
                 previewReport.rows.map((row, index) => (
                   <TableRow key={`${previewReport.title}-${index}`}>
                     {previewReport.columns.map((column) => (
-                      <TableCell key={column.key} sx={{ py: 1, px: 1.25 }}>
+                      <TableCell key={column.key} sx={{ py: 0.9, px: 1.2 }}>
                         {row[column.key] ?? '-'}
                       </TableCell>
                     ))}
@@ -364,10 +504,16 @@ export const DashboardReportSection: React.FC<DashboardReportSectionProps> = ({
         </TableContainer>
       </Paper>
 
-      <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-          Key Insights
-        </Typography>
+      <Paper
+        sx={{
+          p: 1.5,
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: 'divider',
+          boxShadow: 'none',
+        }}
+      >
+        <Typography sx={{ fontWeight: 800, color: 'text.primary', mb: 1 }}>Key insights</Typography>
         <Stack spacing={0.75}>
           {previewReport.insights.map((insight, index) => (
             <Typography key={`${insight}-${index}`} variant="body2" sx={{ color: 'text.secondary' }}>
@@ -376,6 +522,6 @@ export const DashboardReportSection: React.FC<DashboardReportSectionProps> = ({
           ))}
         </Stack>
       </Paper>
-    </Paper>
+    </Box>
   )
 }

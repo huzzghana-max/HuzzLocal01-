@@ -300,17 +300,37 @@ async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS guest_booking_verifications (
         id INT AUTO_INCREMENT PRIMARY KEY,
         service_id INT NOT NULL,
-        email VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NULL,
+        phone VARCHAR(20) NULL,
         name VARCHAR(255),
         verification_code VARCHAR(6) NOT NULL,
         expires_at DATETIME NOT NULL,
         consumed_at DATETIME NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE,
-        INDEX idx_guest_booking_verifications_lookup (service_id, email, verification_code),
+        INDEX idx_guest_booking_verifications_email_lookup (service_id, email, verification_code),
+        INDEX idx_guest_booking_verifications_phone_lookup (service_id, phone, verification_code),
         INDEX idx_guest_booking_verifications_expiry (expires_at)
       )
     `)
+
+    const [guestBookingPhoneColumn] = await dbConnection.execute(`SHOW COLUMNS FROM guest_booking_verifications LIKE 'phone'`)
+    if (guestBookingPhoneColumn.length === 0) {
+      await dbConnection.execute(`ALTER TABLE guest_booking_verifications ADD COLUMN phone VARCHAR(20) NULL AFTER email`)
+    }
+
+    const [guestBookingEmailColumn] = await dbConnection.execute(`SHOW COLUMNS FROM guest_booking_verifications LIKE 'email'`)
+    if (guestBookingEmailColumn.length > 0 && guestBookingEmailColumn[0].Null === 'NO') {
+      await dbConnection.execute(`ALTER TABLE guest_booking_verifications MODIFY COLUMN email VARCHAR(255) NULL`)
+    }
+
+    const [guestBookingPhoneIndex] = await dbConnection.execute(`SHOW INDEX FROM guest_booking_verifications WHERE Key_name = 'idx_guest_booking_verifications_phone_lookup'`)
+    if (guestBookingPhoneIndex.length === 0) {
+      await dbConnection.execute(`
+        ALTER TABLE guest_booking_verifications
+        ADD INDEX idx_guest_booking_verifications_phone_lookup (service_id, phone, verification_code)
+      `)
+    }
 
     // Vendor availability calendar blocks (manual or external sync + booking holds)
     await dbConnection.execute(`
@@ -343,6 +363,74 @@ async function initializeDatabase() {
         priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `)
+
+    await dbConnection.execute(`
+      CREATE TABLE IF NOT EXISTS support_categories (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL UNIQUE,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    await dbConnection.execute(`
+      CREATE TABLE IF NOT EXISTS support_messages (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        ticket_id INT NOT NULL,
+        user_id INT NOT NULL,
+        message TEXT NOT NULL,
+        attachment_path VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `)
+
+    await dbConnection.execute(`
+      CREATE TABLE IF NOT EXISTS ticket_assignments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        ticket_id INT NOT NULL,
+        assigned_to INT,
+        assigned_by INT,
+        assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        unassigned_at TIMESTAMP NULL,
+        FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE CASCADE,
+        FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
+        FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE SET NULL
+      )
+    `)
+
+    await dbConnection.execute(`
+      CREATE TABLE IF NOT EXISTS ticket_refunds (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        ticket_sale_id INT NOT NULL,
+        refund_reason VARCHAR(255),
+        refund_amount DECIMAL(12, 2) NOT NULL,
+        refund_status ENUM('pending', 'approved', 'rejected', 'completed') DEFAULT 'pending',
+        requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        processed_at TIMESTAMP NULL,
+        processed_by INT,
+        notes TEXT,
+        FOREIGN KEY (ticket_sale_id) REFERENCES ticket_sales(id) ON DELETE CASCADE,
+        FOREIGN KEY (processed_by) REFERENCES users(id) ON DELETE SET NULL
+      )
+    `)
+
+    await dbConnection.execute(`
+      CREATE TABLE IF NOT EXISTS ticket_waitlist (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        ticket_id INT NOT NULL,
+        user_id INT NOT NULL,
+        quantity INT NOT NULL,
+        position INT,
+        requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        notified_at TIMESTAMP NULL,
+        purchased BOOLEAN DEFAULT FALSE,
+        UNIQUE KEY unique_ticket_user (ticket_id, user_id),
+        FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `)
@@ -381,6 +469,96 @@ async function initializeDatabase() {
     const [guestPhoneColumn] = await dbConnection.execute(`SHOW COLUMNS FROM service_bookings LIKE 'guest_phone'`)
     if (guestPhoneColumn.length === 0) {
       await dbConnection.execute(`ALTER TABLE service_bookings ADD COLUMN guest_phone VARCHAR(50) NULL AFTER guest_email`)
+    }
+
+    const [supportCategoryIdColumn] = await dbConnection.execute(`SHOW COLUMNS FROM support_tickets LIKE 'category_id'`)
+    if (supportCategoryIdColumn.length === 0) {
+      await dbConnection.execute(`ALTER TABLE support_tickets ADD COLUMN category_id INT NULL AFTER user_id`)
+    }
+
+    const [supportDescriptionColumn] = await dbConnection.execute(`SHOW COLUMNS FROM support_tickets LIKE 'description'`)
+    if (supportDescriptionColumn.length === 0) {
+      await dbConnection.execute(`ALTER TABLE support_tickets ADD COLUMN description TEXT NULL AFTER subject`)
+    }
+
+    const [supportAssignedToColumn] = await dbConnection.execute(`SHOW COLUMNS FROM support_tickets LIKE 'assigned_to'`)
+    if (supportAssignedToColumn.length === 0) {
+      await dbConnection.execute(`ALTER TABLE support_tickets ADD COLUMN assigned_to INT NULL AFTER priority`)
+    }
+
+    const [supportSlaHoursColumn] = await dbConnection.execute(`SHOW COLUMNS FROM support_tickets LIKE 'sla_response_hours'`)
+    if (supportSlaHoursColumn.length === 0) {
+      await dbConnection.execute(`ALTER TABLE support_tickets ADD COLUMN sla_response_hours INT DEFAULT 24 AFTER assigned_to`)
+    }
+
+    const [supportFirstResponseColumn] = await dbConnection.execute(`SHOW COLUMNS FROM support_tickets LIKE 'first_response_at'`)
+    if (supportFirstResponseColumn.length === 0) {
+      await dbConnection.execute(`ALTER TABLE support_tickets ADD COLUMN first_response_at TIMESTAMP NULL AFTER sla_response_hours`)
+    }
+
+    const [supportResolvedAtColumn] = await dbConnection.execute(`SHOW COLUMNS FROM support_tickets LIKE 'resolved_at'`)
+    if (supportResolvedAtColumn.length === 0) {
+      await dbConnection.execute(`ALTER TABLE support_tickets ADD COLUMN resolved_at TIMESTAMP NULL AFTER first_response_at`)
+    }
+
+    const [supportRespondMinutesColumn] = await dbConnection.execute(`SHOW COLUMNS FROM support_tickets LIKE 'time_to_respond_minutes'`)
+    if (supportRespondMinutesColumn.length === 0) {
+      await dbConnection.execute(`ALTER TABLE support_tickets ADD COLUMN time_to_respond_minutes INT NULL AFTER resolved_at`)
+    }
+
+    const [supportResolveMinutesColumn] = await dbConnection.execute(`SHOW COLUMNS FROM support_tickets LIKE 'time_to_resolve_minutes'`)
+    if (supportResolveMinutesColumn.length === 0) {
+      await dbConnection.execute(`ALTER TABLE support_tickets ADD COLUMN time_to_resolve_minutes INT NULL AFTER time_to_respond_minutes`)
+    }
+
+    const [supportSlaBreachedColumn] = await dbConnection.execute(`SHOW COLUMNS FROM support_tickets LIKE 'sla_breached'`)
+    if (supportSlaBreachedColumn.length === 0) {
+      await dbConnection.execute(`ALTER TABLE support_tickets ADD COLUMN sla_breached BOOLEAN DEFAULT FALSE AFTER time_to_resolve_minutes`)
+    }
+
+    const [ticketSalesCancelledAtColumn] = await dbConnection.execute(`SHOW COLUMNS FROM ticket_sales LIKE 'cancelled_at'`)
+    if (ticketSalesCancelledAtColumn.length === 0) {
+      await dbConnection.execute(`ALTER TABLE ticket_sales ADD COLUMN cancelled_at TIMESTAMP NULL AFTER validated`)
+    }
+
+    const [ticketSalesCancellationReasonColumn] = await dbConnection.execute(`SHOW COLUMNS FROM ticket_sales LIKE 'cancellation_reason'`)
+    if (ticketSalesCancellationReasonColumn.length === 0) {
+      await dbConnection.execute(`ALTER TABLE ticket_sales ADD COLUMN cancellation_reason VARCHAR(255) NULL AFTER cancelled_at`)
+    }
+
+    const [ticketSalesIsRefundedColumn] = await dbConnection.execute(`SHOW COLUMNS FROM ticket_sales LIKE 'is_refunded'`)
+    if (ticketSalesIsRefundedColumn.length === 0) {
+      await dbConnection.execute(`ALTER TABLE ticket_sales ADD COLUMN is_refunded BOOLEAN DEFAULT FALSE AFTER cancellation_reason`)
+    }
+
+    const [ticketSalesValidatedAtColumn] = await dbConnection.execute(`SHOW COLUMNS FROM ticket_sales LIKE 'validated_at'`)
+    if (ticketSalesValidatedAtColumn.length === 0) {
+      await dbConnection.execute(`ALTER TABLE ticket_sales ADD COLUMN validated_at TIMESTAMP NULL AFTER is_refunded`)
+    }
+
+    const [ticketSalesValidatedByColumn] = await dbConnection.execute(`SHOW COLUMNS FROM ticket_sales LIKE 'validated_by'`)
+    if (ticketSalesValidatedByColumn.length === 0) {
+      await dbConnection.execute(`ALTER TABLE ticket_sales ADD COLUMN validated_by INT NULL AFTER validated_at`)
+    }
+
+    const [ticketSalesValidationAttemptsColumn] = await dbConnection.execute(`SHOW COLUMNS FROM ticket_sales LIKE 'validation_attempts'`)
+    if (ticketSalesValidationAttemptsColumn.length === 0) {
+      await dbConnection.execute(`ALTER TABLE ticket_sales ADD COLUMN validation_attempts INT DEFAULT 0 AFTER validated_by`)
+    }
+
+    const defaultSupportCategories = [
+      ['Account', 'Account access, sign-in, and profile issues'],
+      ['Bookings', 'Questions about service bookings and scheduling'],
+      ['Payments', 'Payment, payout, and billing support'],
+      ['Events', 'Event creation, tickets, and attendee support'],
+      ['Technical', 'Bugs, broken pages, and unexpected behavior'],
+    ]
+
+    for (const [name, description] of defaultSupportCategories) {
+      await dbConnection.execute(
+        'INSERT IGNORE INTO support_categories (name, description) VALUES (?, ?)',
+        [name, description],
+      )
     }
 
     // Create default admin account if missing
@@ -424,6 +602,14 @@ async function registerUser(name, email, password, role = 'organizer') {
       'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
       [name, email, hashedPassword, role]
     )
+
+    if (role === 'provider') {
+      await connection.execute(
+        `INSERT INTO service_providers (user_id, business_name, service_type)
+         VALUES (?, ?, ?)`,
+        [result.insertId, `${name} Services`, 'General']
+      )
+    }
     
     const user = { id: result.insertId, name, email, role }
     const token = jwt.sign(user, JWT_SECRET, { expiresIn: '7d' })

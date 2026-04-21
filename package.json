@@ -17,6 +17,7 @@
     "@mui/material": "^7.3.6",
     "@mui/x-charts": "^8.27.0",
     "axios": "^1.13.2",
+    "html2pdf.js": "^0.14.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-paystack": "^6.0.0",

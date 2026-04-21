@@ -19,6 +19,8 @@ import ProviderReports from './pages/dashboards/ProviderReports'
 import AdminReports from './pages/dashboards/AdminReports'
 import AdminServiceApproval from './pages/AdminServiceApproval'
 import AdminTicketReports from './pages/AdminTicketReports'
+import AdminTicketDashboard from './pages/AdminTicketDashboard'
+import AdminTicketDetail from './pages/AdminTicketDetail'
 import AdminPayoutRequests from './pages/AdminPayoutRequests'
 import EventsNearYou from './pages/EventsNearYou'
 import CreateEvent from './pages/CreateEvent'
@@ -149,6 +151,22 @@ function App() {
             element={
               <ProtectedRoute requiredRole="admin">
                 <AdminTicketReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/support-tickets"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminTicketDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/support-tickets/:ticketId"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminTicketDetail />
               </ProtectedRoute>
             }
           />

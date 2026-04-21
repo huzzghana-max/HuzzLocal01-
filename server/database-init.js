@@ -147,17 +147,20 @@ async function initializeDatabase() {
       CREATE TABLE events (
         id INT AUTO_INCREMENT PRIMARY KEY,
         organizer_id INT NOT NULL,
-        event_name VARCHAR(255) NOT NULL,
+        name VARCHAR(255) NOT NULL,
         description TEXT,
-        event_date DATETIME,
+        image_url VARCHAR(255),
+        date DATETIME NOT NULL,
         location VARCHAR(255),
-        event_type VARCHAR(100),
-        status ENUM('planning', 'scheduled', 'ongoing', 'completed', 'cancelled') DEFAULT 'planning',
+        type VARCHAR(100),
+        guest_count INT,
+        budget DECIMAL(12, 2),
+        status ENUM('pending','draft', 'published', 'confirmed', 'ongoing', 'completed', 'cancelled') DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (organizer_id) REFERENCES users(id) ON DELETE CASCADE,
         INDEX idx_organizer_id (organizer_id),
-        INDEX idx_event_date (event_date)
+        INDEX idx_date (date)
       )
     `);
     console.log('  ✓ events table');

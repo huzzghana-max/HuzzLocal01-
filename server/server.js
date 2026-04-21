@@ -38,6 +38,7 @@ try {
 }
 const multer = require('multer')
 const bcrypt = require('bcryptjs')
+const axios = require('axios')
 const rateLimit = require('express-rate-limit')
 const { sendMail, transporter } = require('./mailer')
 const { getPool, initializeDatabase, registerUser, loginUser } = require('./db')
@@ -83,7 +84,9 @@ function getPoolOrThrow() {
 }
 
 let servicesOwnerColumnCache = null
+let servicesOwnerConfigCache = null
 let serviceBookingsOwnerColumnCache = null
+let messagesRecipientColumnCache = null
 
 async function getServicesOwnerColumn(pool) {
   if (servicesOwnerColumnCache) return servicesOwnerColumnCache
@@ -92,11 +95,112 @@ async function getServicesOwnerColumn(pool) {
   return servicesOwnerColumnCache
 }
 
+async function getServicesOwnerConfig(pool) {
+  if (servicesOwnerConfigCache) return servicesOwnerConfigCache
+
+  const ownerColumn = await getServicesOwnerColumn(pool)
+  const [references] = await pool.execute(
+    `SELECT REFERENCED_TABLE_NAME as referencedTable
+     FROM information_schema.KEY_COLUMN_USAGE
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'services'
+       AND COLUMN_NAME = ?
+       AND REFERENCED_TABLE_NAME IS NOT NULL
+     LIMIT 1`,
+    [ownerColumn],
+  )
+
+  const referencedTable = references[0]?.referencedTable
+    || (ownerColumn === 'provider_id' ? 'service_providers' : 'users')
+
+  servicesOwnerConfigCache = {
+    ownerColumn,
+    referencedTable,
+    usesServiceProviderOwner: referencedTable === 'service_providers',
+  }
+  return servicesOwnerConfigCache
+}
+
+async function ensureServiceProviderRecord(pool, userId) {
+  const [existing] = await pool.execute(
+    'SELECT id FROM service_providers WHERE user_id = ? LIMIT 1',
+    [userId],
+  )
+  if (existing.length > 0) return existing[0].id
+
+  const [users] = await pool.execute(
+    'SELECT name FROM users WHERE id = ? LIMIT 1',
+    [userId],
+  )
+  if (users.length === 0) {
+    throw new Error('Provider user not found')
+  }
+
+  const businessName = users[0].name ? `${users[0].name} Services` : 'Provider Services'
+  const [result] = await pool.execute(
+    `INSERT INTO service_providers (user_id, business_name, service_type)
+     VALUES (?, ?, ?)`,
+    [userId, businessName, 'General'],
+  )
+
+  return result.insertId
+}
+
+async function resolveServicesOwnerValue(pool, userId) {
+  const ownerConfig = await getServicesOwnerConfig(pool)
+  if (ownerConfig.usesServiceProviderOwner) {
+    return ensureServiceProviderRecord(pool, userId)
+  }
+  return userId
+}
+
+function getServiceOwnerUserIdSelect(ownerConfig, serviceAlias = 's', providerAlias = 'sp') {
+  return ownerConfig.usesServiceProviderOwner
+    ? `${providerAlias}.user_id`
+    : `${serviceAlias}.${ownerConfig.ownerColumn}`
+}
+
+function getServiceOwnerUserJoins(ownerConfig, serviceAlias = 's', userAlias = 'u', providerAlias = 'sp') {
+  if (ownerConfig.usesServiceProviderOwner) {
+    return `JOIN service_providers ${providerAlias} ON ${serviceAlias}.${ownerConfig.ownerColumn} = ${providerAlias}.id
+      JOIN users ${userAlias} ON ${providerAlias}.user_id = ${userAlias}.id`
+  }
+
+  return `JOIN users ${userAlias} ON ${serviceAlias}.${ownerConfig.ownerColumn} = ${userAlias}.id
+    LEFT JOIN service_providers ${providerAlias} ON ${providerAlias}.user_id = ${userAlias}.id`
+}
+
+async function getServicesColumnSet(pool) {
+  const [serviceColumns] = await pool.execute('SHOW COLUMNS FROM services')
+  return new Set(serviceColumns.map((column) => column.Field))
+}
+
+async function getServiceNameColumn(pool) {
+  const availableColumns = await getServicesColumnSet(pool)
+  if (availableColumns.has('title')) return 'title'
+  if (availableColumns.has('name')) return 'name'
+  throw new Error('Services table is missing both title and name columns')
+}
+
+async function getServiceTitleExpression(pool, alias = 's') {
+  const availableColumns = await getServicesColumnSet(pool)
+  if (availableColumns.has('title')) return `${alias}.title`
+  if (availableColumns.has('name')) return `${alias}.name`
+  return "''"
+}
+
 async function getServiceBookingsOwnerColumn(pool) {
   if (serviceBookingsOwnerColumnCache) return serviceBookingsOwnerColumnCache
   const [vendorColumn] = await pool.execute("SHOW COLUMNS FROM service_bookings LIKE 'vendor_id'")
   serviceBookingsOwnerColumnCache = vendorColumn.length > 0 ? 'vendor_id' : 'provider_id'
   return serviceBookingsOwnerColumnCache
+}
+
+async function getMessagesRecipientColumn(pool) {
+  if (messagesRecipientColumnCache) return messagesRecipientColumnCache
+  const [receiverColumn] = await pool.execute("SHOW COLUMNS FROM messages LIKE 'receiver_id'")
+  messagesRecipientColumnCache = receiverColumn.length > 0 ? 'receiver_id' : 'recipient_id'
+  return messagesRecipientColumnCache
 }
 
 function pad2(value) {
@@ -144,6 +248,41 @@ function getRequestAuthUser(req) {
 
 function generateVerificationCode() {
   return String(Math.floor(100000 + Math.random() * 900000))
+}
+
+function normalizePhoneNumber(value) {
+  const digits = String(value || '').replace(/[^\d]/g, '')
+  if (!digits) return null
+  if (digits.startsWith('233') && digits.length === 12) return `0${digits.slice(3)}`
+  if (digits.startsWith('0') && digits.length === 10) return digits
+  if (digits.length === 9) return `0${digits}`
+  return null
+}
+
+async function sendBookingVerificationSms({ phone, serviceTitle, verificationCode }) {
+  const apiKey = process.env.MNOTIFY_API_KEY
+  const sender = process.env.MNOTIFY_SENDER_ID || process.env.MNOTIFY_SENDER || 'mNotify'
+
+  if (!apiKey) {
+    throw new Error('MNotify API key is not configured')
+  }
+
+  const url = `https://api.mnotify.com/api/sms/quick?key=${encodeURIComponent(apiKey)}`
+  const payload = {
+    recipient: [phone],
+    sender,
+    message: `Your HUZZ verification code for ${serviceTitle} is ${verificationCode}. It expires in 10 minutes.`,
+    is_schedule: false,
+    schedule_date: '',
+    sms_type: 'otp',
+  }
+
+  const response = await axios.post(url, payload, {
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    timeout: 15000,
+  })
+
+  return response.data
 }
 
 async function ensurePayoutRequestsTable() {
@@ -347,6 +486,7 @@ const verifyToken = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-this')
     console.log('Token decoded:', decoded)
+    req.user = decoded
     req.userId = decoded.id
     req.userRole = decoded.role
     next()
@@ -866,34 +1006,49 @@ app.get('/api/vendors', async (req, res) => {
 app.get('/api/approved-services', async (req, res) => {
   try {
     const pool = getPoolOrThrow()
-    const serviceOwnerColumn = await getServicesOwnerColumn(pool)
+    const ownerConfig = await getServicesOwnerConfig(pool)
+    const ownerUserIdSelect = getServiceOwnerUserIdSelect(ownerConfig)
+    const ownerJoins = getServiceOwnerUserJoins(ownerConfig)
+    const serviceTitleExpression = await getServiceTitleExpression(pool)
+    const serviceColumns = await getServicesColumnSet(pool)
+    const serviceImageExpression = serviceColumns.has('image')
+      ? 's.image'
+      : serviceColumns.has('image_url')
+        ? 's.image_url'
+        : 'NULL'
+    const optionalFields = [
+      'phone',
+      'location',
+      'latitude',
+      'longitude',
+      'duration',
+      'availability',
+      'is_approved',
+      'created_at',
+    ]
+    const selectedOptionalFields = optionalFields
+      .filter((field) => serviceColumns.has(field))
+      .map((field) => `s.${field}`)
+      .join(', ')
     const [services] = await pool.execute(`
       SELECT 
         s.id, 
-        s.${serviceOwnerColumn} as vendor_id, 
-        s.title, 
+        ${ownerUserIdSelect} as vendor_id, 
+        ${serviceTitleExpression} as title, 
         s.description, 
         s.category, 
-        s.price, 
-        s.phone,
-        s.location,
-        s.latitude,
-        s.longitude,
-        s.image, 
-        s.duration, 
-        s.availability, 
-        s.is_approved,
-        s.created_at,
+        s.price
+        ${selectedOptionalFields ? `, ${selectedOptionalFields}` : ''},
+        ${serviceImageExpression} as image,
         sp.rating as vendor_rating,
         sp.total_ratings as vendor_total_ratings,
         u.id as user_id,
         u.name as vendor_name, 
         u.email as vendor_email
       FROM services s
-      JOIN users u ON s.${serviceOwnerColumn} = u.id
-      LEFT JOIN service_providers sp ON sp.user_id = u.id
-      WHERE s.is_approved = TRUE
-      ORDER BY s.created_at DESC
+      ${ownerJoins}
+      WHERE ${serviceColumns.has('approval_status') ? "COALESCE(s.approval_status, 'pending') = 'approved'" : 's.is_approved = TRUE'}
+      ORDER BY ${serviceColumns.has('created_at') ? 's.created_at DESC' : 's.id DESC'}
     `)
     
     res.json(services)
@@ -1248,15 +1403,37 @@ app.get('/api/vendor/services', verifyToken, async (req, res) => {
   try {
     const pool = getPoolOrThrow()
     const userId = req.userId
-    const serviceOwnerColumn = await getServicesOwnerColumn(pool)
-    console.log('Fetching services for user:', userId)
+    const ownerConfig = await getServicesOwnerConfig(pool)
+    const serviceOwnerValue = await resolveServicesOwnerValue(pool, userId)
+    const serviceTitleExpression = await getServiceTitleExpression(pool)
+    const serviceColumns = await getServicesColumnSet(pool)
+    const serviceImageExpression = serviceColumns.has('image')
+      ? 's.image'
+      : serviceColumns.has('image_url')
+        ? 's.image_url'
+        : 'NULL'
+    const optionalFields = [
+      'phone',
+      'location',
+      'latitude',
+      'longitude',
+      'duration',
+      'availability',
+      'is_approved',
+      'approval_status',
+    ]
+    const selectedOptionalFields = optionalFields
+      .filter((field) => serviceColumns.has(field))
+      .join(', ')
+    console.log('Fetching services for user:', userId, 'owner value:', serviceOwnerValue)
 
     const [results] = await pool.query(
-      `SELECT id, title, description, category, price, image, phone, location, latitude, longitude, duration, availability, is_approved, approval_status
-       FROM services
-       WHERE ${serviceOwnerColumn} = ?
-       ORDER BY created_at DESC`,
-      [userId]
+      `SELECT s.id, ${serviceTitleExpression} as title, s.description, s.category, s.price, ${serviceImageExpression} as image
+       ${selectedOptionalFields ? `, ${selectedOptionalFields}` : ''}
+       FROM services s
+       WHERE s.${ownerConfig.ownerColumn} = ?
+       ORDER BY ${serviceColumns.has('created_at') ? 's.created_at DESC' : 's.id DESC'}`,
+      [serviceOwnerValue]
     )
     console.log('Services found:', results?.length || 0)
     res.json(results || [])
@@ -1271,7 +1448,10 @@ app.post('/api/vendor/services', verifyToken, upload.single('image'), async (req
   try {
     const pool = getPoolOrThrow()
     const userId = req.userId
-    const serviceOwnerColumn = await getServicesOwnerColumn(pool)
+    const ownerConfig = await getServicesOwnerConfig(pool)
+    const serviceOwnerValue = await resolveServicesOwnerValue(pool, userId)
+    const serviceNameColumn = await getServiceNameColumn(pool)
+    const serviceColumns = await getServicesColumnSet(pool)
     const { title, description, category, price, duration, availability, phone, location, latitude, longitude } = req.body
     console.log('Create service - body fields:', { title, description, category, price, duration, availability, phone, location, latitude, longitude })
     console.log('Create service - uploaded file:', req.file ? { filename: req.file.filename, mimetype: req.file.mimetype, size: req.file.size } : null)
@@ -1282,10 +1462,58 @@ app.post('/api/vendor/services', verifyToken, upload.single('image'), async (req
 
     const imageUrl = req.file ? `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}` : null
 
+    const insertColumns = [ownerConfig.ownerColumn, serviceNameColumn, 'description', 'category', 'price']
+    const insertValues = [serviceOwnerValue, title, description, category, price]
+
+    if (serviceColumns.has('image')) {
+      insertColumns.push('image')
+      insertValues.push(imageUrl)
+    } else if (serviceColumns.has('image_url')) {
+      insertColumns.push('image_url')
+      insertValues.push(imageUrl)
+    }
+    if (serviceColumns.has('phone')) {
+      insertColumns.push('phone')
+      insertValues.push(phone || null)
+    }
+    if (serviceColumns.has('location')) {
+      insertColumns.push('location')
+      insertValues.push(location || null)
+    }
+    if (serviceColumns.has('latitude')) {
+      insertColumns.push('latitude')
+      insertValues.push(latitude || null)
+    }
+    if (serviceColumns.has('longitude')) {
+      insertColumns.push('longitude')
+      insertValues.push(longitude || null)
+    }
+    if (serviceColumns.has('duration')) {
+      insertColumns.push('duration')
+      insertValues.push(duration || null)
+    }
+    if (serviceColumns.has('availability')) {
+      insertColumns.push('availability')
+      insertValues.push(availability || null)
+    }
+    if (serviceColumns.has('is_approved')) {
+      insertColumns.push('is_approved')
+      insertValues.push(false)
+    }
+    if (serviceColumns.has('approval_status')) {
+      insertColumns.push('approval_status')
+      insertValues.push('pending')
+    }
+    if (serviceColumns.has('created_at')) {
+      insertColumns.push('created_at')
+      insertValues.push(new Date())
+    }
+
+    const placeholders = insertColumns.map(() => '?').join(', ')
     const [result] = await pool.query(
-      `INSERT INTO services (${serviceOwnerColumn}, title, description, category, price, image, phone, location, latitude, longitude, duration, availability, is_approved, approval_status, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE, ?, NOW())`,
-      [userId, title, description, category, price, imageUrl, phone || null, location || null, latitude || null, longitude || null, duration, availability, 'pending']
+      `INSERT INTO services (${insertColumns.join(', ')})
+       VALUES (${placeholders})`,
+      insertValues
     )
     
     console.log('Service created with ID:', result.insertId)
@@ -1316,7 +1544,10 @@ app.put('/api/vendor/services/:id', verifyToken, upload.single('image'), async (
   try {
     const pool = getPoolOrThrow()
     const userId = req.userId
-    const serviceOwnerColumn = await getServicesOwnerColumn(pool)
+    const ownerConfig = await getServicesOwnerConfig(pool)
+    const serviceOwnerValue = await resolveServicesOwnerValue(pool, userId)
+    const serviceNameColumn = await getServiceNameColumn(pool)
+    const serviceColumns = await getServicesColumnSet(pool)
     const serviceId = parseInt(req.params.id)
     const { title, description, category, price, duration, availability, phone, location, latitude, longitude } = req.body
     console.log('Update service id=', serviceId, '- body fields:', { title, description, category, price, duration, availability, phone, location, latitude, longitude })
@@ -1327,36 +1558,50 @@ app.put('/api/vendor/services/:id', verifyToken, upload.single('image'), async (
     }
 
     // Check ownership
-    const [results] = await pool.query(`SELECT ${serviceOwnerColumn} as service_owner_id FROM services WHERE id = ?`, [serviceId])
+    const [results] = await pool.query(`SELECT ${ownerConfig.ownerColumn} as service_owner_id FROM services WHERE id = ?`, [serviceId])
     if (results.length === 0) {
       return res.status(404).json({ message: 'Service not found' })
     }
-    if (results[0].service_owner_id !== userId) {
+    if (Number(results[0].service_owner_id) !== Number(serviceOwnerValue)) {
       return res.status(403).json({ message: 'Unauthorized' })
     }
 
-    let updateQuery = 'UPDATE services SET title = ?, description = ?, category = ?, price = ?, duration = ?, availability = ?'
-    let updateParams = [title, description, category, price, duration, availability]
+    let updateQuery = `UPDATE services SET ${serviceNameColumn} = ?, description = ?, category = ?, price = ?`
+    let updateParams = [title, description, category, price]
+
+    if (serviceColumns.has('duration')) {
+      updateQuery += ', duration = ?'
+      updateParams.push(duration || null)
+    }
+    if (serviceColumns.has('availability')) {
+      updateQuery += ', availability = ?'
+      updateParams.push(availability || null)
+    }
 
     if (req.file) {
-      updateQuery += ', image = ?'
-      updateParams.push(`${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`)
+      if (serviceColumns.has('image')) {
+        updateQuery += ', image = ?'
+        updateParams.push(`${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`)
+      } else if (serviceColumns.has('image_url')) {
+        updateQuery += ', image_url = ?'
+        updateParams.push(`${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`)
+      }
     }
 
     // Optional phone/location/coords updates
-    if (typeof phone !== 'undefined') {
+    if (serviceColumns.has('phone') && typeof phone !== 'undefined') {
       updateQuery += ', phone = ?'
       updateParams.push(phone || null)
     }
-    if (typeof location !== 'undefined') {
+    if (serviceColumns.has('location') && typeof location !== 'undefined') {
       updateQuery += ', location = ?'
       updateParams.push(location || null)
     }
-    if (typeof latitude !== 'undefined') {
+    if (serviceColumns.has('latitude') && typeof latitude !== 'undefined') {
       updateQuery += ', latitude = ?'
       updateParams.push(latitude || null)
     }
-    if (typeof longitude !== 'undefined') {
+    if (serviceColumns.has('longitude') && typeof longitude !== 'undefined') {
       updateQuery += ', longitude = ?'
       updateParams.push(longitude || null)
     }
@@ -1377,15 +1622,16 @@ app.delete('/api/vendor/services/:id', verifyToken, async (req, res) => {
   try {
     const pool = getPoolOrThrow()
     const userId = req.userId
-    const serviceOwnerColumn = await getServicesOwnerColumn(pool)
+    const ownerConfig = await getServicesOwnerConfig(pool)
+    const serviceOwnerValue = await resolveServicesOwnerValue(pool, userId)
     const serviceId = parseInt(req.params.id)
 
     // Check ownership
-    const [results] = await pool.query(`SELECT ${serviceOwnerColumn} as service_owner_id FROM services WHERE id = ?`, [serviceId])
+    const [results] = await pool.query(`SELECT ${ownerConfig.ownerColumn} as service_owner_id FROM services WHERE id = ?`, [serviceId])
     if (results.length === 0) {
       return res.status(404).json({ message: 'Service not found' })
     }
-    if (results[0].service_owner_id !== userId) {
+    if (Number(results[0].service_owner_id) !== Number(serviceOwnerValue)) {
       return res.status(403).json({ message: 'Unauthorized' })
     }
 
@@ -1426,13 +1672,14 @@ app.get('/api/messages/:recipientId', verifyToken, async (req, res) => {
     const recipientId = parseInt(req.params.recipientId)
 
     const pool = getPoolOrThrow()
+    const messagesRecipientColumn = await getMessagesRecipientColumn(pool)
     const [messages] = await pool.execute(
       `SELECT m.*, u1.name as sender_name, u2.name as receiver_name 
        FROM messages m
        JOIN users u1 ON m.sender_id = u1.id
-       JOIN users u2 ON m.receiver_id = u2.id
-       WHERE (m.sender_id = ? AND m.receiver_id = ?) 
-          OR (m.sender_id = ? AND m.receiver_id = ?)
+       JOIN users u2 ON m.${messagesRecipientColumn} = u2.id
+       WHERE (m.sender_id = ? AND m.${messagesRecipientColumn} = ?) 
+          OR (m.sender_id = ? AND m.${messagesRecipientColumn} = ?)
        ORDER BY m.created_at ASC`,
       [userId, recipientId, recipientId, userId]
     )
@@ -1450,23 +1697,24 @@ app.get('/api/conversations', verifyToken, async (req, res) => {
     const userId = req.userId
 
     const pool = getPoolOrThrow()
+    const messagesRecipientColumn = await getMessagesRecipientColumn(pool)
     const [conversations] = await pool.execute(
       `SELECT DISTINCT 
-         CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END as user_id,
+         CASE WHEN m.sender_id = ? THEN m.${messagesRecipientColumn} ELSE m.sender_id END as user_id,
          u.name, u.email, u.profile_image,
          (SELECT message FROM messages 
-          WHERE (sender_id = ? AND receiver_id = u.id) 
-             OR (sender_id = u.id AND receiver_id = ?)
+          WHERE (sender_id = ? AND ${messagesRecipientColumn} = u.id) 
+             OR (sender_id = u.id AND ${messagesRecipientColumn} = ?)
           ORDER BY created_at DESC LIMIT 1) as last_message,
          (SELECT created_at FROM messages 
-          WHERE (sender_id = ? AND receiver_id = u.id) 
-             OR (sender_id = u.id AND receiver_id = ?)
+          WHERE (sender_id = ? AND ${messagesRecipientColumn} = u.id) 
+             OR (sender_id = u.id AND ${messagesRecipientColumn} = ?)
           ORDER BY created_at DESC LIMIT 1) as last_message_time,
          (SELECT COUNT(*) FROM messages 
-          WHERE receiver_id = ? AND sender_id = u.id AND is_read = FALSE) as unread_count
+          WHERE ${messagesRecipientColumn} = ? AND sender_id = u.id AND is_read = FALSE) as unread_count
        FROM messages m
-       JOIN users u ON u.id = (CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END)
-       WHERE m.sender_id = ? OR m.receiver_id = ?
+       JOIN users u ON u.id = (CASE WHEN m.sender_id = ? THEN m.${messagesRecipientColumn} ELSE m.sender_id END)
+       WHERE m.sender_id = ? OR m.${messagesRecipientColumn} = ?
        GROUP BY user_id, u.id, u.name, u.email, u.profile_image
        ORDER BY last_message_time DESC`,
       [userId, userId, userId, userId, userId, userId, userId, userId, userId]
@@ -1496,6 +1744,7 @@ app.post('/api/messages', verifyToken, async (req, res) => {
     }
 
     const pool = getPoolOrThrow()
+    const messagesRecipientColumn = await getMessagesRecipientColumn(pool)
     
     // Verify sender exists
     const [senderCheck] = await pool.execute('SELECT id FROM users WHERE id = ?', [senderId])
@@ -1512,7 +1761,7 @@ app.post('/api/messages', verifyToken, async (req, res) => {
     }
 
     const [result] = await pool.execute(
-      `INSERT INTO messages (sender_id, receiver_id, booking_id, message, is_read)
+      `INSERT INTO messages (sender_id, ${messagesRecipientColumn}, booking_id, message, is_read)
        VALUES (?, ?, ?, ?, FALSE)`,
       [senderId, recipientId, bookingId || null, message]
     )
@@ -1544,9 +1793,10 @@ app.put('/api/messages/:conversationUserId/read', async (req, res) => {
     const conversationUserId = parseInt(req.params.conversationUserId)
 
     const pool = getPoolOrThrow()
+    const messagesRecipientColumn = await getMessagesRecipientColumn(pool)
     await pool.execute(
       `UPDATE messages SET is_read = TRUE 
-       WHERE receiver_id = ? AND sender_id = ?`,
+       WHERE ${messagesRecipientColumn} = ? AND sender_id = ?`,
       [userId, conversationUserId]
     )
 
@@ -1733,15 +1983,46 @@ app.get('/api/admin/pending-services', verifyToken, async (req, res) => {
     }
 
     const pool = getPoolOrThrow()
-    const serviceOwnerColumn = await getServicesOwnerColumn(pool)
+    const ownerConfig = await getServicesOwnerConfig(pool)
+    const ownerUserIdSelect = getServiceOwnerUserIdSelect(ownerConfig)
+    const ownerJoins = getServiceOwnerUserJoins(ownerConfig)
+    const [serviceColumns] = await pool.execute('SHOW COLUMNS FROM services')
+    const availableColumns = new Set(serviceColumns.map((column) => column.Field))
+    const serviceTitleExpression = availableColumns.has('title')
+      ? 's.title'
+      : availableColumns.has('name')
+        ? 's.name'
+        : "''"
+    const serviceImageExpression = availableColumns.has('image')
+      ? 's.image'
+      : availableColumns.has('image_url')
+        ? 's.image_url'
+        : 'NULL'
+    const optionalFields = [
+      'duration',
+      'availability',
+      'phone',
+      'location',
+      'created_at',
+      'is_approved',
+      'approval_status',
+    ]
+    const selectedOptionalFields = optionalFields
+      .filter((field) => availableColumns.has(field))
+      .map((field) => `s.${field}`)
+      .join(', ')
+    const pendingFilter = availableColumns.has('approval_status')
+      ? `COALESCE(s.approval_status, 'pending') = 'pending'`
+      : 's.is_approved = FALSE'
     const [services] = await pool.execute(
-      `SELECT s.id, s.${serviceOwnerColumn} as vendor_id, s.title, s.description, s.category, s.price, 
-              s.image, s.duration, s.availability, s.phone, s.location, s.created_at, s.is_approved,
+      `SELECT s.id, ${ownerUserIdSelect} as vendor_id, ${serviceTitleExpression} as title, s.description, s.category, s.price,
+              ${serviceImageExpression} as image
+              ${selectedOptionalFields ? `, ${selectedOptionalFields}` : ''},
               u.name as vendor_name, u.email as vendor_email
        FROM services s
-       JOIN users u ON s.${serviceOwnerColumn} = u.id
-       WHERE s.is_approved = FALSE
-       ORDER BY s.created_at DESC`
+       ${ownerJoins}
+       WHERE ${pendingFilter}
+       ORDER BY ${availableColumns.has('created_at') ? 's.created_at DESC' : 's.id DESC'}`
     )
 
     res.json(services)
@@ -1812,11 +2093,23 @@ app.get('/api/vendor-services/:vendorId', async (req, res) => {
   try {
     const { vendorId } = req.params
     const pool = getPoolOrThrow()
-    const serviceOwnerColumn = await getServicesOwnerColumn(pool)
-    const [services] = await pool.execute(
-      `SELECT * FROM services WHERE ${serviceOwnerColumn} = ? AND approval_status = ? ORDER BY created_at DESC`,
-      [vendorId, 'approved']
-    )
+    const ownerConfig = await getServicesOwnerConfig(pool)
+    let services
+    if (ownerConfig.usesServiceProviderOwner) {
+      ;[services] = await pool.execute(
+        `SELECT s.*
+         FROM services s
+         JOIN service_providers sp ON s.${ownerConfig.ownerColumn} = sp.id
+         WHERE sp.user_id = ? AND s.approval_status = ?
+         ORDER BY s.created_at DESC`,
+        [vendorId, 'approved']
+      )
+    } else {
+      ;[services] = await pool.execute(
+        `SELECT * FROM services WHERE ${ownerConfig.ownerColumn} = ? AND approval_status = ? ORDER BY created_at DESC`,
+        [vendorId, 'approved']
+      )
+    }
     res.json(services)
   } catch (error) {
     console.error('Get vendor services error:', error.message)
@@ -2531,23 +2824,26 @@ app.post('/api/events/:eventId/confirm-payment', verifyToken, async (req, res) =
   }
 })
 
-app.post('/api/service-bookings/verify-email', async (req, res) => {
+async function sendServiceBookingCode(req, res) {
   try {
-    const { service_id, email, name } = req.body
+    const { service_id, phone, name } = req.body
 
-    if (!service_id || !email) {
-      return res.status(400).json({ message: 'Service ID and email are required' })
+    if (!service_id || !phone) {
+      return res.status(400).json({ message: 'Service ID and phone number are required' })
     }
 
-    const normalizedEmail = String(email).trim().toLowerCase()
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(normalizedEmail)) {
-      return res.status(400).json({ message: 'Please enter a valid email address' })
+    const normalizedPhone = normalizePhoneNumber(phone)
+    if (!normalizedPhone) {
+      return res.status(400).json({ message: 'Please enter a valid phone number' })
     }
 
     const pool = getPoolOrThrow()
+    const serviceTitleExpression = await getServiceTitleExpression(pool)
     const [services] = await pool.execute(
-      'SELECT id, title FROM services WHERE id = ? LIMIT 1',
+      `SELECT id, ${serviceTitleExpression} as title
+       FROM services s
+       WHERE s.id = ?
+       LIMIT 1`,
       [service_id],
     )
 
@@ -2559,32 +2855,41 @@ app.post('/api/service-bookings/verify-email', async (req, res) => {
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
 
     await pool.execute(
-      `INSERT INTO guest_booking_verifications (service_id, email, name, verification_code, expires_at)
-       VALUES (?, ?, ?, ?, ?)`,
-      [service_id, normalizedEmail, name || null, verificationCode, expiresAt],
+      `INSERT INTO guest_booking_verifications (service_id, email, phone, name, verification_code, expires_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [service_id, null, normalizedPhone, name || null, verificationCode, expiresAt],
     )
 
-    await sendMail({
-      to: normalizedEmail,
-      subject: `Your Huzz booking verification code`,
-      html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #222;">
-          <h2 style="margin: 0 0 12px; color: #145A45;">Confirm your booking request</h2>
-          <p>Use this code to continue your booking for <strong>${services[0].title}</strong>:</p>
-          <p style="font-size: 28px; font-weight: 700; letter-spacing: 4px; margin: 18px 0;">${verificationCode}</p>
-          <p>This code expires in 10 minutes.</p>
-          <p style="color:#5b6a65;">Huzz Bookings</p>
-        </div>
-      `,
-      text: `Your Huzz booking verification code is ${verificationCode}. It expires in 10 minutes.`,
-    })
+    try {
+      await sendBookingVerificationSms({
+        phone: normalizedPhone,
+        serviceTitle: services[0].title,
+        verificationCode,
+      })
 
-    res.status(201).json({ message: 'Verification code sent successfully' })
+      res.status(201).json({ message: 'Verification code sent successfully via SMS' })
+    } catch (smsError) {
+      const isProduction = process.env.NODE_ENV === 'production'
+      console.warn('Booking verification SMS failed:', smsError.message)
+
+      if (isProduction) {
+        throw smsError
+      }
+
+      res.status(201).json({
+        message: 'Verification code generated for local development',
+        debugCode: verificationCode,
+        debugPhone: normalizedPhone,
+      })
+    }
   } catch (error) {
     console.error('Send booking verification code error:', error.message)
     res.status(500).json({ message: error.message || 'Failed to send verification code' })
   }
-})
+}
+
+app.post('/api/service-bookings/send-code', sendServiceBookingCode)
+app.post('/api/service-bookings/verify-email', sendServiceBookingCode)
 
 // Book a service
 app.post('/api/service-bookings', async (req, res) => {
@@ -2598,17 +2903,33 @@ app.post('/api/service-bookings', async (req, res) => {
     }
 
     const pool = getPoolOrThrow()
-    const serviceOwnerColumn = await getServicesOwnerColumn(pool)
+    const ownerConfig = await getServicesOwnerConfig(pool)
     const serviceBookingOwnerColumn = await getServiceBookingsOwnerColumn(pool)
     
-    // Get service details to find vendor_id
-    const [serviceData] = await pool.execute(`SELECT ${serviceOwnerColumn} as service_owner_id FROM services WHERE id = ?`, [service_id])
+    // Normalize the service owner to the provider's users.id for downstream booking tables.
+    let serviceData
+    if (ownerConfig.usesServiceProviderOwner) {
+      ;[serviceData] = await pool.execute(
+        `SELECT sp.user_id as service_owner_user_id
+         FROM services s
+         JOIN service_providers sp ON s.${ownerConfig.ownerColumn} = sp.id
+         WHERE s.id = ?`,
+        [service_id],
+      )
+    } else {
+      ;[serviceData] = await pool.execute(
+        `SELECT s.${ownerConfig.ownerColumn} as service_owner_user_id
+         FROM services s
+         WHERE s.id = ?`,
+        [service_id],
+      )
+    }
     
     if (serviceData.length === 0) {
       return res.status(404).json({ message: 'Service not found' })
     }
 
-    const serviceOwnerId = serviceData[0].service_owner_id
+    const serviceOwnerId = serviceData[0].service_owner_user_id
     const requestedDay = toDateOnly(booking_date)
     if (!requestedDay) {
       return res.status(400).json({ message: 'Invalid booking date format' })
@@ -2649,25 +2970,25 @@ app.post('/api/service-bookings', async (req, res) => {
 
     if (!organizer_id) {
       guestName = String(name || '').trim()
-      guestEmail = String(email || '').trim().toLowerCase()
-      guestPhone = String(phone || '').trim() || null
+      guestEmail = String(email || '').trim().toLowerCase() || null
+      guestPhone = normalizePhoneNumber(phone)
       const verificationCode = String(verification_code || '').trim()
 
-      if (!guestName || !guestEmail || !verificationCode) {
-        return res.status(400).json({ message: 'Name, email, and verification code are required for guest bookings' })
+      if (!guestName || !guestPhone || !verificationCode) {
+        return res.status(400).json({ message: 'Name, phone number, and verification code are required for guest bookings' })
       }
 
       const [verificationRows] = await pool.execute(
         `SELECT id
          FROM guest_booking_verifications
          WHERE service_id = ?
-           AND email = ?
+           AND phone = ?
            AND verification_code = ?
            AND consumed_at IS NULL
            AND expires_at >= NOW()
          ORDER BY created_at DESC
          LIMIT 1`,
-        [service_id, guestEmail, verificationCode],
+        [service_id, guestPhone, verificationCode],
       )
 
       if (verificationRows.length === 0) {
@@ -2727,6 +3048,7 @@ app.get('/api/my-bookings', verifyToken, async (req, res) => {
     const organizer_id = req.userId
     const pool = getPoolOrThrow()
     const serviceBookingOwnerColumn = await getServiceBookingsOwnerColumn(pool)
+    const serviceTitleExpression = await getServiceTitleExpression(pool)
     
     const [bookings] = await pool.execute(
       `SELECT 
@@ -2736,7 +3058,7 @@ app.get('/api/my-bookings', verifyToken, async (req, res) => {
         sb.notes, 
         sb.status,
         sb.created_at,
-        s.title, 
+        ${serviceTitleExpression} as title,
         s.description, 
         s.category, 
         s.price, 
@@ -2764,9 +3086,16 @@ app.get('/api/my-bookings', verifyToken, async (req, res) => {
 app.get('/api/provider-bookings', verifyToken, async (req, res) => {
   try {
     const vendor_id = req.userId
+    
+    if (!vendor_id) {
+      return res.status(400).json({ message: 'User ID not found in token' })
+    }
+    
     const pool = getPoolOrThrow()
     const serviceBookingOwnerColumn = await getServiceBookingsOwnerColumn(pool)
+    const serviceTitleExpression = await getServiceTitleExpression(pool)
     
+    // Get service bookings with better error handling
     const [bookings] = await pool.execute(
       `SELECT 
         sb.id, 
@@ -2776,7 +3105,7 @@ app.get('/api/provider-bookings', verifyToken, async (req, res) => {
         sb.notes, 
         sb.status,
         sb.created_at,
-        s.title, 
+        ${serviceTitleExpression} as title,
         s.description, 
         s.category, 
         s.price,
@@ -2792,7 +3121,7 @@ app.get('/api/provider-bookings', verifyToken, async (req, res) => {
       [vendor_id]
     )
     
-    res.json(bookings)
+    res.json(bookings || [])
   } catch (error) {
     console.error('Get provider bookings error:', error.message)
     res.status(500).json({ message: error.message })
@@ -3018,6 +3347,10 @@ app.put('/api/service-bookings/:bookingId', verifyToken, async (req, res) => {
     res.status(500).json({ message: error.message })
   }
 })
+
+// Import and mount advanced ticket management routes before param-based support routes
+const ticketManagementRoutes = require('./ticket-management-routes')
+ticketManagementRoutes(app, { getPoolOrThrow, verifyToken, isAdmin: (req) => req.userRole === 'admin' })
 
 // --- Support System API ---
 
@@ -3275,10 +3608,6 @@ app.post('/api/faqs/:faqId/helpful', verifyToken, async (req, res) => {
     res.status(500).json({ message: error.message })
   }
 })
-
-// Import and mount advanced ticket management routes
-const ticketManagementRoutes = require('./ticket-management-routes')
-ticketManagementRoutes(app, { getPoolOrThrow, verifyToken, isAdmin: (req) => req.user?.role === 'admin' })
 
 // Contact form submission endpoint - using Mailpit SMTP
 app.post('/api/contact', async (req, res) => {
@@ -3613,16 +3942,9 @@ app.post('/api/support/tickets', verifyToken, async (req, res) => {
 // Get support categories (public)
 app.get('/api/support/categories', async (req, res) => {
   try {
-    const categories = [
-      'General Inquiry',
-      'Technical Issue',
-      'Billing & Payment',
-      'Account & Profile',
-      'Event Management',
-      'Service Booking',
-      'Other'
-    ]
-    res.json(categories)
+    const pool = getPool()
+    const [rows] = await pool.execute('SELECT id, name FROM support_categories ORDER BY name')
+    res.json(rows)
   } catch (error) {
     console.error('Get support categories error:', error.message)
     res.status(500).json({ message: error.message })
@@ -3677,4 +3999,3 @@ app.use('/api/payments', paymentRoutes)
 app.listen(PORT, HOST, () => {
   console.log(`Server running on http://${HOST}:${PORT}`);
 });
-

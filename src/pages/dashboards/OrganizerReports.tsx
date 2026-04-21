@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'
-import { Box, CircularProgress, Container } from '@mui/material'
+import React, { useEffect, useState, useCallback } from 'react'
+import { Box, CircularProgress, Container, Typography } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import DashboardSidebar from '../../components/DashboardSidebar'
 import { DashboardHeader } from '../../components/DashboardComponents'
@@ -54,60 +54,268 @@ const organizerReportFilters: ReportFilter[] = [
   },
 ]
 
+// Utility function for date range filtering
+const matchesDateRange = (value: string | undefined, dateFrom: string, dateTo: string): boolean => {
+  if (!value) return true
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return true
+  if (dateFrom) {
+    const from = new Date(dateFrom)
+    from.setHours(0, 0, 0, 0)
+    if (date < from) return false
+  }
+  if (dateTo) {
+    const to = new Date(dateTo)
+    to.setHours(23, 59, 59, 999)
+    if (date > to) return false
+  }
+  return true
+}
+
+// Individual report builders for better organization
+const buildEventSummaryReport = (
+  events: EventItem[],
+  bookings: ServiceBooking[],
+  dateFrom: string,
+  dateTo: string,
+  filters: Record<string, string>
+): GeneratedReport => {
+  const selectedStatus = filters.status || 'all'
+  const filteredEvents = events.filter((event) => {
+    const statusMatches = selectedStatus === 'all' || event.status === selectedStatus
+    return statusMatches && matchesDateRange(event.date, dateFrom, dateTo)
+  })
+  const filteredBookings = bookings.filter((booking) => {
+    const statusMatches = selectedStatus === 'all' || booking.status === selectedStatus
+    return statusMatches && matchesDateRange(booking.booking_date, dateFrom, dateTo)
+  })
+  const uniqueVendors = new Set(filteredBookings.map((booking) => booking.vendor_name).filter(Boolean))
+  const upcomingEvents = filteredEvents.filter((event) => new Date(event.date) > new Date())
+
+  return {
+    title: 'Organizer Event Summary Report',
+    subtitle: 'Event-level overview for planning and monitoring organizer activity.',
+    summaries: [
+      { label: 'Total Events', value: filteredEvents.length, helper: 'Events in the selected range' },
+      { label: 'Upcoming', value: upcomingEvents.length, helper: 'Scheduled for the future' },
+      { label: 'Booked Vendors', value: uniqueVendors.size, helper: 'Distinct vendors connected to current bookings' },
+      { label: 'Bookings', value: filteredBookings.length, helper: 'Service bookings related to this dashboard' },
+    ],
+    columns: [
+      { key: 'event', label: 'Event' },
+      { key: 'date', label: 'Date' },
+      { key: 'status', label: 'Status' },
+      { key: 'vendors', label: 'Vendors' },
+    ],
+    rows: filteredEvents.map((event) => ({
+      event: event.name,
+      date: new Date(event.date).toLocaleDateString(),
+      status: event.status,
+      vendors: event.vendors,
+    })),
+    insights: [
+      `${filteredEvents.length} events are included in this reporting slice.`,
+      `${upcomingEvents.length} events are still upcoming and may need preparation work.`,
+      `${filteredBookings.length} related bookings support these events right now.`,
+    ],
+  }
+}
+
+const buildBookingActivityReport = (
+  bookings: ServiceBooking[],
+  dateFrom: string,
+  dateTo: string,
+  filters: Record<string, string>
+): GeneratedReport => {
+  const selectedStatus = filters.status || 'all'
+  const filteredBookings = bookings.filter((booking) => {
+    const statusMatches = selectedStatus === 'all' || booking.status === selectedStatus
+    return statusMatches && matchesDateRange(booking.booking_date, dateFrom, dateTo)
+  })
+  const uniqueVendors = new Set(filteredBookings.map((booking) => booking.vendor_name).filter(Boolean))
+  const completedBookings = filteredBookings.filter((booking) => booking.status === 'completed')
+  const pendingBookings = filteredBookings.filter((booking) => booking.status === 'pending')
+
+  return {
+    title: 'Organizer Booking Activity Report',
+    subtitle: 'Current service-booking pipeline for the selected organizer filters.',
+    summaries: [
+      { label: 'Total Bookings', value: filteredBookings.length, helper: 'Bookings in the chosen range' },
+      { label: 'Pending', value: pendingBookings.length, helper: 'Awaiting action or confirmation' },
+      { label: 'Completed', value: completedBookings.length, helper: 'Services already delivered' },
+      { label: 'Active Vendors', value: uniqueVendors.size, helper: 'Distinct vendors in the booking set' },
+    ],
+    columns: [
+      { key: 'service', label: 'Service' },
+      { key: 'vendor', label: 'Vendor' },
+      { key: 'date', label: 'Booking Date' },
+      { key: 'status', label: 'Status' },
+      { key: 'notes', label: 'Notes' },
+    ],
+    rows: filteredBookings.map((booking) => ({
+      service: booking.service_title,
+      vendor: booking.vendor_name,
+      date: new Date(booking.booking_date).toLocaleDateString(),
+      status: booking.status,
+      notes: booking.notes || 'No notes',
+    })),
+    insights: [
+      `${pendingBookings.length} bookings still need attention from your organizer workflow.`,
+      `${completedBookings.length} bookings have already been delivered in this range.`,
+      `${uniqueVendors.size} distinct vendors are represented in the filtered results.`,
+    ],
+  }
+}
+
+const buildVendorUsageReport = (
+  events: EventItem[],
+  bookings: ServiceBooking[],
+  dateFrom: string,
+  dateTo: string,
+  filters: Record<string, string>
+): GeneratedReport => {
+  const selectedStatus = filters.status || 'all'
+  const filteredBookings = bookings.filter((booking) => {
+    const statusMatches = selectedStatus === 'all' || booking.status === selectedStatus
+    return statusMatches && matchesDateRange(booking.booking_date, dateFrom, dateTo)
+  })
+  const completedBookings = filteredBookings.filter((booking) => booking.status === 'completed')
+  const upcomingEvents = events.filter((event) => new Date(event.date) > new Date() && matchesDateRange(event.date, dateFrom, dateTo))
+
+  const vendorUsage = Array.from(
+    filteredBookings.reduce((map, booking) => {
+      const current = map.get(booking.vendor_name) || { vendor: booking.vendor_name, bookings: 0, completed: 0 }
+      current.bookings += 1
+      if (booking.status === 'completed') current.completed += 1
+      map.set(booking.vendor_name, current)
+      return map
+    }, new Map<string, { vendor: string; bookings: number; completed: number }>()),
+  )
+    .map(([, item]) => item)
+    .sort((a, b) => b.bookings - a.bookings)
+
+  return {
+    title: 'Organizer Vendor Usage Report',
+    subtitle: 'Which vendors are being used most and how much work has been completed with them.',
+    summaries: [
+      { label: 'Unique Vendors', value: vendorUsage.length, helper: 'Vendors in selected bookings' },
+      { label: 'Repeat Vendors', value: vendorUsage.filter((item) => item.bookings > 1).length, helper: 'Vendors with multiple bookings' },
+      { label: 'Completed Jobs', value: completedBookings.length, helper: 'Finished bookings in the range' },
+      { label: 'Upcoming Events', value: upcomingEvents.length, helper: 'Events still ahead on the calendar' },
+    ],
+    columns: [
+      { key: 'vendor', label: 'Vendor' },
+      { key: 'bookings', label: 'Bookings' },
+      { key: 'completed', label: 'Completed' },
+    ],
+    rows: vendorUsage,
+    insights: [
+      `${vendorUsage[0]?.vendor || 'No vendor'} is currently the most-used vendor in this report.`,
+      `${vendorUsage.filter((item) => item.bookings > 1).length} vendors are repeat partners.`,
+      `${upcomingEvents.length} upcoming events may still require additional coordination.`,
+    ],
+  }
+}
+
+const buildDeliveryOverviewReport = (
+  events: EventItem[],
+  bookings: ServiceBooking[],
+  stats: any,
+  dateFrom: string,
+  dateTo: string,
+  filters: Record<string, string>
+): GeneratedReport => {
+  const selectedStatus = filters.status || 'all'
+  const filteredEvents = events.filter((event) => {
+    const statusMatches = selectedStatus === 'all' || event.status === selectedStatus
+    return statusMatches && matchesDateRange(event.date, dateFrom, dateTo)
+  })
+  const filteredBookings = bookings.filter((booking) => {
+    const statusMatches = selectedStatus === 'all' || booking.status === selectedStatus
+    return statusMatches && matchesDateRange(booking.booking_date, dateFrom, dateTo)
+  })
+  const uniqueVendors = new Set(filteredBookings.map((booking) => booking.vendor_name).filter(Boolean))
+  const upcomingEvents = filteredEvents.filter((event) => new Date(event.date) > new Date())
+
+  return {
+    title: 'Organizer Delivery Overview',
+    subtitle: 'High-level snapshot of completed work, bookings, and event readiness.',
+    summaries: [
+      { label: 'Total Events', value: filteredEvents.length, helper: 'Events matching the current date/status filters' },
+      { label: 'Upcoming Events', value: upcomingEvents.length, helper: 'Future events still on your calendar' },
+      { label: 'Total Vendors', value: uniqueVendors.size, helper: 'Vendors working with this organizer' },
+      { label: 'Revenue', value: `$${Number(stats?.totalRevenue || 0).toFixed(2)}`, helper: 'Completed-booking revenue from dashboard stats' },
+    ],
+    columns: [
+      { key: 'event', label: 'Event' },
+      { key: 'date', label: 'Date' },
+      { key: 'status', label: 'Status' },
+      { key: 'vendors', label: 'Vendors' },
+    ],
+    rows: filteredEvents.map((event) => ({
+      event: event.name,
+      date: new Date(event.date).toLocaleDateString(),
+      status: event.status,
+      vendors: event.vendors,
+    })),
+    insights: [
+      `${upcomingEvents.length} events remain upcoming in the selected range.`,
+      `${uniqueVendors.size} vendors are contributing across your filtered bookings.`,
+      `$${Number(stats?.totalRevenue || 0).toFixed(2)} is the current revenue total shown on the dashboard.`,
+    ],
+  }
+}
+
 const OrganizerReports: React.FC = () => {
   const navigate = useNavigate()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [stats, setStats] = useState<any>(null)
   const [events, setEvents] = useState<EventItem[]>([])
   const [bookings, setBookings] = useState<ServiceBooking[]>([])
 
   useEffect(() => {
-    const userStr = localStorage.getItem('user')
-    if (userStr) setUser(JSON.parse(userStr))
-    void fetchReportData()
-  }, [])
+    const initializeUser = () => {
+      const userStr = localStorage.getItem('user')
+      if (userStr) setUser(JSON.parse(userStr))
+    }
 
-  const fetchReportData = async () => {
+    initializeUser()
+    void fetchReportData()
+  }, [navigate])
+
+  const fetchReportData = useCallback(async () => {
     try {
       setLoading(true)
+      setError(null)
       const token = localStorage.getItem('token')
       if (!token) {
         navigate('/signin')
         return
       }
+
       const [statsResponse, bookingsResponse] = await Promise.all([
         api.get('/dashboard/organizer-stats'),
         api.get('/my-bookings'),
       ])
+
       setStats(statsResponse.data)
       setEvents(statsResponse.data?.events || [])
       setBookings(bookingsResponse.data || [])
     } catch (error: any) {
-      if (error.response?.status === 401) navigate('/signin')
+      console.error('Error fetching report data:', error)
+      if (error.response?.status === 401) {
+        navigate('/signin')
+      } else {
+        setError('Failed to load report data. Please try again.')
+      }
     } finally {
       setLoading(false)
     }
-  }
+  }, [navigate])
 
-  const matchesDateRange = (value: string | undefined, dateFrom: string, dateTo: string) => {
-    if (!value) return true
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return true
-    if (dateFrom) {
-      const from = new Date(dateFrom)
-      from.setHours(0, 0, 0, 0)
-      if (date < from) return false
-    }
-    if (dateTo) {
-      const to = new Date(dateTo)
-      to.setHours(23, 59, 59, 999)
-      if (date > to) return false
-    }
-    return true
-  }
-
-  const buildOrganizerReport = ({
+  const buildOrganizerReport = useCallback(({
     reportType,
     dateFrom,
     dateTo,
@@ -118,145 +326,45 @@ const OrganizerReports: React.FC = () => {
     dateTo: string
     filters: Record<string, string>
   }): GeneratedReport => {
-    const selectedStatus = filters.status || 'all'
-    const filteredEvents = events.filter((event) => {
-      const statusMatches = selectedStatus === 'all' || event.status === selectedStatus
-      return statusMatches && matchesDateRange(event.date, dateFrom, dateTo)
-    })
-    const filteredBookings = bookings.filter((booking) => {
-      const statusMatches = selectedStatus === 'all' || booking.status === selectedStatus
-      return statusMatches && matchesDateRange(booking.booking_date, dateFrom, dateTo)
-    })
-    const uniqueVendors = new Set(filteredBookings.map((booking) => booking.vendor_name).filter(Boolean))
-    const completedBookings = filteredBookings.filter((booking) => booking.status === 'completed')
-    const pendingBookings = filteredBookings.filter((booking) => booking.status === 'pending')
-    const upcomingEvents = filteredEvents.filter((event) => new Date(event.date) > new Date())
-
-    if (reportType === 'booking-activity') {
-      return {
-        title: 'Organizer Booking Activity Report',
-        subtitle: 'Current service-booking pipeline for the selected organizer filters.',
-        summaries: [
-          { label: 'Total Bookings', value: filteredBookings.length, helper: 'Bookings in the chosen range' },
-          { label: 'Pending', value: pendingBookings.length, helper: 'Awaiting action or confirmation' },
-          { label: 'Completed', value: completedBookings.length, helper: 'Services already delivered' },
-          { label: 'Active Vendors', value: uniqueVendors.size, helper: 'Distinct vendors in the booking set' },
-        ],
-        columns: [
-          { key: 'service', label: 'Service' },
-          { key: 'vendor', label: 'Vendor' },
-          { key: 'date', label: 'Booking Date' },
-          { key: 'status', label: 'Status' },
-          { key: 'notes', label: 'Notes' },
-        ],
-        rows: filteredBookings.map((booking) => ({
-          service: booking.service_title,
-          vendor: booking.vendor_name,
-          date: new Date(booking.booking_date).toLocaleDateString(),
-          status: booking.status,
-          notes: booking.notes || 'No notes',
-        })),
-        insights: [
-          `${pendingBookings.length} bookings still need attention from your organizer workflow.`,
-          `${completedBookings.length} bookings have already been delivered in this range.`,
-          `${uniqueVendors.size} distinct vendors are represented in the filtered results.`,
-        ],
-      }
+    switch (reportType) {
+      case 'booking-activity':
+        return buildBookingActivityReport(bookings, dateFrom, dateTo, filters)
+      case 'vendor-usage':
+        return buildVendorUsageReport(events, bookings, dateFrom, dateTo, filters)
+      case 'delivery-overview':
+        return buildDeliveryOverviewReport(events, bookings, stats, dateFrom, dateTo, filters)
+      case 'event-summary':
+      default:
+        return buildEventSummaryReport(events, bookings, dateFrom, dateTo, filters)
     }
+  }, [events, bookings, stats])
 
-    if (reportType === 'vendor-usage') {
-      const vendorUsage = Array.from(
-        filteredBookings.reduce((map, booking) => {
-          const current = map.get(booking.vendor_name) || { vendor: booking.vendor_name, bookings: 0, completed: 0 }
-          current.bookings += 1
-          if (booking.status === 'completed') current.completed += 1
-          map.set(booking.vendor_name, current)
-          return map
-        }, new Map<string, { vendor: string; bookings: number; completed: number }>()),
-      )
-        .map(([, item]) => item)
-        .sort((a, b) => b.bookings - a.bookings)
-
-      return {
-        title: 'Organizer Vendor Usage Report',
-        subtitle: 'Which vendors are being used most and how much work has been completed with them.',
-        summaries: [
-          { label: 'Unique Vendors', value: vendorUsage.length, helper: 'Vendors in selected bookings' },
-          { label: 'Repeat Vendors', value: vendorUsage.filter((item) => item.bookings > 1).length, helper: 'Vendors with multiple bookings' },
-          { label: 'Completed Jobs', value: completedBookings.length, helper: 'Finished bookings in the range' },
-          { label: 'Upcoming Events', value: upcomingEvents.length, helper: 'Events still ahead on the calendar' },
-        ],
-        columns: [
-          { key: 'vendor', label: 'Vendor' },
-          { key: 'bookings', label: 'Bookings' },
-          { key: 'completed', label: 'Completed' },
-        ],
-        rows: vendorUsage,
-        insights: [
-          `${vendorUsage[0]?.vendor || 'No vendor'} is currently the most-used vendor in this report.`,
-          `${vendorUsage.filter((item) => item.bookings > 1).length} vendors are repeat partners.`,
-          `${upcomingEvents.length} upcoming events may still require additional coordination.`,
-        ],
-      }
-    }
-
-    if (reportType === 'delivery-overview') {
-      return {
-        title: 'Organizer Delivery Overview',
-        subtitle: 'High-level snapshot of completed work, bookings, and event readiness.',
-        summaries: [
-          { label: 'Total Events', value: filteredEvents.length, helper: 'Events matching the current date/status filters' },
-          { label: 'Upcoming Events', value: upcomingEvents.length, helper: 'Future events still on your calendar' },
-          { label: 'Total Vendors', value: uniqueVendors.size, helper: 'Vendors working with this organizer' },
-          { label: 'Revenue', value: `$${Number(stats?.totalRevenue || 0).toFixed(2)}`, helper: 'Completed-booking revenue from dashboard stats' },
-        ],
-        columns: [
-          { key: 'event', label: 'Event' },
-          { key: 'date', label: 'Date' },
-          { key: 'status', label: 'Status' },
-          { key: 'vendors', label: 'Vendors' },
-        ],
-        rows: filteredEvents.map((event) => ({
-          event: event.name,
-          date: new Date(event.date).toLocaleDateString(),
-          status: event.status,
-          vendors: event.vendors,
-        })),
-        insights: [
-          `${upcomingEvents.length} events remain upcoming in the selected range.`,
-          `${uniqueVendors.size} vendors are contributing across your filtered bookings.`,
-          `$${Number(stats?.totalRevenue || 0).toFixed(2)} is the current revenue total shown on the dashboard.`,
-        ],
-      }
-    }
-
-    return {
-      title: 'Organizer Event Summary Report',
-      subtitle: 'Event-level overview for planning and monitoring organizer activity.',
-      summaries: [
-        { label: 'Total Events', value: filteredEvents.length, helper: 'Events in the selected range' },
-        { label: 'Upcoming', value: upcomingEvents.length, helper: 'Scheduled for the future' },
-        { label: 'Booked Vendors', value: uniqueVendors.size, helper: 'Distinct vendors connected to current bookings' },
-        { label: 'Bookings', value: filteredBookings.length, helper: 'Service bookings related to this dashboard' },
-      ],
-      columns: [
-        { key: 'event', label: 'Event' },
-        { key: 'date', label: 'Date' },
-        { key: 'status', label: 'Status' },
-        { key: 'vendors', label: 'Vendors' },
-      ],
-      rows: filteredEvents.map((event) => ({
-        event: event.name,
-        date: new Date(event.date).toLocaleDateString(),
-        status: event.status,
-        vendors: event.vendors,
-      })),
-      insights: [
-        `${filteredEvents.length} events are included in this reporting slice.`,
-        `${upcomingEvents.length} events are still upcoming and may need preparation work.`,
-        `${filteredBookings.length} related bookings support these events right now.`,
-      ],
-    }
+  if (error) {
+    return (
+      <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+        <DashboardSidebar
+          userRole="organizer"
+          userName={user?.name || 'Organizer'}
+          userEmail={user?.email || 'organizer@huzz.com'}
+          userImage={user?.profile_image}
+          notifications={0}
+          messages={0}
+          onLogout={() => {
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
+            navigate('/signin')
+          }}
+        />
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', ml: { xs: 0, md: '280px' }, mt: { xs: 60, md: 0 } }}>
+          <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 }, px: { xs: 2, sm: 3 }, flex: 1 }}>
+            <DashboardHeader title="Organizer Reports" subtitle="Generate event, booking, and vendor reports from your organizer data." />
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+              <Typography color="error">{error}</Typography>
+            </Box>
+          </Container>
+        </Box>
+      </Box>
+    )
   }
 
   return (
@@ -283,7 +391,6 @@ const OrganizerReports: React.FC = () => {
             </Box>
           ) : (
             <DashboardReportSection
-              title="Organizer Report Builder"
               description="Build event, booking, and vendor reports directly from your organizer data."
               reportTypes={organizerReportTypes}
               filters={organizerReportFilters}

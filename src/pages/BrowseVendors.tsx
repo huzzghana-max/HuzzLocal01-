@@ -99,7 +99,6 @@ const BrowseVendors: React.FC = () => {
   const [bookingDate, setBookingDate] = useState('')
   const [bookingNotes, setBookingNotes] = useState('')
   const [guestName, setGuestName] = useState('')
-  const [guestEmail, setGuestEmail] = useState('')
   const [guestPhone, setGuestPhone] = useState('')
   const [verificationCode, setVerificationCode] = useState('')
   const [sendingCode, setSendingCode] = useState(false)
@@ -325,7 +324,6 @@ const BrowseVendors: React.FC = () => {
     setBookingDate('')
     setBookingNotes('')
     setGuestName('')
-    setGuestEmail('')
     setGuestPhone('')
     setVerificationCode('')
     setCodeSent(false)
@@ -335,20 +333,26 @@ const BrowseVendors: React.FC = () => {
 
   const handleSendVerificationCode = async () => {
     if (!selectedVendor) return
-    if (!guestEmail.trim()) {
-      setBookingMessage({ type: 'error', text: 'Please enter your email to receive a code.' })
+    if (!guestPhone.trim()) {
+      setBookingMessage({ type: 'error', text: 'Please enter your phone number to receive a code.' })
       return
     }
     try {
       setSendingCode(true)
       setBookingMessage({ type: '', text: '' })
-      await api.post('/service-bookings/verify-email', {
+      const response = await api.post('/service-bookings/send-code', {
         service_id: selectedVendor.id,
-        email: guestEmail,
+        phone: guestPhone,
         name: guestName,
       })
       setCodeSent(true)
-      setBookingMessage({ type: 'success', text: 'Verification code sent. Check your email.' })
+      const debugCode = response.data?.debugCode
+      setBookingMessage({
+        type: 'success',
+        text: debugCode
+          ? `Verification code generated for local development: ${debugCode}`
+          : 'Verification code sent. Check your SMS messages.',
+      })
     } catch (error: any) {
       const errorMessage = error?.response?.data?.message || 'Failed to send verification code'
       setBookingMessage({ type: 'error', text: errorMessage })
@@ -378,8 +382,8 @@ const BrowseVendors: React.FC = () => {
       const token = localStorage.getItem('token')
 
       if (!token) {
-        if (!guestName.trim() || !guestEmail.trim()) {
-          setBookingMessage({ type: 'error', text: 'Please enter your name and email to book.' })
+        if (!guestName.trim() || !guestPhone.trim()) {
+          setBookingMessage({ type: 'error', text: 'Please enter your name and phone number to book.' })
           setBookingLoading(false)
           return
         }
@@ -397,7 +401,7 @@ const BrowseVendors: React.FC = () => {
           booking_date: bookingDate,
           notes: bookingNotes || '',
           name: token ? undefined : guestName,
-          email: token ? undefined : guestEmail,
+          email: token ? undefined : undefined,
           phone: token ? undefined : guestPhone,
           verification_code: token ? undefined : verificationCode,
         },
@@ -414,7 +418,7 @@ const BrowseVendors: React.FC = () => {
         type: 'success', 
         text: token
           ? 'Service booked successfully! Check your dashboard for details.'
-          : 'Booking request sent! We will email you updates.' 
+          : 'Booking request sent! We will contact you with updates.' 
       })
       
       setTimeout(() => {
@@ -1042,16 +1046,10 @@ const BrowseVendors: React.FC = () => {
                 />
                 <TextField
                   fullWidth
-                  label="Email"
-                  type="email"
-                  value={guestEmail}
-                  onChange={(e) => setGuestEmail(e.target.value)}
-                />
-                <TextField
-                  fullWidth
-                  label="Phone (optional)"
+                  label="Phone Number"
                   value={guestPhone}
                   onChange={(e) => setGuestPhone(e.target.value)}
+                  helperText="We'll send your verification code by SMS."
                 />
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems="center">
                   <TextField

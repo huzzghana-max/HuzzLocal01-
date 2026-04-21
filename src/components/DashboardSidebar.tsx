@@ -142,9 +142,9 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             path: '/organizer/reports',
           },
           {
-            label: 'Support',
+            label: 'Support Tickets',
             icon: <HelpIcon />,
-            path: '/support',
+            path: '/admin/support-tickets',
           },
           {
             label: 'Settings',
