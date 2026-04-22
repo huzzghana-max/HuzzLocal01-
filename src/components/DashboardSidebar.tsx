@@ -220,11 +220,6 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             path: '/vendor-availability',
           },
           {
-            label: 'Earnings',
-            icon: <PaymentIcon />,
-            path: '#earnings',
-          },
-          {
             label: 'Analytics',
             icon: <AnalyticsIcon />,
             path: '/provider/analytics',

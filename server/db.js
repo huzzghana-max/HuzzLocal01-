@@ -113,6 +113,8 @@ async function initializeDatabase() {
         image_url VARCHAR(255),
         date DATETIME NOT NULL,
         location VARCHAR(255),
+        latitude DECIMAL(10,7),
+        longitude DECIMAL(10,7),
         type VARCHAR(100),
         guest_count INT,
         budget DECIMAL(12, 2),
@@ -122,6 +124,16 @@ async function initializeDatabase() {
         FOREIGN KEY (organizer_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `)
+
+    const [eventLatitudeColumn] = await dbConnection.execute(`SHOW COLUMNS FROM events LIKE 'latitude'`)
+    if (eventLatitudeColumn.length === 0) {
+      await dbConnection.execute(`ALTER TABLE events ADD COLUMN latitude DECIMAL(10,7) NULL AFTER location`)
+    }
+
+    const [eventLongitudeColumn] = await dbConnection.execute(`SHOW COLUMNS FROM events LIKE 'longitude'`)
+    if (eventLongitudeColumn.length === 0) {
+      await dbConnection.execute(`ALTER TABLE events ADD COLUMN longitude DECIMAL(10,7) NULL AFTER latitude`)
+    }
 
     // Create bookings table
     await dbConnection.execute(`

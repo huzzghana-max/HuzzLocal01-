@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS events (
   image_url VARCHAR(255),
   date TIMESTAMPTZ NOT NULL,
   location VARCHAR(255),
+  latitude NUMERIC(10, 7),
+  longitude NUMERIC(10, 7),
   type VARCHAR(100),
   guest_count INT,
   budget NUMERIC(12, 2),

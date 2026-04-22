@@ -608,7 +608,7 @@ app.get('/api/dashboard/organizer-stats', verifyToken, async (req, res) => {
 
     // Get user's actual events
     const [events] = await pool.execute(
-      'SELECT id, name, date, status, (SELECT COUNT(*) FROM bookings WHERE event_id = events.id) AS vendors FROM events WHERE organizer_id = ? ORDER BY date DESC LIMIT 10',
+      'SELECT id, name, date, location, latitude, longitude, type, description, image_url, status, (SELECT COUNT(*) FROM bookings WHERE event_id = events.id) AS vendors FROM events WHERE organizer_id = ? ORDER BY date DESC LIMIT 10',
       [userId]
     )
 
@@ -2120,7 +2120,7 @@ app.get('/api/vendor-services/:vendorId', async (req, res) => {
 // Create event (supports optional image upload)
 app.post('/api/events', verifyToken, upload.single('image'), async (req, res) => {
   try {
-    const { name, date, type, description, location } = req.body
+    const { name, date, type, description, location, latitude, longitude } = req.body
     const organizer_id = req.userId
 
     if (!name || !date) {
@@ -2132,9 +2132,19 @@ app.post('/api/events', verifyToken, upload.single('image'), async (req, res) =>
     const imageUrl = req.file ? `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}` : (req.body.imageUrl || null)
 
     const [result] = await pool.execute(
-      `INSERT INTO events (organizer_id, name, date, type, description, location, image_url, status, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'published', NOW())`,
-      [organizer_id, name, date, type || null, description || null, location || null, imageUrl]
+      `INSERT INTO events (organizer_id, name, date, type, description, location, latitude, longitude, image_url, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', NOW())`,
+      [
+        organizer_id,
+        name,
+        date,
+        type || null,
+        description || null,
+        location || null,
+        latitude ? Number(latitude) : null,
+        longitude ? Number(longitude) : null,
+        imageUrl,
+      ]
     )
 
     res.status(201).json({
@@ -2145,6 +2155,8 @@ app.post('/api/events', verifyToken, upload.single('image'), async (req, res) =>
       type,
       description,
       location,
+      latitude: latitude ? Number(latitude) : null,
+      longitude: longitude ? Number(longitude) : null,
       image_url: imageUrl,
       status: 'published',
     })
@@ -2158,7 +2170,7 @@ app.post('/api/events', verifyToken, upload.single('image'), async (req, res) =>
 app.get('/api/events/public', async (req, res) => {
   try {
     const pool = getPoolOrThrow()
-    const [events] = await pool.execute('SELECT id, organizer_id, name, date, location, type, description, image_url FROM events WHERE status = ? ORDER BY date ASC', ['published'])
+    const [events] = await pool.execute('SELECT id, organizer_id, name, date, location, latitude, longitude, type, description, image_url FROM events WHERE status = ? ORDER BY date ASC', ['published'])
     res.json(events)
   } catch (err) {
     console.error('Get public events error:', err.message)
@@ -2171,7 +2183,7 @@ app.get('/api/events/:eventId', async (req, res) => {
   try {
     const { eventId } = req.params
     const pool = getPoolOrThrow()
-    const [events] = await pool.execute('SELECT id, organizer_id, name, date, location, type, description, image_url, status FROM events WHERE id = ? LIMIT 1', [eventId])
+    const [events] = await pool.execute('SELECT id, organizer_id, name, date, location, latitude, longitude, type, description, image_url, status FROM events WHERE id = ? LIMIT 1', [eventId])
     
     if (events.length === 0) {
       return res.status(404).json({ message: 'Event not found' })
@@ -3849,7 +3861,7 @@ app.put('/api/events/:eventId', verifyToken, upload.single('image'), async (req,
   try {
     const { eventId } = req.params
     const userId = req.userId
-    const { name, date, type, description, location } = req.body
+    const { name, date, type, description, location, latitude, longitude } = req.body
 
     if (!name || !date) {
       return res.status(400).json({ message: 'Event name and date are required' })
@@ -3875,8 +3887,18 @@ app.put('/api/events/:eventId', verifyToken, upload.single('image'), async (req,
 
     // Update the event
     await pool.execute(
-      `UPDATE events SET name = ?, date = ?, type = ?, description = ?, location = ?, image_url = ? WHERE id = ?`,
-      [name, date, type || null, description || null, location || null, imageUrl, eventId]
+      `UPDATE events SET name = ?, date = ?, type = ?, description = ?, location = ?, latitude = ?, longitude = ?, image_url = ? WHERE id = ?`,
+      [
+        name,
+        date,
+        type || null,
+        description || null,
+        location || null,
+        latitude ? Number(latitude) : null,
+        longitude ? Number(longitude) : null,
+        imageUrl,
+        eventId,
+      ]
     )
 
     res.json({
@@ -3886,6 +3908,8 @@ app.put('/api/events/:eventId', verifyToken, upload.single('image'), async (req,
       type,
       description,
       location,
+      latitude: latitude ? Number(latitude) : null,
+      longitude: longitude ? Number(longitude) : null,
       image_url: imageUrl,
       status: events[0].status,
     })

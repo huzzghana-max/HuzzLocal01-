@@ -59,7 +59,10 @@ interface Event {
   vendors: number
   type?: string
   location?: string
+  latitude?: number
+  longitude?: number
   description?: string
+  image_url?: string
 }
 
 interface ServiceBooking {
@@ -209,11 +212,12 @@ const OrganizerDashboard: React.FC = () => {
         setReviewSubmitting(false)
       }
     }
-  const [newEvent, setNewEvent] = useState({ name: '', date: '', type: '', location: '', description: '' })
+  const [newEvent, setNewEvent] = useState({ name: '', date: '', type: '', location: '', latitude: '', longitude: '', description: '' })
   const [editingEventId, setEditingEventId] = useState<number | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageError, setImageError] = useState<string | null>(null)
+  const locationInputRef = React.useRef<HTMLInputElement | null>(null)
   const [ticketsDialogOpen, setTicketsDialogOpen] = useState(false)
   const [currentEventTickets, setCurrentEventTickets] = useState<any[]>([])
   const [currentEventId, setCurrentEventId] = useState<number | null>(null)
@@ -250,6 +254,53 @@ const OrganizerDashboard: React.FC = () => {
 
 
   }, [])
+
+  useEffect(() => {
+    if (!openDialog) return
+
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+    if (!apiKey) return
+
+    const attach = () => {
+      try {
+        const google = (window as any).google
+        if (!google?.maps?.places || !locationInputRef.current) return
+        const autocomplete = new google.maps.places.Autocomplete(locationInputRef.current, { types: ['geocode'] })
+        autocomplete.addListener('place_changed', () => {
+          const place = autocomplete.getPlace()
+          const formatted = place.formatted_address || place.name || locationInputRef.current!.value
+          const lat = place.geometry?.location?.lat && place.geometry.location.lat()
+          const lng = place.geometry?.location?.lng && place.geometry.location.lng()
+          setNewEvent((prev) => ({
+            ...prev,
+            location: formatted,
+            latitude: lat ? String(lat) : '',
+            longitude: lng ? String(lng) : '',
+          }))
+        })
+      } catch (err) {
+        console.warn('Event location autocomplete attach failed', err)
+      }
+    }
+
+    if ((window as any).google?.maps?.places) {
+      attach()
+      return
+    }
+
+    const existingScript = document.querySelector('script[data-google-maps="true"]') as HTMLScriptElement | null
+    if (existingScript) {
+      existingScript.addEventListener('load', attach, { once: true })
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
+    script.async = true
+    script.dataset.googleMaps = 'true'
+    script.onload = attach
+    document.head.appendChild(script)
+  }, [openDialog])
 
   const fetchDashboardData = async () => {
     try {
@@ -321,6 +372,8 @@ const OrganizerDashboard: React.FC = () => {
       date: event.date,
       type: event.type || '',
       location: event.location || '',
+      latitude: event.latitude ? String(event.latitude) : '',
+      longitude: event.longitude ? String(event.longitude) : '',
       description: event.description || '',
     })
     setOpenDialog(true)
@@ -394,7 +447,7 @@ const OrganizerDashboard: React.FC = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingEventId(null);
-    setNewEvent({ name: '', date: '', type: '', location: '', description: '' });
+    setNewEvent({ name: '', date: '', type: '', location: '', latitude: '', longitude: '', description: '' });
     setImageFile(null);
     setImagePreview(null);
     setImageError(null);
@@ -453,6 +506,8 @@ const OrganizerDashboard: React.FC = () => {
       form.append('date', newEvent.date)
       form.append('type', newEvent.type || '')
       form.append('location', newEvent.location || '')
+      form.append('latitude', newEvent.latitude || '')
+      form.append('longitude', newEvent.longitude || '')
       form.append('description', newEvent.description || '')
       if (imageFile) form.append('image', imageFile)
 
@@ -1059,10 +1114,14 @@ const OrganizerDashboard: React.FC = () => {
                     fullWidth
                     label="Location"
                     placeholder="Enter event location"
+                    inputRef={locationInputRef}
                     value={newEvent.location}
-                    onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+                    onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value, latitude: '', longitude: '' })}
                     margin="normal"
                   />
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: -0.5 }}>
+                    Search for a venue or full address so the event page can drop an exact map pin.
+                  </Typography>
                   <TextField
                     fullWidth
                     label="Description"

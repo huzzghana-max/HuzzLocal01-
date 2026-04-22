@@ -27,12 +27,15 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
 import DescriptionIcon from '@mui/icons-material/Description'
 import ShareIcon from '@mui/icons-material/Share'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 
 interface EventData {
   id: number
   name: string
   date: string
   location?: string
+  latitude?: number
+  longitude?: number
   description?: string
   image_url?: string
   status?: string
@@ -60,6 +63,19 @@ const EventDetail: React.FC = () => {
   const [shareNotice, setShareNotice] = useState('')
   const publicEventLink = eventId ? `${window.location.origin}/events/public/${encodeURIComponent(eventId)}` : ''
   const buyerEmail = currentUser?.email || registerForm.email
+  const hasExactCoordinates = typeof event?.latitude === 'number' && typeof event?.longitude === 'number'
+  const coordinateQuery = hasExactCoordinates ? `${event?.latitude},${event?.longitude}` : ''
+  const encodedLocation = event?.location ? encodeURIComponent(event.location) : ''
+  const embeddedMapSrc = hasExactCoordinates
+    ? `https://www.google.com/maps?q=${coordinateQuery}&z=17&output=embed`
+    : encodedLocation
+      ? `https://www.google.com/maps?q=${encodedLocation}&z=15&output=embed`
+    : ''
+  const directionsHref = hasExactCoordinates
+    ? `https://www.google.com/maps/search/?api=1&query=${coordinateQuery}`
+    : encodedLocation
+      ? `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`
+    : ''
 
   const fetchEventDetails = async () => {
     try {
@@ -404,6 +420,101 @@ const EventDetail: React.FC = () => {
                 </Box>
 
                 {/* Description */}
+                {event.location && (
+                  <>
+                    <Divider />
+                    <Box>
+                      <Stack
+                        direction={{ xs: 'column', md: 'row' }}
+                        spacing={1.5}
+                        justifyContent="space-between"
+                        alignItems={{ xs: 'flex-start', md: 'center' }}
+                        sx={{ mb: 2 }}
+                      >
+                        <Box>
+                          <Typography
+                            variant="h6"
+                            sx={{
+                              fontWeight: 700,
+                              color: theme.palette.text.primary,
+                            }}
+                          >
+                            Location
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              mt: 0.5,
+                              color: theme.palette.text.secondary,
+                            }}
+                          >
+                            See where the event is happening and open directions in Google Maps.
+                          </Typography>
+                        </Box>
+                        <Button
+                          component="a"
+                          href={directionsHref}
+                          target="_blank"
+                          rel="noreferrer"
+                          variant="outlined"
+                          endIcon={<OpenInNewIcon />}
+                        >
+                          Get Directions
+                        </Button>
+                      </Stack>
+
+                      <Paper
+                        sx={{
+                          overflow: 'hidden',
+                          borderRadius: '18px',
+                          border: `1px solid ${theme.palette.divider}`,
+                          background: theme.palette.background.paper,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            px: { xs: 2, md: 2.5 },
+                            py: 1.5,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            borderBottom: `1px solid ${theme.palette.divider}`,
+                            background: theme.palette.mode === 'light'
+                              ? 'linear-gradient(135deg, rgba(31, 111, 120, 0.08) 0%, rgba(240, 138, 93, 0.08) 100%)'
+                              : 'linear-gradient(135deg, rgba(98, 183, 193, 0.14) 0%, rgba(255, 157, 114, 0.14) 100%)',
+                          }}
+                        >
+                          <LocationOnIcon sx={{ color: theme.palette.primary.main }} />
+                          <Box>
+                            <Typography sx={{ fontWeight: 700, color: theme.palette.text.primary }}>
+                              {event.location}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                              {hasExactCoordinates ? 'Exact venue pin' : 'Map preview based on the saved address'}
+                            </Typography>
+                          </Box>
+                        </Box>
+
+                        <Box sx={{ position: 'relative', width: '100%', height: { xs: 280, md: 360 } }}>
+                          <Box
+                            component="iframe"
+                            title={`Map for ${event.name}`}
+                            src={embeddedMapSrc}
+                            loading="lazy"
+                            referrerPolicy="no-referrer-when-downgrade"
+                            sx={{
+                              width: '100%',
+                              height: '100%',
+                              border: 0,
+                              display: 'block',
+                            }}
+                          />
+                        </Box>
+                      </Paper>
+                    </Box>
+                  </>
+                )}
+
                 {event.description && (
                   <>
                     <Divider />

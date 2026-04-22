@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Box, Container, TextField, Button, Typography, CircularProgress, Card, CardMedia, Alert, Stack } from '@mui/material'
 import api from '../api'
 import { useNavigate } from 'react-router-dom'
@@ -9,11 +9,56 @@ const CreateEvent: React.FC = () => {
   const [type, setType] = useState('')
   const [description, setDescription] = useState('')
   const [location, setLocation] = useState('')
+  const [latitude, setLatitude] = useState('')
+  const [longitude, setLongitude] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageError, setImageError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const locationInputRef = useRef<HTMLInputElement | null>(null)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+    if (!apiKey) return
+
+    const attach = () => {
+      try {
+        const google = (window as any).google
+        if (!google?.maps?.places || !locationInputRef.current) return
+        const autocomplete = new google.maps.places.Autocomplete(locationInputRef.current, { types: ['geocode'] })
+        autocomplete.addListener('place_changed', () => {
+          const place = autocomplete.getPlace()
+          const formatted = place.formatted_address || place.name || locationInputRef.current!.value
+          const lat = place.geometry?.location?.lat && place.geometry.location.lat()
+          const lng = place.geometry?.location?.lng && place.geometry.location.lng()
+          setLocation(formatted)
+          setLatitude(lat ? String(lat) : '')
+          setLongitude(lng ? String(lng) : '')
+        })
+      } catch (err) {
+        console.warn('Event location autocomplete attach failed', err)
+      }
+    }
+
+    if ((window as any).google?.maps?.places) {
+      attach()
+      return
+    }
+
+    const existingScript = document.querySelector('script[data-google-maps="true"]') as HTMLScriptElement | null
+    if (existingScript) {
+      existingScript.addEventListener('load', attach, { once: true })
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
+    script.async = true
+    script.dataset.googleMaps = 'true'
+    script.onload = attach
+    document.head.appendChild(script)
+  }, [])
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -67,6 +112,8 @@ const CreateEvent: React.FC = () => {
       form.append('type', type)
       form.append('description', description)
       form.append('location', location)
+      form.append('latitude', latitude)
+      form.append('longitude', longitude)
       if (imageFile) form.append('image', imageFile)
 
       const resp = await api.post('/events', form, { headers: { 'Content-Type': 'multipart/form-data' } })
@@ -114,8 +161,14 @@ const CreateEvent: React.FC = () => {
           <TextField 
             label="Location" 
             fullWidth 
+            inputRef={locationInputRef}
             value={location} 
-            onChange={e => setLocation(e.target.value)} 
+            onChange={e => {
+              setLocation(e.target.value)
+              setLatitude('')
+              setLongitude('')
+            }} 
+            placeholder="Search for address or venue"
           />
           
           <TextField 
