@@ -15,32 +15,45 @@ import { alpha, useTheme } from '@mui/material/styles'
 import { Email as EmailIcon, Phone as PhoneIcon, LocationOn as LocationIcon } from '@mui/icons-material'
 import api from '../api'
 import MarketingHero from '../components/MarketingHero'
+import { getErrorMessage } from '../utils/errorHandler'
+import { validateContactForm } from '../utils/validation'
 
 const Contact: React.FC = () => {
   const [formData, setFormData] = useState({ name: '', email: '', message: '' })
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; email?: string; message?: string }>({})
   const theme = useTheme()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
+    setFieldErrors((current) => ({ ...current, [e.target.name]: '' }))
     setError('')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     setError('')
+    setFieldErrors({})
+
+    const validation = validateContactForm(formData)
+    if (!validation.isValid) {
+      setFieldErrors(validation.errors)
+      setError('Please fix the highlighted fields and try again.')
+      return
+    }
+
+    setLoading(true)
 
     try {
-      await api.post('/contact', formData)
+      await api.post('/contact', validation.values)
       setSubmitted(true)
       setFormData({ name: '', email: '', message: '' })
+      setFieldErrors({})
       setTimeout(() => setSubmitted(false), 5000)
-    } catch (err: any) {
-      const errorMsg = err?.response?.data?.message || err?.message || 'Failed to send message. Please try again.'
-      setError(errorMsg)
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || 'Failed to send message. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -83,13 +96,49 @@ const Contact: React.FC = () => {
                 <form onSubmit={handleSubmit}>
                   <Grid container spacing={1.6}>
                     <Grid size={{ xs: 12, sm: 6 }}>
-                      <TextField fullWidth label="Your Name" name="name" value={formData.name} onChange={handleChange} required disabled={loading} />
+                      <TextField
+                        fullWidth
+                        label="Your Name"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        error={Boolean(fieldErrors.name)}
+                        helperText={fieldErrors.name}
+                        required
+                        disabled={loading}
+                        inputProps={{ maxLength: 80 }}
+                      />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
-                      <TextField fullWidth label="Email Address" name="email" type="email" value={formData.email} onChange={handleChange} required disabled={loading} />
+                      <TextField
+                        fullWidth
+                        label="Email Address"
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        error={Boolean(fieldErrors.email)}
+                        helperText={fieldErrors.email}
+                        required
+                        disabled={loading}
+                        inputProps={{ maxLength: 120 }}
+                      />
                     </Grid>
                     <Grid size={{ xs: 12 }}>
-                      <TextField fullWidth label="Message" name="message" value={formData.message} onChange={handleChange} required multiline rows={6} disabled={loading} />
+                      <TextField
+                        fullWidth
+                        label="Message"
+                        name="message"
+                        value={formData.message}
+                        onChange={handleChange}
+                        error={Boolean(fieldErrors.message)}
+                        helperText={fieldErrors.message ?? `${formData.message.length}/2000`}
+                        required
+                        multiline
+                        rows={6}
+                        disabled={loading}
+                        inputProps={{ maxLength: 2000 }}
+                      />
                     </Grid>
                     <Grid size={{ xs: 12 }}>
                       <Button

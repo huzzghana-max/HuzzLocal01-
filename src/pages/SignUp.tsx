@@ -16,6 +16,8 @@ import {
   useTheme,
 } from '@mui/material'
 import PersonAddIcon from '@mui/icons-material/PersonAdd'
+import { getErrorMessage } from '../utils/errorHandler'
+import { validateSignUp } from '../utils/validation'
 
 const SignUp: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -26,6 +28,7 @@ const SignUp: React.FC = () => {
     role: 'organizer',
   })
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof typeof formData, string>>>({})
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const theme = useTheme()
@@ -36,6 +39,8 @@ const SignUp: React.FC = () => {
       ...formData,
       [name]: value,
     })
+    setFieldErrors((current) => ({ ...current, [name]: '' }))
+    setError('')
   }
 
   const handleRoleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -43,19 +48,18 @@ const SignUp: React.FC = () => {
       ...formData,
       role: e.target.value,
     })
+    setError('')
   }
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setFieldErrors({})
 
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
-      return
-    }
-
-    if (!formData.name || !formData.email || !formData.password) {
-      setError('Please fill in all fields')
+    const validation = validateSignUp(formData)
+    if (!validation.isValid) {
+      setFieldErrors(validation.errors)
+      setError('Please fix the highlighted fields and try again.')
       return
     }
 
@@ -63,17 +67,16 @@ const SignUp: React.FC = () => {
 
     try {
       const response = await api.post('/auth/register', {
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        role: formData.role,
+        name: validation.values.name,
+        email: validation.values.email,
+        password: validation.values.password,
+        role: validation.values.role,
       })
 
       if (response.data.token && response.data.user) {
         localStorage.setItem('token', response.data.token)
         localStorage.setItem('user', JSON.stringify(response.data.user))
 
-        // Route based on user role
         const userRole = response.data.user.role
         if (userRole === 'provider') {
           navigate('/provider-dashboard')
@@ -81,8 +84,8 @@ const SignUp: React.FC = () => {
           navigate('/organizer-dashboard')
         }
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || 'Registration failed. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -91,7 +94,6 @@ const SignUp: React.FC = () => {
   return (
     <Container maxWidth="sm">
       <Box sx={{ py: 8 }}>
-        {/* Header */}
         <Box sx={{ textAlign: 'center', mb: 4 }}>
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
             <PersonAddIcon sx={{ fontSize: 40, color: theme.palette.secondary.main }} />
@@ -111,14 +113,12 @@ const SignUp: React.FC = () => {
           </Typography>
         </Box>
 
-        {/* Error Alert */}
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
           </Alert>
         )}
 
-        {/* Sign Up Form */}
         <Paper
           sx={{
             p: 4,
@@ -136,9 +136,12 @@ const SignUp: React.FC = () => {
               name="name"
               value={formData.name}
               onChange={handleChange}
+              error={Boolean(fieldErrors.name)}
+              helperText={fieldErrors.name}
               required
               margin="normal"
               placeholder="Kwesi John"
+              inputProps={{ maxLength: 80 }}
             />
 
             <TextField
@@ -148,9 +151,12 @@ const SignUp: React.FC = () => {
               type="email"
               value={formData.email}
               onChange={handleChange}
+              error={Boolean(fieldErrors.email)}
+              helperText={fieldErrors.email}
               required
               margin="normal"
               placeholder="your@email.com"
+              inputProps={{ maxLength: 120 }}
             />
 
             <TextField
@@ -160,9 +166,12 @@ const SignUp: React.FC = () => {
               type="password"
               value={formData.password}
               onChange={handleChange}
+              error={Boolean(fieldErrors.password)}
+              helperText={fieldErrors.password}
               required
               margin="normal"
-              placeholder="••••••••"
+              placeholder="........"
+              inputProps={{ minLength: 8, maxLength: 128 }}
             />
 
             <TextField
@@ -172,9 +181,12 @@ const SignUp: React.FC = () => {
               type="password"
               value={formData.confirmPassword}
               onChange={handleChange}
+              error={Boolean(fieldErrors.confirmPassword)}
+              helperText={fieldErrors.confirmPassword}
               required
               margin="normal"
-              placeholder="••••••••"
+              placeholder="........"
+              inputProps={{ maxLength: 128 }}
             />
 
             <Typography sx={{ my: 2, fontWeight: 600, color: theme.palette.text.primary }}>

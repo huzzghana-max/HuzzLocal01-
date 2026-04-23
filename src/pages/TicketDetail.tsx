@@ -20,6 +20,8 @@ import DashboardSidebar from '../components/DashboardSidebar'
 import SendIcon from '@mui/icons-material/Send'
 import BackIcon from '@mui/icons-material/ArrowBack'
 import { getCategoryLabel } from '../constants/support'
+import { getErrorMessage } from '../utils/errorHandler'
+import { validateSupportReply } from '../utils/validation'
 
 interface TicketMessage {
   id: number
@@ -43,15 +45,24 @@ interface TicketDetail {
   updated_at: string
 }
 
+interface LocalUser {
+  role: string
+  name: string
+  email: string
+  profile_image?: string
+}
+
 const TicketDetail: React.FC = () => {
   const { ticketId } = useParams<{ ticketId: string }>()
   const navigate = useNavigate()
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<LocalUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [ticket, setTicket] = useState<TicketDetail | null>(null)
   const [messages, setMessages] = useState<TicketMessage[]>([])
   const [newMessage, setNewMessage] = useState('')
+  const [messageError, setMessageError] = useState('')
+  const [messageFeedback, setMessageFeedback] = useState('')
 
   useEffect(() => {
     const userStr = localStorage.getItem('user')
@@ -82,19 +93,27 @@ const TicketDetail: React.FC = () => {
   }
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim()) return
+    setMessageError('')
+    setMessageFeedback('')
+
+    const validation = validateSupportReply({ message: newMessage })
+    if (!validation.isValid) {
+      setMessageError(validation.errors.message || 'Message is required.')
+      return
+    }
 
     try {
       setSending(true)
       await api.post(`/support/tickets/${ticketId}/messages`, {
-        message: newMessage,
+        message: validation.values.message,
       })
 
       setNewMessage('')
+      setMessageFeedback('Message sent successfully.')
       fetchTicketDetail()
     } catch (error) {
       console.error('Failed to send message:', error)
-      alert('Failed to send message')
+      setMessageFeedback(getErrorMessage(error))
     } finally {
       setSending(false)
     }
@@ -266,20 +285,32 @@ const TicketDetail: React.FC = () => {
 
                 {/* Message Input */}
                 <Divider sx={{ my: 2 }} />
+                {messageFeedback && (
+                  <Alert severity={messageFeedback === 'Message sent successfully.' ? 'success' : 'error'} sx={{ mb: 2 }}>
+                    {messageFeedback}
+                  </Alert>
+                )}
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <TextField
                     fullWidth
                     placeholder="Type your message..."
                     value={newMessage}
-                    onChange={e => setNewMessage(e.target.value)}
+                    onChange={e => {
+                      setNewMessage(e.target.value)
+                      setMessageError('')
+                      setMessageFeedback('')
+                    }}
                     onKeyPress={e => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         handleSendMessage()
                       }
                     }}
+                    error={Boolean(messageError)}
+                    helperText={messageError || `${newMessage.length}/2000`}
                     multiline
                     maxRows={3}
                     disabled={sending}
+                    inputProps={{ maxLength: 2000 }}
                   />
                   <Button
                     variant="contained"

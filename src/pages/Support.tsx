@@ -27,6 +27,8 @@ import TicketIcon from '@mui/icons-material/Assignment'
 import ChatIcon from '@mui/icons-material/Chat'
 import SearchIcon from '@mui/icons-material/Search'
 import { InputAdornment } from '@mui/material'
+import { getErrorMessage } from '../utils/errorHandler'
+import { validateSupportTicket } from '../utils/validation'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -73,10 +75,17 @@ interface Category {
   description: string
 }
 
+interface LocalUser {
+  role: string
+  name: string
+  email: string
+  profile_image?: string
+}
+
 const Support: React.FC = () => {
   const navigate = useNavigate()
   const [tabValue, setTabValue] = useState(0)
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<LocalUser | null>(null)
   const [loading, setLoading] = useState(false)
 
   // Tickets
@@ -89,6 +98,12 @@ const Support: React.FC = () => {
     description: '',
     priority: 'medium',
   })
+  const [ticketErrors, setTicketErrors] = useState<{
+    category_id?: string
+    subject?: string
+    description?: string
+  }>({})
+  const [ticketFeedback, setTicketFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   // FAQs
   const [faqs, setFaqs] = useState<FAQ[]>([])
@@ -150,27 +165,33 @@ const Support: React.FC = () => {
   }
 
   const handleCreateTicket = async () => {
-    if (!newTicket.category_id || !newTicket.subject || !newTicket.description) {
-      alert('Please fill all required fields')
+    setTicketFeedback(null)
+    setTicketErrors({})
+
+    const validation = validateSupportTicket(newTicket)
+    if (!validation.isValid) {
+      setTicketErrors(validation.errors)
+      setTicketFeedback({ type: 'error', text: 'Please fix the highlighted fields and try again.' })
       return
     }
 
     try {
       setLoading(true)
       await api.post('/support/tickets', {
-        category_id: newTicket.category_id,
-        subject: newTicket.subject,
-        description: newTicket.description,
-        priority: newTicket.priority,
+        category_id: validation.values.category_id,
+        subject: validation.values.subject,
+        description: validation.values.description,
+        priority: validation.values.priority,
       })
 
-      alert('Ticket created successfully!')
+      setTicketFeedback({ type: 'success', text: 'Ticket created successfully.' })
       setNewTicket({ category_id: '', subject: '', description: '', priority: 'medium' })
-      setOpenTicketDialog(false)
+      setTicketErrors({})
       fetchTickets()
+      setOpenTicketDialog(false)
     } catch (error) {
       console.error('Failed to create ticket:', error)
-      alert('Failed to create ticket')
+      setTicketFeedback({ type: 'error', text: getErrorMessage(error) })
     } finally {
       setLoading(false)
     }
@@ -256,6 +277,11 @@ const Support: React.FC = () => {
           {/* My Tickets Tab */}
           <TabPanel value={tabValue} index={0}>
             <Box sx={{ mb: 3 }}>
+              {ticketFeedback && !openTicketDialog && (
+                <Alert severity={ticketFeedback.type} sx={{ mb: 2 }} onClose={() => setTicketFeedback(null)}>
+                  {ticketFeedback.text}
+                </Alert>
+              )}
               <Button
                 variant="contained"
                 color="primary"
@@ -411,11 +437,22 @@ const Support: React.FC = () => {
       <Dialog open={openTicketDialog} onClose={() => setOpenTicketDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Create Support Ticket</DialogTitle>
         <DialogContent sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {ticketFeedback && (
+            <Alert severity={ticketFeedback.type} onClose={() => setTicketFeedback(null)}>
+              {ticketFeedback.text}
+            </Alert>
+          )}
           <TextField
             select
             label="Category *"
             value={newTicket.category_id}
-            onChange={e => setNewTicket({ ...newTicket, category_id: e.target.value })}
+            onChange={e => {
+              setNewTicket({ ...newTicket, category_id: e.target.value })
+              setTicketErrors((current) => ({ ...current, category_id: '' }))
+              setTicketFeedback(null)
+            }}
+            error={Boolean(ticketErrors.category_id)}
+            helperText={ticketErrors.category_id}
             fullWidth
           >
             {categories.map(cat => (
@@ -428,19 +465,33 @@ const Support: React.FC = () => {
           <TextField
             label="Subject *"
             value={newTicket.subject}
-            onChange={e => setNewTicket({ ...newTicket, subject: e.target.value })}
+            onChange={e => {
+              setNewTicket({ ...newTicket, subject: e.target.value })
+              setTicketErrors((current) => ({ ...current, subject: '' }))
+              setTicketFeedback(null)
+            }}
+            error={Boolean(ticketErrors.subject)}
+            helperText={ticketErrors.subject}
             fullWidth
             placeholder="Brief description of your issue"
+            inputProps={{ maxLength: 120 }}
           />
 
           <TextField
             label="Description *"
             value={newTicket.description}
-            onChange={e => setNewTicket({ ...newTicket, description: e.target.value })}
+            onChange={e => {
+              setNewTicket({ ...newTicket, description: e.target.value })
+              setTicketErrors((current) => ({ ...current, description: '' }))
+              setTicketFeedback(null)
+            }}
+            error={Boolean(ticketErrors.description)}
+            helperText={ticketErrors.description ?? `${newTicket.description.length}/4000`}
             fullWidth
             multiline
             rows={4}
             placeholder="Provide detailed information about your issue"
+            inputProps={{ maxLength: 4000 }}
           />
 
           <TextField

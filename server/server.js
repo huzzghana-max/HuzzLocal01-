@@ -47,6 +47,114 @@ const { getPool, initializeDatabase, registerUser, loginUser } = require('./db')
 const app = express();
 const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || '0.0.0.0';
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function normalizeWhitespace(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim()
+}
+
+function normalizeEmail(value) {
+  return String(value || '').trim().toLowerCase()
+}
+
+function validateRegistrationPayload(body = {}) {
+  const values = {
+    name: normalizeWhitespace(body.name),
+    email: normalizeEmail(body.email),
+    password: String(body.password || ''),
+    role: ['organizer', 'provider', 'admin'].includes(body.role) ? body.role : 'organizer',
+  }
+
+  if (!values.name || !values.email || !values.password) {
+    return { message: 'Name, email, and password are required' }
+  }
+  if (values.name.length < 2 || values.name.length > 80) {
+    return { message: 'Name must be between 2 and 80 characters' }
+  }
+  if (!EMAIL_REGEX.test(values.email) || values.email.length > 120) {
+    return { message: 'Please provide a valid email address' }
+  }
+  if (values.password.length < 8 || values.password.length > 128) {
+    return { message: 'Password must be between 8 and 128 characters' }
+  }
+
+  return { values }
+}
+
+function validateLoginPayload(body = {}) {
+  const values = {
+    email: normalizeEmail(body.email),
+    password: String(body.password || ''),
+  }
+
+  if (!values.email || !values.password) {
+    return { message: 'Email and password are required' }
+  }
+  if (!EMAIL_REGEX.test(values.email) || values.email.length > 120) {
+    return { message: 'Please provide a valid email address' }
+  }
+
+  return { values }
+}
+
+function validateSupportTicketPayload(body = {}) {
+  const values = {
+    category_id: String(body.category_id || '').trim(),
+    subject: normalizeWhitespace(body.subject),
+    description: String(body.description || '').trim(),
+    priority: ['low', 'medium', 'high', 'urgent'].includes(body.priority) ? body.priority : 'medium',
+  }
+
+  if (!values.category_id || !values.subject || !values.description) {
+    return { message: 'Category, subject, and description are required' }
+  }
+  if (values.subject.length < 5 || values.subject.length > 120) {
+    return { message: 'Subject must be between 5 and 120 characters' }
+  }
+  if (values.description.length < 20 || values.description.length > 4000) {
+    return { message: 'Description must be between 20 and 4000 characters' }
+  }
+
+  return { values }
+}
+
+function validateSupportMessagePayload(body = {}) {
+  const values = {
+    message: String(body.message || '').trim(),
+  }
+
+  if (!values.message) {
+    return { message: 'Message content is required' }
+  }
+  if (values.message.length < 2 || values.message.length > 2000) {
+    return { message: 'Message must be between 2 and 2000 characters' }
+  }
+
+  return { values }
+}
+
+function validateContactPayload(body = {}) {
+  const values = {
+    name: normalizeWhitespace(body.name),
+    email: normalizeEmail(body.email),
+    message: String(body.message || '').trim(),
+  }
+
+  if (!values.name || !values.email || !values.message) {
+    return { message: 'Name, email, and message are required' }
+  }
+  if (values.name.length < 2 || values.name.length > 80) {
+    return { message: 'Name must be between 2 and 80 characters' }
+  }
+  if (!EMAIL_REGEX.test(values.email) || values.email.length > 120) {
+    return { message: 'Invalid email format' }
+  }
+  if (values.message.length < 10 || values.message.length > 2000) {
+    return { message: 'Message must be between 10 and 2000 characters' }
+  }
+
+  return { values }
+}
 
 function logMailConfigStatus() {
   const required = ['MAIL_HOST', 'MAIL_PORT', 'MAIL_USER', 'MAIL_PASS', 'MAIL_FROM']
@@ -532,15 +640,15 @@ const registerLimiter = rateLimit({
 // Routes
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { name, email, password, role } = req.body
-    console.log('Register request received:', { name, email, role })
-
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: 'All fields are required' })
+    const validation = validateRegistrationPayload(req.body)
+    if (validation.message) {
+      return res.status(400).json({ message: validation.message })
     }
 
-    const userRole = role && ['organizer', 'provider', 'admin'].includes(role) ? role : 'organizer'
-    const result = await registerUser(name, email, password, userRole)
+    const { name, email, password, role } = validation.values
+    console.log('Register request received:', { name, email, role })
+
+    const result = await registerUser(name, email, password, role)
     console.log('User registered successfully:', result.user)
     res.status(201).json(result)
   } catch (error) {
@@ -557,12 +665,13 @@ app.post('/api/auth/register', async (req, res) => {
 
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const { email, password } = req.body
-    console.log('Login request received:', { email })
-
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' })
+    const validation = validateLoginPayload(req.body)
+    if (validation.message) {
+      return res.status(400).json({ message: validation.message })
     }
+
+    const { email, password } = validation.values
+    console.log('Login request received:', { email })
 
     const result = await loginUser(email, password)
     console.log('User logged in successfully:', result.user)
@@ -3369,12 +3478,13 @@ ticketManagementRoutes(app, { getPoolOrThrow, verifyToken, isAdmin: (req) => req
 // Create support ticket
 app.post('/api/support/tickets', verifyToken, async (req, res) => {
   try {
-    const { category_id, subject, description, priority } = req.body
-    const user_id = req.userId
-
-    if (!category_id || !subject || !description) {
-      return res.status(400).json({ message: 'Category, subject, and description are required' })
+    const validation = validateSupportTicketPayload(req.body)
+    if (validation.message) {
+      return res.status(400).json({ message: validation.message })
     }
+
+    const { category_id, subject, description, priority } = validation.values
+    const user_id = req.userId
 
     const pool = getPoolOrThrow()
     const [result] = await pool.execute(
@@ -3471,12 +3581,13 @@ app.get('/api/support/tickets/:ticketId', verifyToken, async (req, res) => {
 app.post('/api/support/tickets/:ticketId/messages', verifyToken, async (req, res) => {
   try {
     const { ticketId } = req.params
-    const { message } = req.body
-    const user_id = req.userId
-
-    if (!message) {
-      return res.status(400).json({ message: 'Message content is required' })
+    const validation = validateSupportMessagePayload(req.body)
+    if (validation.message) {
+      return res.status(400).json({ message: validation.message })
     }
+
+    const { message } = validation.values
+    const user_id = req.userId
 
     const pool = getPoolOrThrow()
 
@@ -3624,17 +3735,12 @@ app.post('/api/faqs/:faqId/helpful', verifyToken, async (req, res) => {
 // Contact form submission endpoint - using Mailpit SMTP
 app.post('/api/contact', async (req, res) => {
   try {
-    const { name, email, message } = req.body
-
-    // Validate input
-    if (!name || !email || !message) {
-      return res.status(400).json({ message: 'Name, email, and message are required' })
+    const validation = validateContactPayload(req.body)
+    if (validation.message) {
+      return res.status(400).json({ message: validation.message })
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ message: 'Invalid email format' })
-    }
+    const { name, email, message } = validation.values
 
     const adminEmail = process.env.ADMIN_EMAIL || 'jonathandraft02@gmail.com'
     const fromEmail = process.env.MAIL_FROM || 'noreply@huzz.local'

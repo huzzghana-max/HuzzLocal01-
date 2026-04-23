@@ -18,11 +18,13 @@ import {
 import LoginIcon from '@mui/icons-material/Login'
 import { normalizeImageUrl, cacheProfileImage } from '../utils/imageUtils'
 import { getErrorMessage, logError } from '../utils/errorHandler'
+import { validateSignIn } from '../utils/validation'
 
 const SignIn: React.FC = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({})
   const [loading, setLoading] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const navigate = useNavigate()
@@ -32,32 +34,37 @@ const SignIn: React.FC = () => {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setFieldErrors({})
+
+    const validation = validateSignIn({ email, password })
+    if (!validation.isValid) {
+      setFieldErrors(validation.errors)
+      setError('Please fix the highlighted fields and try again.')
+      return
+    }
+
     setLoading(true)
 
     try {
       const response = await api.post('/auth/login', {
-        email,
-        password,
+        email: validation.values.email,
+        password: validation.values.password,
       })
 
       if (response.data.token && response.data.user) {
-        // Normalize user profile image URL
         const normalizedUser = {
           ...response.data.user,
-          profile_image: response.data.user.profile_image 
+          profile_image: response.data.user.profile_image
             ? normalizeImageUrl(response.data.user.profile_image)
             : '',
         }
 
-        // Use AuthContext to store auth data
         login(normalizedUser, response.data.token, rememberMe)
 
-        // Cache profile image for faster loading
         if (normalizedUser.email && normalizedUser.profile_image) {
           cacheProfileImage(normalizedUser.email, normalizedUser.profile_image)
         }
 
-        // Route based on user role
         const userRole = normalizedUser.role
         if (userRole === 'admin') {
           navigate('/admin-dashboard')
@@ -67,7 +74,7 @@ const SignIn: React.FC = () => {
           navigate('/organizer-dashboard')
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMessage = getErrorMessage(err)
       setError(errorMessage)
       logError(err, 'SignIn')
@@ -79,7 +86,6 @@ const SignIn: React.FC = () => {
   return (
     <Container maxWidth="sm">
       <Box sx={{ py: 8 }}>
-        {/* Header */}
         <Box sx={{ textAlign: 'center', mb: 4 }}>
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
             <LoginIcon sx={{ fontSize: 40, color: theme.palette.secondary.main }} />
@@ -99,14 +105,12 @@ const SignIn: React.FC = () => {
           </Typography>
         </Box>
 
-        {/* Error Alert */}
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
           </Alert>
         )}
 
-        {/* Sign In Form */}
         <Paper
           sx={{
             p: 4,
@@ -123,10 +127,17 @@ const SignIn: React.FC = () => {
               label="Email Address"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                setFieldErrors((current) => ({ ...current, email: '' }))
+                setError('')
+              }}
+              error={Boolean(fieldErrors.email)}
+              helperText={fieldErrors.email}
               required
               margin="normal"
               placeholder="your@email.com"
+              inputProps={{ maxLength: 120 }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   '&:hover fieldset': {
@@ -141,10 +152,17 @@ const SignIn: React.FC = () => {
               label="Password"
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value)
+                setFieldErrors((current) => ({ ...current, password: '' }))
+                setError('')
+              }}
+              error={Boolean(fieldErrors.password)}
+              helperText={fieldErrors.password}
               required
               margin="normal"
-              placeholder="••••••••"
+              placeholder="........"
+              inputProps={{ maxLength: 128 }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   '&:hover fieldset': {
@@ -220,10 +238,10 @@ const SignIn: React.FC = () => {
               Don't have an account?{' '}
               <Link
                 to="/signup"
-                style={{ 
-                  color: theme.palette.secondary.main, 
-                  textDecoration: 'none', 
-                  fontWeight: 600 
+                style={{
+                  color: theme.palette.secondary.main,
+                  textDecoration: 'none',
+                  fontWeight: 600,
                 }}
               >
                 Sign Up
@@ -237,4 +255,3 @@ const SignIn: React.FC = () => {
 }
 
 export default SignIn
-
