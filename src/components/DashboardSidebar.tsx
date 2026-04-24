@@ -44,8 +44,10 @@ interface SidebarItem {
   submenu?: SidebarItem[]
 }
 
+type DashboardUserRole = 'admin' | 'organizer' | 'provider'
+
 interface DashboardSidebarProps {
-  userRole: 'admin' | 'organizer' | 'provider'
+  userRole: string
   userName?: string
   userEmail?: string
   userImage?: string
@@ -81,6 +83,10 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   })()
 
   const avatarSrc = userImage || storedUserImage || undefined
+  const normalizedUserRole: DashboardUserRole | null =
+    userRole === 'admin' || userRole === 'organizer' || userRole === 'provider'
+      ? userRole
+      : null
 
   const toggleSubmenu = (label: string) => {
     setExpanded((prev) => ({
@@ -107,7 +113,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   }
 
   const getMenuItems = (): SidebarItem[] => {
-    switch (userRole) {
+    switch (normalizedUserRole) {
       case 'admin':
         return [
           {
@@ -115,11 +121,11 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             icon: <DashboardIcon />,
             path: '/admin-dashboard',
           },
-          {
+         /* {
             label: 'Analytics',
             icon: <AnalyticsIcon />,
             path: '#analytics',
-          },
+          },*/
           {
             label: 'Payments',
             icon: <PaymentIcon />,

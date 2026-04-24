@@ -111,8 +111,7 @@ const AdminTicketDashboard: React.FC = () => {
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
   const [staffLoading, setStaffLoading] = useState(false)
 
-  // Refs for focus management in dialogs
-  const assignInputRef = useRef<HTMLInputElement>(null)
+  // Ref for focus management in dialogs
   const escalateInputRef = useRef<HTMLInputElement>(null)
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
@@ -121,6 +120,20 @@ const AdminTicketDashboard: React.FC = () => {
     fetchAnalytics()
     fetchTickets()
   }, [page, filterStatus, filterPriority, searchTerm, startDate, endDate])
+
+  useEffect(() => {
+    if (!assignDialog) return
+    fetchStaffMembers()
+  }, [assignDialog])
+
+  useEffect(() => {
+    if (!escalateDialog) return
+    const timeout = window.setTimeout(() => {
+      escalateInputRef.current?.focus()
+    }, 0)
+
+    return () => window.clearTimeout(timeout)
+  }, [escalateDialog])
 
   const fetchAnalytics = async () => {
     try {
@@ -179,10 +192,6 @@ const AdminTicketDashboard: React.FC = () => {
     }
   }
 
-  const handleAssignDialogOpen = () => {
-    fetchStaffMembers()
-  }
-
   const fetchStaffMembers = async () => {
     try {
       setStaffLoading(true)
@@ -211,12 +220,6 @@ const AdminTicketDashboard: React.FC = () => {
       console.error('Failed to escalate ticket:', error)
       alert('Failed to escalate ticket')
     }
-  }
-
-  const handleEscalateDialogOpen = () => {
-    setTimeout(() => {
-      escalateInputRef.current?.focus()
-    }, 0)
   }
 
   const getStatusColor = (status: string) => {
@@ -641,7 +644,6 @@ const AdminTicketDashboard: React.FC = () => {
         <Dialog 
           open={assignDialog} 
           onClose={() => setAssignDialog(false)}
-          onOpen={handleAssignDialogOpen}
           maxWidth="sm" 
           fullWidth
           keepMounted={false}
@@ -684,7 +686,6 @@ const AdminTicketDashboard: React.FC = () => {
         <Dialog 
           open={escalateDialog} 
           onClose={() => setEscalateDialog(false)}
-          onOpen={handleEscalateDialogOpen}
           maxWidth="sm" 
           fullWidth
           keepMounted={false}
