@@ -28,6 +28,8 @@ import {
   Tabs,
   Tab,
   useMediaQuery,
+  Switch,
+  FormControlLabel,
 } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import { useNavigate } from 'react-router-dom'
@@ -44,6 +46,9 @@ import LocationOnIcon from '@mui/icons-material/LocationOn'
 import api from '../../api'
 import DashboardSidebar from '../../components/DashboardSidebar'
 import { StatCard, DashboardHeader } from '../../components/DashboardComponents'
+import { getErrorMessage } from '../../utils/errorHandler'
+import { normalizePasswordPolicy } from '../../utils/passwordPolicy'
+import { DEFAULT_PASSWORD_POLICY, getPasswordPolicyChecklist, validatePasswordAgainstPolicy } from '../../utils/validation'
 
 interface User {
   id: number
@@ -69,6 +74,14 @@ interface Event {
   status: 'pending' | 'draft' | 'published' | 'confirmed' | 'ongoing' | 'completed' | 'cancelled'
   created_at: string
   image_url?: string
+}
+
+interface PasswordPolicyState {
+  minLength: number
+  requireUppercase: boolean
+  requireLowercase: boolean
+  requireNumber: boolean
+  requireSpecialCharacter: boolean
 }
 
 const AdminDashboard: React.FC = () => {
@@ -116,6 +129,8 @@ const AdminDashboard: React.FC = () => {
   const [deletingEvent, setDeletingEvent] = useState(false)
   const [pendingServicesCount, setPendingServicesCount] = useState(0)
   const [pendingPayoutRequestsCount, setPendingPayoutRequestsCount] = useState(0)
+  const [passwordPolicy, setPasswordPolicy] = useState<PasswordPolicyState>(DEFAULT_PASSWORD_POLICY)
+  const [savingPasswordPolicy, setSavingPasswordPolicy] = useState(false)
 
   useEffect(() => {
     const userStr = localStorage.getItem('user')
@@ -136,7 +151,21 @@ const AdminDashboard: React.FC = () => {
     fetchEvents()
     fetchPendingServices()
     fetchPendingPayoutRequests()
+    fetchPasswordPolicy()
   }, [navigate])
+
+  const fetchPasswordPolicy = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+      const response = await api.get('/admin/password-policy', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      setPasswordPolicy(normalizePasswordPolicy(response.data))
+    } catch (err) {
+      console.error('Error fetching password policy:', err)
+    }
+  }
 
   const fetchPendingServices = async () => {
     try {
@@ -240,6 +269,12 @@ const AdminDashboard: React.FC = () => {
       return
     }
 
+    const passwordError = validatePasswordAgainstPolicy(newUserData.password, passwordPolicy)
+    if (passwordError) {
+      setError(passwordError)
+      return
+    }
+
     setCreatingUser(true)
     try {
       await api.post('/admin/users', newUserData)
@@ -247,10 +282,27 @@ const AdminDashboard: React.FC = () => {
       setOpenCreateDialog(false)
       fetchUsers()
       setTimeout(() => setSuccessMessage(''), 3000)
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create user')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || 'Failed to create user')
     } finally {
       setCreatingUser(false)
+    }
+  }
+
+  const handleSavePasswordPolicy = async () => {
+    setSavingPasswordPolicy(true)
+    setError('')
+    try {
+      const token = localStorage.getItem('token')
+      await api.put('/admin/password-policy', passwordPolicy, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      setSuccessMessage('Password policy updated successfully!')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || 'Failed to update password policy')
+    } finally {
+      setSavingPasswordPolicy(false)
     }
   }
 
@@ -582,6 +634,7 @@ const AdminDashboard: React.FC = () => {
                 >
                   <Tab label="👥 Users" />
                   <Tab label={`📅 Events (${totalEvents})`} />
+                  <Tab label="🔐 Security" />
                   <Tab label="Analytics" />
                 </Tabs>
               </Paper>
@@ -1066,6 +1119,97 @@ const AdminDashboard: React.FC = () => {
                     </Typography>
                   </Box>
                 </Box>
+                ) : currentTab === 2 ? (
+                <Box>
+                  <Typography variant="h5" sx={{ fontWeight: 600, mb: 3 }}>
+                    Security Settings
+                  </Typography>
+
+                  <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(65, 73, 88, 0.14)' }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5 }}>
+                      Password Policy
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
+                      Define the password rules that apply to signup, admin-created accounts, and password changes.
+                    </Typography>
+
+                    {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+                    <Box sx={{ display: 'grid', gap: 2.2, maxWidth: 720 }}>
+                      <TextField
+                        label="Minimum Length"
+                        type="number"
+                        value={passwordPolicy.minLength}
+                        onChange={(e) => setPasswordPolicy((prev) => ({
+                          ...prev,
+                          minLength: Math.min(Math.max(Number(e.target.value) || 8, 8), 128),
+                        }))}
+                        inputProps={{ min: 8, max: 128 }}
+                      />
+
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 1 }}>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={passwordPolicy.requireUppercase}
+                              onChange={(e) => setPasswordPolicy((prev) => ({ ...prev, requireUppercase: e.target.checked }))}
+                            />
+                          }
+                          label="Require uppercase"
+                        />
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={passwordPolicy.requireLowercase}
+                              onChange={(e) => setPasswordPolicy((prev) => ({ ...prev, requireLowercase: e.target.checked }))}
+                            />
+                          }
+                          label="Require lowercase"
+                        />
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={passwordPolicy.requireNumber}
+                              onChange={(e) => setPasswordPolicy((prev) => ({ ...prev, requireNumber: e.target.checked }))}
+                            />
+                          }
+                          label="Require number"
+                        />
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={passwordPolicy.requireSpecialCharacter}
+                              onChange={(e) => setPasswordPolicy((prev) => ({ ...prev, requireSpecialCharacter: e.target.checked }))}
+                            />
+                          }
+                          label="Require special character"
+                        />
+                      </Box>
+
+                      <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'action.hover' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, mb: 1 }}>
+                          Active requirements
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                          {getPasswordPolicyChecklist(passwordPolicy).map((item) => (
+                            <Chip key={item} label={item} size="small" color="primary" variant="outlined" />
+                          ))}
+                        </Box>
+                      </Box>
+
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <Button
+                          variant="contained"
+                          onClick={handleSavePasswordPolicy}
+                          disabled={savingPasswordPolicy}
+                          sx={{ textTransform: 'none', fontWeight: 700 }}
+                        >
+                          {savingPasswordPolicy ? 'Saving...' : 'Save Password Policy'}
+                        </Button>
+                      </Box>
+                    </Box>
+                  </Paper>
+                </Box>
                 ) : (
                 <Box>
                   <Typography variant="h5" sx={{ fontWeight: 600, mb: 3 }}>
@@ -1323,6 +1467,8 @@ const AdminDashboard: React.FC = () => {
                       type="password"
                       value={newUserData.password}
                       onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
+                      helperText={`Requirements: ${getPasswordPolicyChecklist(passwordPolicy).join(' • ')}`}
+                      inputProps={{ minLength: passwordPolicy.minLength, maxLength: 128 }}
                     />
                     <FormControl fullWidth>
                       <InputLabel>Role</InputLabel>

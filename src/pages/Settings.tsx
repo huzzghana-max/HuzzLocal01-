@@ -50,6 +50,9 @@ import PersonOutlineIcon from '@mui/icons-material/PersonOutline'
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone'
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
 import DashboardSidebar from '../components/DashboardSidebar'
+import { getErrorMessage } from '../utils/errorHandler'
+import { normalizePasswordPolicy } from '../utils/passwordPolicy'
+import { DEFAULT_PASSWORD_POLICY, getPasswordPolicyChecklist, validatePasswordAgainstPolicy } from '../utils/validation'
 
 interface User {
   id: number
@@ -96,6 +99,7 @@ const Settings: React.FC = () => {
     newPassword: '',
     confirmPassword: '',
   })
+  const [passwordPolicy, setPasswordPolicy] = useState(DEFAULT_PASSWORD_POLICY)
 
   // Notification settings
   const [notifications, setNotifications] = useState({
@@ -147,7 +151,17 @@ const Settings: React.FC = () => {
     
     // Fetch settings in background (non-blocking)
     fetchSettings()
+    fetchPasswordPolicy()
   }, [navigate])
+
+  const fetchPasswordPolicy = async () => {
+    try {
+      const response = await api.get('/password-policy')
+      setPasswordPolicy(normalizePasswordPolicy(response.data))
+    } catch (error) {
+      console.error('Failed to fetch password policy:', error)
+    }
+  }
 
   const fetchSettings = async () => {
     try {
@@ -227,6 +241,15 @@ const Settings: React.FC = () => {
   }
 
   const handleSaveProfile = async () => {
+    const passwordPolicyError = passwordData.newPassword
+      ? validatePasswordAgainstPolicy(passwordData.newPassword, passwordPolicy)
+      : ''
+
+    if (passwordPolicyError) {
+      setErrorMessage(passwordPolicyError)
+      return
+    }
+
     if (passwordData.newPassword && passwordData.newPassword !== passwordData.confirmPassword) {
       setErrorMessage('Passwords do not match!')
       return
@@ -287,8 +310,8 @@ const Settings: React.FC = () => {
       setErrorMessage('')
       setSuccessMessage('Profile updated successfully!')
       setTimeout(() => setSuccessMessage(''), 3000)
-    } catch (error: any) {
-      setErrorMessage(error.response?.data?.message || 'Failed to update profile')
+    } catch (error: unknown) {
+      setErrorMessage(getErrorMessage(error) || 'Failed to update profile')
     } finally {
       setSaving(false)
     }
@@ -304,8 +327,8 @@ const Settings: React.FC = () => {
       setErrorMessage('')
       setSuccessMessage('Notification preferences saved!')
       setTimeout(() => setSuccessMessage(''), 3000)
-    } catch (error: any) {
-      setErrorMessage(error.response?.data?.message || 'Failed to save preferences')
+    } catch (error: unknown) {
+      setErrorMessage(getErrorMessage(error) || 'Failed to save preferences')
     } finally {
       setSaving(false)
     }
@@ -321,8 +344,8 @@ const Settings: React.FC = () => {
       setErrorMessage('')
       setSuccessMessage('Privacy settings saved!')
       setTimeout(() => setSuccessMessage(''), 3000)
-    } catch (error: any) {
-      setErrorMessage(error.response?.data?.message || 'Failed to save privacy settings')
+    } catch (error: unknown) {
+      setErrorMessage(getErrorMessage(error) || 'Failed to save privacy settings')
     } finally {
       setSaving(false)
     }
@@ -576,8 +599,20 @@ const Settings: React.FC = () => {
                         Security
                       </Typography>
                       <Box sx={{ display: 'grid', gap: 1.8 }}>
+                        <Alert severity="info" sx={{ alignItems: 'flex-start' }}>
+                          Password requirements: {getPasswordPolicyChecklist(passwordPolicy).join(' • ')}
+                        </Alert>
                         <TextField fullWidth label="Current Password" name="currentPassword" type="password" value={passwordData.currentPassword} onChange={handlePasswordChange} />
-                        <TextField fullWidth label="New Password" name="newPassword" type="password" value={passwordData.newPassword} onChange={handlePasswordChange} />
+                        <TextField
+                          fullWidth
+                          label="New Password"
+                          name="newPassword"
+                          type="password"
+                          value={passwordData.newPassword}
+                          onChange={handlePasswordChange}
+                          helperText={passwordData.newPassword ? `${passwordData.newPassword.length}/128 characters` : undefined}
+                          inputProps={{ minLength: passwordPolicy.minLength, maxLength: 128 }}
+                        />
                         <TextField fullWidth label="Confirm New Password" name="confirmPassword" type="password" value={passwordData.confirmPassword} onChange={handlePasswordChange} />
                       </Box>
                     </CardContent>

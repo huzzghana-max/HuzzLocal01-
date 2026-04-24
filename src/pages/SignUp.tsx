@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import api from '../api'
 import {
@@ -17,7 +17,8 @@ import {
 } from '@mui/material'
 import PersonAddIcon from '@mui/icons-material/PersonAdd'
 import { getErrorMessage } from '../utils/errorHandler'
-import { validateSignUp } from '../utils/validation'
+import { normalizePasswordPolicy } from '../utils/passwordPolicy'
+import { DEFAULT_PASSWORD_POLICY, getPasswordPolicyChecklist, validateSignUp } from '../utils/validation'
 
 const SignUp: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -29,9 +30,23 @@ const SignUp: React.FC = () => {
   })
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof typeof formData, string>>>({})
+  const [passwordPolicy, setPasswordPolicy] = useState(DEFAULT_PASSWORD_POLICY)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const theme = useTheme()
+
+  useEffect(() => {
+    const fetchPasswordPolicy = async () => {
+      try {
+        const response = await api.get('/password-policy')
+        setPasswordPolicy(normalizePasswordPolicy(response.data))
+      } catch (err) {
+        console.error('Failed to fetch password policy:', err)
+      }
+    }
+
+    fetchPasswordPolicy()
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -56,7 +71,7 @@ const SignUp: React.FC = () => {
     setError('')
     setFieldErrors({})
 
-    const validation = validateSignUp(formData)
+    const validation = validateSignUp(formData, passwordPolicy)
     if (!validation.isValid) {
       setFieldErrors(validation.errors)
       setError('Please fix the highlighted fields and try again.')
@@ -171,8 +186,11 @@ const SignUp: React.FC = () => {
               required
               margin="normal"
               placeholder="........"
-              inputProps={{ minLength: 8, maxLength: 128 }}
+              inputProps={{ minLength: passwordPolicy.minLength, maxLength: 128 }}
             />
+            <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: 'text.secondary' }}>
+              Password requirements: {getPasswordPolicyChecklist(passwordPolicy).join(' • ')}
+            </Typography>
 
             <TextField
               fullWidth

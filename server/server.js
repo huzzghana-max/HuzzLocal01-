@@ -48,6 +48,13 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || '0.0.0.0';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const DEFAULT_PASSWORD_POLICY = {
+  minLength: 8,
+  requireUppercase: false,
+  requireLowercase: false,
+  requireNumber: false,
+  requireSpecialCharacter: false,
+}
 
 function normalizeWhitespace(value) {
   return String(value || '').replace(/\s+/g, ' ').trim()
@@ -55,6 +62,75 @@ function normalizeWhitespace(value) {
 
 function normalizeEmail(value) {
   return String(value || '').trim().toLowerCase()
+}
+
+function normalizePasswordPolicy(rawPolicy = {}) {
+  const minLength = Number(rawPolicy.minLength)
+
+  return {
+    minLength: Number.isFinite(minLength) ? Math.min(Math.max(Math.round(minLength), 8), 128) : DEFAULT_PASSWORD_POLICY.minLength,
+    requireUppercase: Boolean(rawPolicy.requireUppercase),
+    requireLowercase: Boolean(rawPolicy.requireLowercase),
+    requireNumber: Boolean(rawPolicy.requireNumber),
+    requireSpecialCharacter: Boolean(rawPolicy.requireSpecialCharacter),
+  }
+}
+
+function getPasswordPolicyChecklist(policy) {
+  const checklist = [`At least ${policy.minLength} characters`]
+  if (policy.requireUppercase) checklist.push('At least one uppercase letter')
+  if (policy.requireLowercase) checklist.push('At least one lowercase letter')
+  if (policy.requireNumber) checklist.push('At least one number')
+  if (policy.requireSpecialCharacter) checklist.push('At least one special character')
+  return checklist
+}
+
+function validatePasswordAgainstPolicy(password, policy) {
+  const passwordValue = String(password || '')
+
+  if (!passwordValue) return 'Password is required'
+  if (passwordValue.length > 128) return 'Password must be 128 characters or fewer'
+  if (passwordValue.length < policy.minLength) return `Password must be at least ${policy.minLength} characters`
+  if (policy.requireUppercase && !/[A-Z]/.test(passwordValue)) return 'Password must include at least one uppercase letter'
+  if (policy.requireLowercase && !/[a-z]/.test(passwordValue)) return 'Password must include at least one lowercase letter'
+  if (policy.requireNumber && !/\d/.test(passwordValue)) return 'Password must include at least one number'
+  if (policy.requireSpecialCharacter && !/[^A-Za-z0-9]/.test(passwordValue)) return 'Password must include at least one special character'
+
+  return ''
+}
+
+async function getPasswordPolicy(pool) {
+  try {
+    const [rows] = await pool.execute(
+      'SELECT setting_value FROM app_settings WHERE setting_key = ? LIMIT 1',
+      ['password_policy']
+    )
+    const rawValue = rows[0]?.setting_value
+    const parsedValue = typeof rawValue === 'string' ? JSON.parse(rawValue) : rawValue
+    return normalizePasswordPolicy(parsedValue || DEFAULT_PASSWORD_POLICY)
+  } catch (error) {
+    console.warn('Falling back to default password policy:', error.message)
+    return DEFAULT_PASSWORD_POLICY
+  }
+}
+
+async function savePasswordPolicy(pool, policy) {
+  const normalizedPolicy = normalizePasswordPolicy(policy)
+  await pool.execute(
+    `INSERT INTO app_settings (setting_key, setting_value)
+     VALUES (?, ?)
+     ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = CURRENT_TIMESTAMP`,
+    ['password_policy', JSON.stringify(normalizedPolicy)]
+  )
+  return normalizedPolicy
+}
+
+function ensureAdmin(req, res) {
+  if (req.userRole !== 'admin') {
+    res.status(403).json({ message: 'Admin access required' })
+    return false
+  }
+  return true
 }
 
 function validateRegistrationPayload(body = {}) {
@@ -74,8 +150,8 @@ function validateRegistrationPayload(body = {}) {
   if (!EMAIL_REGEX.test(values.email) || values.email.length > 120) {
     return { message: 'Please provide a valid email address' }
   }
-  if (values.password.length < 8 || values.password.length > 128) {
-    return { message: 'Password must be between 8 and 128 characters' }
+  if (values.password.length > 128) {
+    return { message: 'Password must be 128 characters or fewer' }
   }
 
   return { values }
@@ -640,12 +716,18 @@ const registerLimiter = rateLimit({
 // Routes
 app.post('/api/auth/register', async (req, res) => {
   try {
+    const pool = getPoolOrThrow()
     const validation = validateRegistrationPayload(req.body)
     if (validation.message) {
       return res.status(400).json({ message: validation.message })
     }
 
     const { name, email, password, role } = validation.values
+    const passwordPolicy = await getPasswordPolicy(pool)
+    const passwordError = validatePasswordAgainstPolicy(password, passwordPolicy)
+    if (passwordError) {
+      return res.status(400).json({ message: passwordError, passwordPolicy })
+    }
     console.log('Register request received:', { name, email, role })
 
     const result = await registerUser(name, email, password, role)
@@ -679,6 +761,20 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (error) {
     console.error('Login error:', error.message)
     res.status(401).json({ message: error.message || 'Login failed' })
+  }
+})
+
+app.get('/api/password-policy', async (_req, res) => {
+  try {
+    const pool = getPoolOrThrow()
+    const passwordPolicy = await getPasswordPolicy(pool)
+    res.json({
+      ...passwordPolicy,
+      checklist: getPasswordPolicyChecklist(passwordPolicy),
+    })
+  } catch (error) {
+    console.error('Get password policy error:', error.message)
+    res.status(500).json({ message: error.message })
   }
 })
 
@@ -845,6 +941,7 @@ app.get('/api/dashboard/admin-stats', verifyToken, async (req, res) => {
 // Get all users (admin only)
 app.get('/api/admin/users', verifyToken, async (req, res) => {
   try {
+    if (!ensureAdmin(req, res)) return
     const pool = getPoolOrThrow()
     const [users] = await pool.execute('SELECT id, name, email, role, created_at FROM users ORDER BY created_at DESC')
     res.json(users)
@@ -854,19 +951,57 @@ app.get('/api/admin/users', verifyToken, async (req, res) => {
   }
 })
 
+app.get('/api/admin/password-policy', verifyToken, async (req, res) => {
+  try {
+    if (!ensureAdmin(req, res)) return
+    const pool = getPoolOrThrow()
+    const passwordPolicy = await getPasswordPolicy(pool)
+    res.json({
+      ...passwordPolicy,
+      checklist: getPasswordPolicyChecklist(passwordPolicy),
+    })
+  } catch (error) {
+    console.error('Get admin password policy error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.put('/api/admin/password-policy', verifyToken, async (req, res) => {
+  try {
+    if (!ensureAdmin(req, res)) return
+    const pool = getPoolOrThrow()
+    const passwordPolicy = await savePasswordPolicy(pool, req.body)
+    res.json({
+      message: 'Password policy updated successfully',
+      passwordPolicy,
+      checklist: getPasswordPolicyChecklist(passwordPolicy),
+    })
+  } catch (error) {
+    console.error('Update password policy error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
 // Create new user (admin only)
 app.post('/api/admin/users', verifyToken, async (req, res) => {
   try {
-    const { name, email, password, role } = req.body
+    if (!ensureAdmin(req, res)) return
+    const pool = getPoolOrThrow()
+    const validation = validateRegistrationPayload(req.body)
+    if (validation.message) {
+      return res.status(400).json({ message: validation.message })
+    }
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Name, email, and password are required' })
+    const { name, email, password, role } = validation.values
+    const passwordPolicy = await getPasswordPolicy(pool)
+    const passwordError = validatePasswordAgainstPolicy(password, passwordPolicy)
+    if (passwordError) {
+      return res.status(400).json({ message: passwordError, passwordPolicy })
     }
 
     const validRole = ['organizer', 'provider', 'admin'].includes(role) ? role : 'organizer'
     const hashedPassword = await require('bcryptjs').hash(password, 10)
 
-    const pool = getPoolOrThrow()
     const [result] = await pool.execute(
       'INSERT INTO users (name, email, password, role, is_approved) VALUES (?, ?, ?, ?, 1)',
       [name, email, hashedPassword, validRole]
@@ -892,6 +1027,7 @@ app.post('/api/admin/users', verifyToken, async (req, res) => {
 // Update user role/privileges (admin only)
 app.put('/api/admin/users/:id', verifyToken, async (req, res) => {
   try {
+    if (!ensureAdmin(req, res)) return
     const { id } = req.params
     const { role } = req.body
 
@@ -919,6 +1055,7 @@ app.put('/api/admin/users/:id', verifyToken, async (req, res) => {
 // Delete user (admin only)
 app.delete('/api/admin/users/:id', verifyToken, async (req, res) => {
   try {
+    if (!ensureAdmin(req, res)) return
     const { id } = req.params
 
     const pool = getPoolOrThrow()
@@ -1989,6 +2126,12 @@ app.put('/api/settings/profile', verifyToken, upload.single('profileImage'), asy
     // Handle password change if provided (synchronous & safe)
     let hashedPassword = null
     if (newPassword) {
+      const passwordPolicy = await getPasswordPolicy(pool)
+      const passwordError = validatePasswordAgainstPolicy(newPassword, passwordPolicy)
+      if (passwordError) {
+        return res.status(400).json({ message: passwordError, passwordPolicy })
+      }
+
       if (!currentPassword) {
         return res.status(400).json({ message: 'Current password required to change password' })
       }

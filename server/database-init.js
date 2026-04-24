@@ -94,6 +94,25 @@ async function initializeDatabase() {
     `);
     console.log('  ✓ users table');
 
+    await connection.execute(`
+      CREATE TABLE app_settings (
+        setting_key VARCHAR(100) PRIMARY KEY,
+        setting_value JSON NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    await connection.execute(`
+      INSERT INTO app_settings (setting_key, setting_value)
+      VALUES ('password_policy', JSON_OBJECT(
+        'minLength', 8,
+        'requireUppercase', false,
+        'requireLowercase', false,
+        'requireNumber', false,
+        'requireSpecialCharacter', false
+      ))
+    `);
+    console.log('  âœ“ app_settings table');
+
     // Service providers table
     await connection.execute(`
       CREATE TABLE service_providers (

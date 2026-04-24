@@ -82,6 +82,26 @@ async function initializeDatabase() {
       )
     `)
 
+    await dbConnection.execute(`
+      CREATE TABLE IF NOT EXISTS app_settings (
+        setting_key VARCHAR(100) PRIMARY KEY,
+        setting_value JSON NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `)
+
+    await dbConnection.execute(
+      `INSERT INTO app_settings (setting_key, setting_value)
+       VALUES ('password_policy', JSON_OBJECT(
+         'minLength', 8,
+         'requireUppercase', false,
+         'requireLowercase', false,
+         'requireNumber', false,
+         'requireSpecialCharacter', false
+       ))
+       ON DUPLICATE KEY UPDATE setting_key = setting_key`
+    )
+
     // Create service providers table
     await dbConnection.execute(`
       CREATE TABLE IF NOT EXISTS service_providers (

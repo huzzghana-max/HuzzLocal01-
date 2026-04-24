@@ -1,5 +1,21 @@
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+export interface PasswordPolicy {
+  minLength: number
+  requireUppercase: boolean
+  requireLowercase: boolean
+  requireNumber: boolean
+  requireSpecialCharacter: boolean
+}
+
+export const DEFAULT_PASSWORD_POLICY: PasswordPolicy = {
+  minLength: 8,
+  requireUppercase: false,
+  requireLowercase: false,
+  requireNumber: false,
+  requireSpecialCharacter: false,
+}
+
 export const normalizeWhitespace = (value: string) => value.replace(/\s+/g, ' ').trim()
 
 export const normalizeEmail = (value: string) => value.trim().toLowerCase()
@@ -42,7 +58,47 @@ export interface SupportReplyValues {
   message: string
 }
 
-export const validateSignUp = (values: AuthSignupValues): ValidationResult<AuthSignupValues> => {
+export const getPasswordPolicyChecklist = (policy: PasswordPolicy) => {
+  const checklist = [`At least ${policy.minLength} characters`]
+
+  if (policy.requireUppercase) checklist.push('At least one uppercase letter')
+  if (policy.requireLowercase) checklist.push('At least one lowercase letter')
+  if (policy.requireNumber) checklist.push('At least one number')
+  if (policy.requireSpecialCharacter) checklist.push('At least one special character')
+
+  return checklist
+}
+
+export const validatePasswordAgainstPolicy = (password: string, policy: PasswordPolicy = DEFAULT_PASSWORD_POLICY): string => {
+  if (!password) {
+    return 'Password is required.'
+  }
+  if (password.length < policy.minLength) {
+    return `Password must be at least ${policy.minLength} characters.`
+  }
+  if (password.length > 128) {
+    return 'Password must be 128 characters or fewer.'
+  }
+  if (policy.requireUppercase && !/[A-Z]/.test(password)) {
+    return 'Password must include at least one uppercase letter.'
+  }
+  if (policy.requireLowercase && !/[a-z]/.test(password)) {
+    return 'Password must include at least one lowercase letter.'
+  }
+  if (policy.requireNumber && !/\d/.test(password)) {
+    return 'Password must include at least one number.'
+  }
+  if (policy.requireSpecialCharacter && !/[^A-Za-z0-9]/.test(password)) {
+    return 'Password must include at least one special character.'
+  }
+
+  return ''
+}
+
+export const validateSignUp = (
+  values: AuthSignupValues,
+  passwordPolicy: PasswordPolicy = DEFAULT_PASSWORD_POLICY,
+): ValidationResult<AuthSignupValues> => {
   const normalizedValues = {
     ...values,
     name: normalizeWhitespace(values.name),
@@ -66,13 +122,8 @@ export const validateSignUp = (values: AuthSignupValues): ValidationResult<AuthS
     errors.email = 'Email must be 120 characters or fewer.'
   }
 
-  if (!values.password) {
-    errors.password = 'Password is required.'
-  } else if (values.password.length < 8) {
-    errors.password = 'Password must be at least 8 characters.'
-  } else if (values.password.length > 128) {
-    errors.password = 'Password must be 128 characters or fewer.'
-  }
+  const passwordError = validatePasswordAgainstPolicy(values.password, passwordPolicy)
+  if (passwordError) errors.password = passwordError
 
   if (!values.confirmPassword) {
     errors.confirmPassword = 'Please confirm your password.'

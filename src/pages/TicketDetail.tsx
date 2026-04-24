@@ -46,7 +46,7 @@ interface TicketDetail {
 }
 
 interface LocalUser {
-  role: string
+  role: 'organizer' | 'provider' | 'admin'
   name: string
   email: string
   profile_image?: string
