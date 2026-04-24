@@ -42,6 +42,7 @@ import ShareIcon from '@mui/icons-material/Share'
 import api from '../../api'
 import DashboardSidebar from '../../components/DashboardSidebar'
 import { StatCard, DashboardHeader } from '../../components/DashboardComponents'
+import { validateReview } from '../../utils/validation'
 
 interface User {
   id: number
@@ -88,6 +89,14 @@ interface Conversation {
   unread_count: number
 }
 
+interface BookingReview {
+  id: number
+  booking_id: number
+  provider_id: number
+  rating: number
+  comment: string | null
+}
+
 const OrganizerDashboard: React.FC = () => {
   const navigate = useNavigate()
   const theme = useTheme()
@@ -105,7 +114,8 @@ const OrganizerDashboard: React.FC = () => {
   const [reviewSubmitting, setReviewSubmitting] = useState(false)
   const [reviewSuccess, setReviewSuccess] = useState('')
   const [reviewError, setReviewError] = useState('')
-  const [reviewedBookings, setReviewedBookings] = useState<number[]>([])
+  const [reviewCommentError, setReviewCommentError] = useState('')
+  const [reviewsByBooking, setReviewsByBooking] = useState<Record<number, BookingReview>>({})
   const [shareInfo, setShareInfo] = useState('')
   const [conversations, setConversations] = useState<Conversation[]>([])
   const conversationPollingRef = React.useRef<ReturnType<typeof setInterval> | null>(null)
@@ -172,8 +182,11 @@ const OrganizerDashboard: React.FC = () => {
         try {
           if (!user?.id) return
           const response = await api.get('/reviews/by-reviewer')
-          // Only store booking ids that have been reviewed by this user
-          setReviewedBookings(response.data.map((r: any) => r.booking_id))
+          const reviewMap = (response.data || []).reduce((acc: Record<number, BookingReview>, review: BookingReview) => {
+            acc[review.booking_id] = review
+            return acc
+          }, {})
+          setReviewsByBooking(reviewMap)
         } catch (err) {
           console.error('Failed to fetch reviews:', err)
         }
@@ -181,33 +194,97 @@ const OrganizerDashboard: React.FC = () => {
       if (user?.id) fetchReviewed()
     }, [user?.id])
     const handleOpenReviewDialog = (booking: ServiceBooking) => {
+      const existingReview = reviewsByBooking[booking.id]
       setReviewBooking(booking)
-      setReviewRating(null)
-      setReviewComment('')
+      setReviewRating(existingReview?.rating ?? null)
+      setReviewComment(existingReview?.comment ?? '')
       setReviewDialogOpen(true)
       setReviewError('')
+      setReviewCommentError('')
+      setReviewSuccess('')
+    }
+
+    const handleCloseReviewDialog = () => {
+      setReviewDialogOpen(false)
+      setReviewBooking(null)
+      setReviewRating(null)
+      setReviewComment('')
+      setReviewError('')
+      setReviewCommentError('')
       setReviewSuccess('')
     }
 
     const handleSubmitReview = async () => {
-      if (!reviewBooking || !reviewRating) {
-        setReviewError('Please provide a rating.')
+      if (!reviewBooking) {
         return
       }
+
+      const validation = validateReview({
+        rating: reviewRating,
+        comment: reviewComment,
+      })
+
+      if (!validation.isValid) {
+        setReviewError(validation.errors.rating || '')
+        setReviewCommentError(validation.errors.comment || '')
+        setReviewSuccess('')
+        return
+      }
+
+      const existingReview = reviewsByBooking[reviewBooking.id]
       setReviewSubmitting(true)
       setReviewError('')
+      setReviewCommentError('')
       try {
-        await api.post('/reviews', {
+        const payload = {
           booking_id: reviewBooking.id,
           provider_id: reviewBooking.vendor_id,
-          rating: reviewRating,
-          comment: reviewComment,
-        })
-        setReviewSuccess('Review submitted!')
-        setReviewedBookings((prev) => [...prev, reviewBooking.id])
-        setTimeout(() => setReviewDialogOpen(false), 1200)
+          rating: validation.values.rating,
+          comment: validation.values.comment,
+        }
+        const response = existingReview
+          ? await api.put(`/reviews/${existingReview.id}`, payload)
+          : await api.post('/reviews', payload)
+
+        setReviewSuccess(existingReview ? 'Review updated!' : 'Review submitted!')
+        setReviewsByBooking((prev) => ({
+          ...prev,
+          [reviewBooking.id]: {
+            id: Number(response.data?.review?.id ?? response.data?.reviewId ?? existingReview?.id),
+            booking_id: reviewBooking.id,
+            provider_id: reviewBooking.vendor_id,
+            rating: Number(validation.values.rating),
+            comment: validation.values.comment || null,
+          },
+        }))
+        window.setTimeout(() => handleCloseReviewDialog(), 1200)
       } catch (err: any) {
         setReviewError(err.response?.data?.message || 'Failed to submit review.')
+      } finally {
+        setReviewSubmitting(false)
+      }
+    }
+
+    const handleDeleteReview = async () => {
+      if (!reviewBooking) return
+
+      const existingReview = reviewsByBooking[reviewBooking.id]
+      if (!existingReview) return
+
+      setReviewSubmitting(true)
+      setReviewError('')
+      setReviewCommentError('')
+      try {
+        await api.delete(`/reviews/${existingReview.id}`)
+        setReviewsByBooking((prev) => {
+          const next = { ...prev }
+          delete next[reviewBooking.id]
+          return next
+        })
+        setReviewSuccess('Review deleted.')
+        window.setTimeout(() => handleCloseReviewDialog(), 900)
+      } catch (err: any) {
+        setReviewError(err.response?.data?.message || 'Failed to delete review.')
       } finally {
         setReviewSubmitting(false)
       }
@@ -935,7 +1012,7 @@ const OrganizerDashboard: React.FC = () => {
                               Cancel Booking
                             </Button>
                           )}
-                          {booking.status === 'completed' && !reviewedBookings.includes(booking.id) && (
+                          {booking.status === 'completed' && (
                             <Button
                               size="small"
                               variant="contained"
@@ -943,7 +1020,7 @@ const OrganizerDashboard: React.FC = () => {
                               onClick={() => handleOpenReviewDialog(booking)}
                               fullWidth
                             >
-                              Leave Review
+                              {reviewsByBooking[booking.id] ? 'Edit Review' : 'Leave Review'}
                             </Button>
                           )}
                         </Box>
@@ -1022,7 +1099,7 @@ const OrganizerDashboard: React.FC = () => {
                                   Cancel
                                 </Button>
                               )}
-                              {booking.status === 'completed' && !reviewedBookings.includes(booking.id) && (
+                              {booking.status === 'completed' && (
                                 <Button
                                   size="small"
                                   variant="contained"
@@ -1030,7 +1107,7 @@ const OrganizerDashboard: React.FC = () => {
                                   onClick={() => handleOpenReviewDialog(booking)}
                                   sx={{ ml: 1 }}
                                 >
-                                  Leave Review
+                                  {reviewsByBooking[booking.id] ? 'Edit Review' : 'Leave Review'}
                                 </Button>
                               )}
                             </TableCell></TableRow>
@@ -1041,8 +1118,8 @@ const OrganizerDashboard: React.FC = () => {
                 )}
               </Box>
                             {/* Review Dialog */}
-              <Dialog open={reviewDialogOpen} onClose={() => setReviewDialogOpen(false)} maxWidth="xs" fullWidth>
-                <DialogTitle>Leave a Review</DialogTitle>
+              <Dialog open={reviewDialogOpen} onClose={handleCloseReviewDialog} maxWidth="xs" fullWidth>
+                <DialogTitle>{reviewBooking && reviewsByBooking[reviewBooking.id] ? 'Edit Review' : 'Leave a Review'}</DialogTitle>
                 <DialogContent sx={{ pt: 2 }}>
                   {reviewError && <Alert severity="error" sx={{ mb: 2 }}>{reviewError}</Alert>}
                   {reviewSuccess && <Alert severity="success" sx={{ mb: 2 }}>{reviewSuccess}</Alert>}
@@ -1057,6 +1134,11 @@ const OrganizerDashboard: React.FC = () => {
                       size="large"
                     />
                   </Box>
+                  {reviewCommentError && (
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                      {reviewCommentError}
+                    </Alert>
+                  )}
                   <TextField
                     label="Comment (optional)"
                     value={reviewComment}
@@ -1065,12 +1147,18 @@ const OrganizerDashboard: React.FC = () => {
                     multiline
                     minRows={2}
                     maxRows={4}
+                    helperText={`${reviewComment.trim().length}/1000`}
                   />
                 </DialogContent>
                 <DialogActions>
-                  <Button onClick={() => setReviewDialogOpen(false)} disabled={reviewSubmitting}>Cancel</Button>
+                  {reviewBooking && reviewsByBooking[reviewBooking.id] && (
+                    <Button onClick={handleDeleteReview} color="error" disabled={reviewSubmitting}>
+                      {reviewSubmitting ? 'Working...' : 'Delete'}
+                    </Button>
+                  )}
+                  <Button onClick={handleCloseReviewDialog} disabled={reviewSubmitting}>Cancel</Button>
                   <Button onClick={handleSubmitReview} variant="contained" disabled={reviewSubmitting || !reviewRating}>
-                    {reviewSubmitting ? 'Submitting...' : 'Submit'}
+                    {reviewSubmitting ? 'Saving...' : reviewBooking && reviewsByBooking[reviewBooking.id] ? 'Update' : 'Submit'}
                   </Button>
                 </DialogActions>
               </Dialog>

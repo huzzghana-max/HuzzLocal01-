@@ -443,6 +443,58 @@ function normalizePhoneNumber(value) {
   return null
 }
 
+function normalizeReviewComment(value) {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed ? trimmed : null
+}
+
+function validateReviewPayload({ rating, comment }, { requireRating = true } = {}) {
+  const parsedRating = rating == null || rating === '' ? null : Number(rating)
+  const normalizedComment = normalizeReviewComment(comment)
+
+  if (requireRating && parsedRating == null) {
+    return { error: 'Missing required fields' }
+  }
+
+  if (parsedRating != null && (!Number.isInteger(parsedRating) || parsedRating < 1 || parsedRating > 5)) {
+    return { error: 'Rating must be an integer between 1 and 5' }
+  }
+
+  if (normalizedComment && normalizedComment.length > 1000) {
+    return { error: 'Comment must be 1000 characters or fewer' }
+  }
+
+  return {
+    parsedRating,
+    normalizedComment,
+  }
+}
+
+async function refreshProviderRating(pool, providerId) {
+  const [ratingRows] = await pool.execute(
+    `SELECT COALESCE(AVG(rating), 0) as avg_rating, COUNT(*) as total_ratings
+     FROM reviews
+     WHERE provider_id = ?`,
+    [providerId],
+  )
+
+  const avgRating = Number(ratingRows[0]?.avg_rating || 0)
+  const totalRatings = Number(ratingRows[0]?.total_ratings || 0)
+
+  await pool.execute(
+    `UPDATE service_providers
+     SET rating = ?, total_ratings = ?
+     WHERE user_id = ?`,
+    [avgRating, totalRatings, providerId],
+  )
+
+  return {
+    rating: avgRating,
+    totalRatings,
+  }
+}
+
 async function sendBookingVerificationSms({ phone, serviceTitle, verificationCode }) {
   const apiKey = process.env.MNOTIFY_API_KEY
   const sender = process.env.MNOTIFY_SENDER_ID || process.env.MNOTIFY_SENDER || 'mNotify'
@@ -1109,12 +1161,9 @@ app.post('/api/reviews', verifyToken, async (req, res) => {
   try {
     const { booking_id, rating, comment } = req.body
     const reviewer_id = req.userId
-    const parsedRating = Number(rating)
-    if (!booking_id || !parsedRating) {
-      return res.status(400).json({ message: 'Missing required fields' })
-    }
-    if (!Number.isInteger(parsedRating) || parsedRating < 1 || parsedRating > 5) {
-      return res.status(400).json({ message: 'Rating must be an integer between 1 and 5' })
+    const validation = validateReviewPayload({ rating, comment })
+    if (!booking_id || validation.error) {
+      return res.status(400).json({ message: validation.error || 'Missing required fields' })
     }
 
     const pool = getPoolOrThrow()
@@ -1142,36 +1191,115 @@ app.post('/api/reviews', verifyToken, async (req, res) => {
     // Insert review
     const [insertResult] = await pool.execute(
       'INSERT INTO reviews (booking_id, reviewer_id, provider_id, rating, comment) VALUES (?, ?, ?, ?, ?)',
-      [booking_id, reviewer_id, provider_id, parsedRating, (comment || '').trim() || null]
+      [booking_id, reviewer_id, provider_id, validation.parsedRating, validation.normalizedComment]
     )
 
-    // Update aggregate provider rating.
-    const [ratingRows] = await pool.execute(
-      `SELECT COALESCE(AVG(rating), 0) as avg_rating, COUNT(*) as total_ratings
-       FROM reviews
-       WHERE provider_id = ?`,
-      [provider_id],
-    )
-    const avgRating = Number(ratingRows[0]?.avg_rating || 0)
-    const totalRatings = Number(ratingRows[0]?.total_ratings || 0)
-    await pool.execute(
-      `UPDATE service_providers
-       SET rating = ?, total_ratings = ?
-       WHERE user_id = ?`,
-      [avgRating, totalRatings, provider_id],
-    )
+    const providerSummary = await refreshProviderRating(pool, provider_id)
 
     res.status(201).json({
       message: 'Review submitted successfully.',
       reviewId: insertResult.insertId,
       provider: {
         id: provider_id,
-        rating: avgRating,
-        totalRatings,
+        rating: providerSummary.rating,
+        totalRatings: providerSummary.totalRatings,
       },
     })
   } catch (error) {
     console.error('Submit review error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.put('/api/reviews/:reviewId', verifyToken, async (req, res) => {
+  try {
+    const reviewId = Number(req.params.reviewId)
+    const reviewerId = req.userId
+    const validation = validateReviewPayload(req.body)
+
+    if (!reviewId || validation.error) {
+      return res.status(400).json({ message: validation.error || 'Invalid review id' })
+    }
+
+    const pool = getPoolOrThrow()
+    const [reviews] = await pool.execute(
+      `SELECT id, booking_id, provider_id
+       FROM reviews
+       WHERE id = ? AND reviewer_id = ?
+       LIMIT 1`,
+      [reviewId, reviewerId],
+    )
+
+    if (reviews.length === 0) {
+      return res.status(404).json({ message: 'Review not found.' })
+    }
+
+    await pool.execute(
+      `UPDATE reviews
+       SET rating = ?, comment = ?
+       WHERE id = ?`,
+      [validation.parsedRating, validation.normalizedComment, reviewId],
+    )
+
+    const providerSummary = await refreshProviderRating(pool, reviews[0].provider_id)
+
+    res.json({
+      message: 'Review updated successfully.',
+      review: {
+        id: reviewId,
+        booking_id: reviews[0].booking_id,
+        provider_id: reviews[0].provider_id,
+        rating: validation.parsedRating,
+        comment: validation.normalizedComment,
+      },
+      provider: {
+        id: reviews[0].provider_id,
+        rating: providerSummary.rating,
+        totalRatings: providerSummary.totalRatings,
+      },
+    })
+  } catch (error) {
+    console.error('Update review error:', error.message)
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.delete('/api/reviews/:reviewId', verifyToken, async (req, res) => {
+  try {
+    const reviewId = Number(req.params.reviewId)
+    const reviewerId = req.userId
+
+    if (!reviewId) {
+      return res.status(400).json({ message: 'Invalid review id' })
+    }
+
+    const pool = getPoolOrThrow()
+    const [reviews] = await pool.execute(
+      `SELECT id, booking_id, provider_id
+       FROM reviews
+       WHERE id = ? AND reviewer_id = ?
+       LIMIT 1`,
+      [reviewId, reviewerId],
+    )
+
+    if (reviews.length === 0) {
+      return res.status(404).json({ message: 'Review not found.' })
+    }
+
+    await pool.execute('DELETE FROM reviews WHERE id = ?', [reviewId])
+    const providerSummary = await refreshProviderRating(pool, reviews[0].provider_id)
+
+    res.json({
+      message: 'Review deleted successfully.',
+      bookingId: reviews[0].booking_id,
+      provider: {
+        id: reviews[0].provider_id,
+        rating: providerSummary.rating,
+        totalRatings: providerSummary.totalRatings,
+      },
+    })
+  } catch (error) {
+    console.error('Delete review error:', error.message)
     res.status(500).json({ message: error.message })
   }
 })

@@ -224,13 +224,15 @@ const BrowseVendors: React.FC = () => {
       const reviewsResp = await api.get('/reviews/by-reviewer', {
         headers: { Authorization: `Bearer ${token}` },
       })
-      const reviewedIds = new Set((reviewsResp.data || []).map((r: any) => Number(r.booking_id)))
+      const existingReviews = Array.isArray(reviewsResp.data) ? reviewsResp.data : []
+      const reviewedIds = new Set(existingReviews.map((r: any) => Number(r.booking_id)))
+      const providerReview = existingReviews.find((r: any) => Number(r.provider_id) === Number(providerId))
       const completed = (bookingsResp.data || []).filter((b: any) => b.status === 'completed')
       const matching = completed.find(
         (b: any) => Number(b.vendor_id) === Number(providerId) && !reviewedIds.has(Number(b.id))
       )
 
-      if (!matching) {
+      if (!matching && !providerReview) {
         setRatingNotice({ type: 'info', text: 'You can only rate after completing a booking with this provider.' })
         setUserRatings((prev) => {
           const next = { ...prev }
@@ -241,11 +243,17 @@ const BrowseVendors: React.FC = () => {
         return
       }
 
-      const reviewResp = await api.post(
-        '/reviews',
-        { booking_id: matching.id, rating: newValue, comment: '' },
-        { headers: { Authorization: `Bearer ${token}` } },
-      )
+      const reviewResp = providerReview
+        ? await api.put(
+            `/reviews/${providerReview.id}`,
+            { rating: newValue, comment: providerReview.comment || '' },
+            { headers: { Authorization: `Bearer ${token}` } },
+          )
+        : await api.post(
+            '/reviews',
+            { booking_id: matching.id, rating: newValue, comment: '' },
+            { headers: { Authorization: `Bearer ${token}` } },
+          )
 
       const updatedRating = Number(reviewResp.data?.provider?.rating ?? vendor.rating ?? 0)
       const updatedTotal = Number(reviewResp.data?.provider?.totalRatings ?? vendor.totalRatings ?? 0)
@@ -263,7 +271,7 @@ const BrowseVendors: React.FC = () => {
           return v
         })
       )
-      setRatingNotice({ type: 'success', text: 'Thanks! Your rating was submitted.' })
+      setRatingNotice({ type: 'success', text: providerReview ? 'Your rating was updated.' : 'Thanks! Your rating was submitted.' })
     } catch (error: any) {
       const status = error?.response?.status
       if (status === 409) {

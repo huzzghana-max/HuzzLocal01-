@@ -58,6 +58,11 @@ export interface SupportReplyValues {
   message: string
 }
 
+export interface ReviewValues {
+  rating: number | null
+  comment: string
+}
+
 export const getPasswordPolicyChecklist = (policy: PasswordPolicy) => {
   const checklist = [`At least ${policy.minLength} characters`]
 
@@ -233,6 +238,26 @@ export const validateSupportReply = (values: SupportReplyValues): ValidationResu
     errors.message = 'Message must be at least 2 characters.'
   } else if (normalizedValues.message.length > 2000) {
     errors.message = 'Message must be 2000 characters or fewer.'
+  }
+
+  return { errors, values: normalizedValues, isValid: Object.keys(errors).length === 0 }
+}
+
+export const validateReview = (values: ReviewValues): ValidationResult<ReviewValues> => {
+  const normalizedValues = {
+    ...values,
+    comment: values.comment.trim(),
+  }
+  const errors: ValidationResult<ReviewValues>['errors'] = {}
+
+  if (normalizedValues.rating == null) {
+    errors.rating = 'Please provide a rating.'
+  } else if (!Number.isInteger(normalizedValues.rating) || normalizedValues.rating < 1 || normalizedValues.rating > 5) {
+    errors.rating = 'Rating must be a whole number between 1 and 5.'
+  }
+
+  if (normalizedValues.comment.length > 1000) {
+    errors.comment = 'Comment must be 1000 characters or fewer.'
   }
 
   return { errors, values: normalizedValues, isValid: Object.keys(errors).length === 0 }
