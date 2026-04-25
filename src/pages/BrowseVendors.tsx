@@ -53,6 +53,7 @@ import ViewListIcon from '@mui/icons-material/ViewList'
 import StarIcon from '@mui/icons-material/Star'
 import api from '../api'
 import { API_CONFIG } from '../config/api.config'
+import { getCategoryBanner } from '../data/categoryBanners'
 
 interface Vendor {
   id: number
@@ -648,6 +649,77 @@ const BrowseVendors: React.FC = () => {
             </Box>
           </Paper>
         </Fade>
+
+        {/* Category Banner */}
+        {selectedServiceType !== 'all' && getCategoryBanner(selectedServiceType) && (
+          <Fade in={true} timeout={500}>
+            <Paper
+              sx={{
+                mb: 4,
+                borderRadius: 3,
+                overflow: 'hidden',
+                height: { xs: 180, sm: 240, md: 280 },
+                position: 'relative',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
+                backgroundColor: '#f0f0f0',
+              }}
+            >
+              {/* Banner Image */}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('${getCategoryBanner(selectedServiceType)?.image}')`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                }}
+              />
+
+              {/* Banner Content */}
+              <Box
+                sx={{
+                  position: 'relative',
+                  zIndex: 1,
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'flex-end',
+                  p: { xs: 2, sm: 3, md: 4 },
+                  color: 'white',
+                }}
+              >
+                <Typography
+                  variant="h4"
+                  sx={{
+                    fontWeight: 800,
+                    mb: 1,
+                    fontSize: { xs: '1.5rem', sm: '2rem', md: '2.25rem' },
+                    textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
+                  }}
+                >
+                  {getCategoryBanner(selectedServiceType)?.title}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 400,
+                    opacity: 0.9,
+                    fontSize: { xs: '0.9rem', sm: '1rem', md: '1.05rem' },
+                    maxWidth: '85%',
+                    textShadow: '0 1px 4px rgba(0, 0, 0, 0.5)',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {getCategoryBanner(selectedServiceType)?.description}
+                </Typography>
+              </Box>
+            </Paper>
+          </Fade>
+        )}
 
         {/* Vendors Grid / List */}
         {loading ? (
