@@ -21,13 +21,13 @@ export const categoryBanners: Record<string, CategoryBanner> = {
   Catering: {
     title: 'Catering Services',
     description: 'Delight your guests with exceptional culinary experiences. Professional caterers offering diverse menus and exceptional service.',
-    image: 'https://images.unsplash.com/photo-1555732006-edcadf036d4f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8ZW58MHx8fHx8fA%3D%3D&auto=format&fit=crop&w=2000&q=80',
+    image: 'https://i.pinimg.com/736x/30/67/39/30673928d62f1b4d49fe5636e6629bfc.jpg',
     color: '#F19B7D',
   },
   'Event Planning': {
     title: 'Event Planning Services',
     description: 'Turn your vision into reality. Expert event planners ready to coordinate every detail of your perfect event.',
-    image: 'https://images.unsplash.com/photo-1519671482632-7f87d229cc28?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8ZW58MHx8fHx8fA%3D%3D&auto=format&fit=crop&w=2000&q=80',
+    image: 'https://i.pinimg.com/1200x/55/0e/87/550e87ca968682c3060156585cc07e7a.jpg',
     color: '#F19B7D',
   },
   Entertainment: {
