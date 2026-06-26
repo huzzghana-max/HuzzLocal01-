@@ -632,9 +632,9 @@ const AdminDashboard: React.FC = () => {
                     },
                   }}
                 >
-                  <Tab label="👥 Users" />
-                  <Tab label={`📅 Events (${totalEvents})`} />
-                  <Tab label="🔐 Security" />
+                  <Tab label="Users" />
+                  <Tab label={`Events (${totalEvents})`} />
+                  <Tab label="Security" />
                   <Tab label="Analytics" />
                 </Tabs>
               </Paper>

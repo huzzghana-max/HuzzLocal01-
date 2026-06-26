@@ -41,7 +41,7 @@ import { AuthProvider } from './contexts/AuthContext'
 
 // Layout component with navbar
 const LayoutWithNavbar = ({ children }: { children: React.ReactNode }) => (
-  <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default', pt: '88px' }}>
+  <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default', pt: '66px' }}>
     <Navbar navState="active" activeIndex={0} />
     {children}
   </Box>

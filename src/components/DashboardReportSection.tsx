@@ -242,52 +242,64 @@ export const DashboardReportSection: React.FC<DashboardReportSectionProps> = ({
     })
   }
 
+  const summaryAccentColors = [
+    theme.palette.primary.main,
+    theme.palette.secondary.main,
+    theme.palette.success.main,
+    theme.palette.warning.main,
+    theme.palette.info.main,
+  ]
+  const displayTitle = hideHeader ? activeReportType?.label || previewReport.title : previewReport.title
+
   return (
     <Box sx={{ mb: 3 }}>
       <Paper
         sx={{
-          p: { xs: 1.5, md: 2 },
-          mb: 1.5,
+          p: { xs: 2, md: 2.5 },
+          mb: 2,
           borderRadius: 3,
           border: '1px solid',
-          borderColor: 'divider',
-          boxShadow: 'none',
+          borderColor: alpha(theme.palette.primary.main, 0.14),
+          background: theme.palette.mode === 'light'
+            ? `linear-gradient(135deg, ${theme.palette.background.paper} 0%, ${alpha(theme.palette.secondary.main, 0.08)} 100%)`
+            : `linear-gradient(135deg, ${theme.palette.background.paper} 0%, ${alpha(theme.palette.secondary.main, 0.12)} 100%)`,
+          boxShadow: theme.palette.mode === 'light'
+            ? `0 16px 38px ${alpha(theme.palette.common.black, 0.06)}`
+            : `0 16px 38px ${alpha(theme.palette.common.black, 0.28)}`,
         }}
       >
-        <Stack spacing={1.5}>
+        <Stack spacing={2}>
           <Box
             sx={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: { xs: 'flex-start', md: 'center' },
               flexDirection: { xs: 'column', md: 'row' },
-              gap: 1.5,
+              gap: 2,
             }}
           >
-            <Box>
-              {!hideHeader && (
-                <Typography sx={{ fontSize: { xs: '1.2rem', md: '1.4rem' }, fontWeight: 800, color: 'text.primary' }}>
-                  {previewReport.title}
-                </Typography>
-              )}
+            <Box sx={{ maxWidth: 760 }}>
+              <Typography sx={{ fontSize: { xs: '1.35rem', md: '1.75rem' }, fontWeight: 800, color: 'text.primary', lineHeight: 1.15 }}>
+                {displayTitle}
+              </Typography>
               <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5, maxWidth: 720 }}>
                 {activeReportType?.description || previewReport.subtitle || description}
               </Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.75 }}>
-                Last generated: {lastGeneratedAt.toLocaleString()}
+              <Typography variant="caption" sx={{ color: alpha(theme.palette.text.secondary, 0.9), display: 'block', mt: 1 }}>
+                Updated {lastGeneratedAt.toLocaleString()} - {previewReport.rows.length} rows
               </Typography>
             </Box>
 
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: { xs: '100%', md: 'auto' } }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: { xs: '100%', md: 'auto' }, flexShrink: 0 }}>
               <Button
                 variant="contained"
                 onClick={handleGenerateReport}
                 fullWidth
                 size="small"
                 disabled={hasInvalidDateRange || !hasPendingChanges}
-                sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2, minHeight: 36 }}
+                sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2, minHeight: 38, px: 2 }}
               >
-                Generate Report
+                Generate
               </Button>
               <Button
                 variant="outlined"
@@ -295,7 +307,7 @@ export const DashboardReportSection: React.FC<DashboardReportSectionProps> = ({
                 onClick={handleExportCsv}
                 fullWidth
                 size="small"
-                sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2, minHeight: 36 }}
+                sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2, minHeight: 38 }}
               >
                 CSV
               </Button>
@@ -305,7 +317,7 @@ export const DashboardReportSection: React.FC<DashboardReportSectionProps> = ({
                 onClick={handleExportPdf}
                 fullWidth
                 size="small"
-                sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2, minHeight: 36 }}
+                sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2, minHeight: 38 }}
               >
                 PDF
               </Button>
@@ -315,8 +327,15 @@ export const DashboardReportSection: React.FC<DashboardReportSectionProps> = ({
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: `minmax(220px, 1.4fr) repeat(${Math.max(2, visibleFilters.length + 2)}, minmax(160px, 1fr)) auto` },
-              gap: 0.9,
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: 'repeat(2, minmax(0, 1fr))',
+                lg: `minmax(240px, 1.3fr) repeat(${Math.max(2, visibleFilters.length + 2)}, minmax(150px, 1fr)) auto`,
+              },
+              gap: 1,
+              p: 1,
+              borderRadius: 2.5,
+              backgroundColor: alpha(theme.palette.background.paper, theme.palette.mode === 'light' ? 0.84 : 0.62),
             }}
           >
             <FormControl fullWidth>
@@ -386,7 +405,7 @@ export const DashboardReportSection: React.FC<DashboardReportSectionProps> = ({
               variant="text"
               startIcon={<RestartAltRoundedIcon />}
               onClick={resetFilters}
-              sx={{ textTransform: 'none', fontWeight: 700, justifySelf: { lg: 'start' }, minHeight: 36 }}
+              sx={{ textTransform: 'none', fontWeight: 700, justifySelf: { lg: 'start' }, minHeight: 36, borderRadius: 2 }}
             >
               Reset
             </Button>
@@ -409,26 +428,38 @@ export const DashboardReportSection: React.FC<DashboardReportSectionProps> = ({
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(4, minmax(0, 1fr))' },
-          gap: 1,
-          mb: 1.5,
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', xl: `repeat(${Math.min(5, Math.max(1, previewReport.summaries.length))}, minmax(0, 1fr))` },
+          gap: 1.25,
+          mb: 2,
         }}
       >
-        {previewReport.summaries.map((item) => (
+        {previewReport.summaries.map((item, index) => (
           <Paper
             key={item.label}
             sx={{
-              p: 1.25,
+              p: 1.5,
               borderRadius: 2.5,
               border: '1px solid',
-              borderColor: 'divider',
+              borderColor: alpha(summaryAccentColors[index % summaryAccentColors.length], 0.24),
               boxShadow: 'none',
+              position: 'relative',
+              overflow: 'hidden',
+              minHeight: 124,
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 4,
+                backgroundColor: summaryAccentColors[index % summaryAccentColors.length],
+              },
             }}
           >
             <Typography sx={{ fontSize: '0.72rem', fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               {item.label}
             </Typography>
-            <Typography sx={{ fontSize: '1.45rem', fontWeight: 800, mt: 0.6, color: 'text.primary' }}>
+            <Typography sx={{ fontSize: { xs: '1.65rem', md: '1.85rem' }, fontWeight: 800, mt: 0.75, color: 'text.primary', lineHeight: 1.1 }}>
               {item.value}
             </Typography>
             <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.6, display: 'block' }}>
@@ -438,90 +469,133 @@ export const DashboardReportSection: React.FC<DashboardReportSectionProps> = ({
         ))}
       </Box>
 
-      <Paper
+      <Box
         sx={{
-          mb: 1.5,
-          borderRadius: 3,
-          overflow: 'hidden',
-          border: '1px solid',
-          borderColor: 'divider',
-          boxShadow: 'none',
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.8fr) minmax(280px, 0.8fr)' },
+          gap: 2,
         }}
       >
-        <Box sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Typography sx={{ fontWeight: 800, color: 'text.primary' }}>Preview</Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            {previewReport.subtitle || description}
-          </Typography>
-          <Typography variant="caption" sx={{ color: alpha(theme.palette.text.secondary, 0.9), display: 'block', mt: 0.6 }}>
-            {previewReport.rows.length} rows - {previewReport.columns.length} columns
-          </Typography>
-        </Box>
-
-        <TableContainer sx={{ maxHeight: 420 }}>
-          <Table stickyHeader size="small">
-            <TableHead>
-              <TableRow>
-                {previewReport.columns.map((column) => (
-                  <TableCell
-                    key={column.key}
-                    sx={{
-                      fontWeight: 700,
-                      py: 0.9,
-                      px: 1.2,
-                      bgcolor: theme.palette.background.paper,
-                      borderBottom: '1px solid',
-                      borderColor: 'divider',
-                    }}
-                  >
-                    {column.label}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {previewReport.rows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={Math.max(1, previewReport.columns.length)} sx={{ py: 2.4, px: 1.2 }}>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                      No rows match the current report filters.
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                previewReport.rows.map((row, index) => (
-                  <TableRow key={`${previewReport.title}-${index}`}>
-                    {previewReport.columns.map((column) => (
-                      <TableCell key={column.key} sx={{ py: 0.9, px: 1.2 }}>
-                        {row[column.key] ?? '-'}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
-
-      <Paper
-        sx={{
-          p: 1.5,
-          borderRadius: 3,
-          border: '1px solid',
-          borderColor: 'divider',
-          boxShadow: 'none',
-        }}
-      >
-        <Typography sx={{ fontWeight: 800, color: 'text.primary', mb: 1 }}>Key insights</Typography>
-        <Stack spacing={0.75}>
-          {previewReport.insights.map((insight, index) => (
-            <Typography key={`${insight}-${index}`} variant="body2" sx={{ color: 'text.secondary' }}>
-              {index + 1}. {insight}
+        <Paper
+          sx={{
+            borderRadius: 3,
+            overflow: 'hidden',
+            border: '1px solid',
+            borderColor: 'divider',
+            boxShadow: 'none',
+            minWidth: 0,
+          }}
+        >
+          <Box sx={{ p: 1.75, borderBottom: '1px solid', borderColor: 'divider' }}>
+            <Typography sx={{ fontWeight: 800, color: 'text.primary' }}>Report Preview</Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+              {previewReport.subtitle || description}
             </Typography>
-          ))}
-        </Stack>
-      </Paper>
+          </Box>
+
+          <TableContainer sx={{ maxHeight: 460 }}>
+            <Table stickyHeader size="small">
+              <TableHead>
+                <TableRow>
+                  {previewReport.columns.map((column) => (
+                    <TableCell
+                      key={column.key}
+                      sx={{
+                        fontWeight: 800,
+                        py: 1.05,
+                        px: 1.4,
+                        bgcolor: theme.palette.mode === 'light' ? alpha(theme.palette.primary.main, 0.04) : alpha(theme.palette.primary.main, 0.12),
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                        color: 'text.primary',
+                      }}
+                    >
+                      {column.label}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {previewReport.rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={Math.max(1, previewReport.columns.length)} sx={{ py: 3, px: 1.4 }}>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        No rows match the current report filters.
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  previewReport.rows.map((row, index) => (
+                    <TableRow
+                      key={`${previewReport.title}-${index}`}
+                      sx={{
+                        '&:nth-of-type(even)': {
+                          backgroundColor: alpha(theme.palette.primary.main, theme.palette.mode === 'light' ? 0.025 : 0.06),
+                        },
+                      }}
+                    >
+                      {previewReport.columns.map((column) => (
+                        <TableCell key={column.key} sx={{ py: 1.05, px: 1.4, color: 'text.primary' }}>
+                          {row[column.key] ?? '-'}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+
+        <Paper
+          sx={{
+            p: 2,
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: alpha(theme.palette.secondary.main, 0.24),
+            boxShadow: 'none',
+            alignSelf: 'start',
+          }}
+        >
+          <Typography sx={{ fontWeight: 800, color: 'text.primary' }}>Key Insights</Typography>
+          <Typography variant="caption" sx={{ color: alpha(theme.palette.text.secondary, 0.9), display: 'block', mt: 0.5, mb: 1.5 }}>
+            {previewReport.columns.length} columns - {previewReport.rows.length} rows
+          </Typography>
+          <Stack spacing={1}>
+            {previewReport.insights.map((insight, index) => (
+              <Box
+                key={`${insight}-${index}`}
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: '28px minmax(0, 1fr)',
+                  gap: 1,
+                  alignItems: 'start',
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    color: theme.palette.secondary.contrastText,
+                    backgroundColor: theme.palette.secondary.main,
+                  }}
+                >
+                  {index + 1}
+                </Box>
+                <Typography variant="body2" sx={{ color: 'text.secondary', lineHeight: 1.55 }}>
+                  {insight}
+                </Typography>
+              </Box>
+            ))}
+          </Stack>
+        </Paper>
+      </Box>
     </Box>
   )
 }

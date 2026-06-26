@@ -1,7 +1,9 @@
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Box,
   Button,
+  ButtonBase,
   Card,
   CardContent,
   Container,
@@ -9,6 +11,7 @@ import {
   Stack,
   Typography,
   Avatar,
+  IconButton,
 } from '@mui/material'
 import { alpha, useTheme } from '@mui/material/styles'
 import { keyframes } from '@mui/system'
@@ -75,6 +78,48 @@ const HomePage: React.FC = () => {
       image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=80',
     },
   ]
+
+  const [spotlightIndex, setSpotlightIndex] = useState(0)
+  const [touchStart, setTouchStart] = useState<number | null>(null)
+  const [touchEnd, setTouchEnd] = useState<number | null>(null)
+  const [isCarouselPaused, setCarouselPaused] = useState(false)
+
+  const handleSwipe = () => {
+    if (touchStart === null || touchEnd === null) return
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > 50
+    const isRightSwipe = distance < -50
+
+    if (isLeftSwipe) {
+      handleSpotlightNext()
+    } else if (isRightSwipe) {
+      handleSpotlightPrev()
+    }
+
+    setTouchStart(null)
+    setTouchEnd(null)
+  }
+
+  useEffect(() => {
+    if (touchEnd !== null) {
+      handleSwipe()
+    }
+  }, [touchEnd])
+
+  useEffect(() => {
+    if (isCarouselPaused) {
+      return
+    }
+
+    const interval = setInterval(() => {
+      setSpotlightIndex((prev) => (prev + 1) % spotlight.length)
+    }, 5200)
+
+    return () => clearInterval(interval)
+  }, [spotlight.length, isCarouselPaused])
+
+  const handleSpotlightPrev = () => setSpotlightIndex((prev) => (prev - 1 + spotlight.length) % spotlight.length)
+  const handleSpotlightNext = () => setSpotlightIndex((prev) => (prev + 1) % spotlight.length)
 
   return (
     <Box sx={{ backgroundColor: 'background.default', pb: { xs: 10, md: 14 } }}>
@@ -230,19 +275,164 @@ const HomePage: React.FC = () => {
             Outcomes Teams Can Trust
           </Typography>
         </Stack>
-        <Grid container spacing={2.4}>
-          {spotlight.map((card) => (
-            <Grid key={card.title} size={{ xs: 12, md: 4 }}>
-              <Card sx={{ borderRadius: 3, overflow: 'hidden', boxShadow: 'none', border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}` }}>
-                <Box sx={{ height: 210, background: `url(${card.image}) center/cover` }} />
-                <CardContent sx={{ p: 2.2 }}>
-                  <Typography sx={{ fontWeight: 800, mb: 0.6 }}>{card.title}</Typography>
-                  <Typography sx={{ color: 'text.secondary', fontSize: '0.93rem', lineHeight: 1.55 }}>{card.text}</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
+
+        <Box
+          sx={{
+            position: 'relative',
+            borderRadius: 4,
+            overflow: 'hidden',
+            minHeight: { xs: 320, md: 360 },
+            boxShadow: `0 18px 40px ${alpha(theme.palette.common.black, 0.12)}`,
+            cursor: 'grab',
+            userSelect: 'none',
+          }}
+          onMouseEnter={() => setCarouselPaused(true)}
+          onMouseLeave={() => setCarouselPaused(false)}
+          onTouchStart={(e) => setTouchStart(e.targetTouches[0].clientX)}
+          onTouchMove={(e) => setTouchEnd(e.targetTouches[0].clientX)}
+          onTouchEnd={(e) => setTouchEnd(e.changedTouches[0].clientX)}
+        >
+          {spotlight.map((item, idx) => (
+            <Box
+              key={item.title}
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                backgroundImage: `url(${item.image})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                filter: 'brightness(0.75) contrast(1.05)',
+                opacity: idx === spotlightIndex ? 1 : 0,
+                transition: 'opacity 600ms ease-in-out',
+              }}
+            />
           ))}
-        </Grid>
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(180deg, rgba(15,23,42,0.15) 0%, rgba(15,23,42,0.72) 100%)',
+            }}
+          />
+          <Box
+            sx={{
+              position: 'relative',
+              zIndex: 1,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Box sx={{ p: { xs: 3, md: 4 }, maxWidth: { xs: '100%', md: '55%' } }}>
+              <Typography sx={{ color: theme.palette.secondary.main, fontWeight: 700, letterSpacing: 0.8, mb: 1 }}>
+                Featured execution
+              </Typography>
+              <Typography
+                sx={{
+                  fontSize: { xs: '1.9rem', md: '2.6rem' },
+                  fontWeight: 900,
+                  color: 'common.white',
+                  lineHeight: 1.05,
+                  opacity: 1,
+                  transition: 'opacity 600ms ease-in-out',
+                }}
+              >
+                {spotlight[spotlightIndex].title}
+              </Typography>
+              <Typography
+                sx={{
+                  mt: 1.5,
+                  color: alpha(theme.palette.common.white, 0.92),
+                  fontSize: '1rem',
+                  lineHeight: 1.7,
+                  maxWidth: 540,
+                  opacity: 1,
+                  transition: 'opacity 600ms ease-in-out',
+                }}
+              >
+                {spotlight[spotlightIndex].text}
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: { xs: 2.5, md: 3 } }}>
+              <Stack direction="column" spacing={1} sx={{ width: '100%', maxWidth: 260 }}>
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                  {spotlight.map((item, idx) => (
+                    <ButtonBase
+                      key={item.title}
+                      onClick={() => setSpotlightIndex(idx)}
+                      aria-label={`Show ${item.title}`}
+                      sx={{
+                        width: 16,
+                        height: 16,
+                        minWidth: 16,
+                        minHeight: 16,
+                        borderRadius: '50%',
+                        backgroundColor: idx === spotlightIndex ? theme.palette.secondary.main : alpha(theme.palette.common.white, 0.45),
+                        transition: 'transform 180ms ease, background-color 180ms ease',
+                        transform: idx === spotlightIndex ? 'scale(1.1)' : 'scale(1)',
+                        '&:hover': {
+                          transform: 'scale(1.35)',
+                          backgroundColor: theme.palette.secondary.main,
+                        },
+                      }}
+                    />
+                  ))}
+                </Stack>
+                <Box
+                  sx={{
+                    width: '100%',
+                    height: 5,
+                    borderRadius: 999,
+                    backgroundColor: alpha(theme.palette.common.white, 0.18),
+                    overflow: 'hidden',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: `${((spotlightIndex + 1) / spotlight.length) * 100}%`,
+                      height: '100%',
+                      backgroundColor: theme.palette.secondary.main,
+                      transition: 'width 450ms ease',
+                    }}
+                  />
+                </Box>
+              </Stack>
+
+              <Stack direction="row" spacing={1}>
+                <IconButton
+                  aria-label="Previous spotlight"
+                  onClick={handleSpotlightPrev}
+                  sx={{
+                    color: 'common.white',
+                    border: `1px solid ${alpha(theme.palette.common.white, 0.32)}`,
+                    backgroundColor: alpha(theme.palette.common.black, 0.24),
+                    '&:hover': {
+                      backgroundColor: alpha(theme.palette.common.black, 0.34),
+                    },
+                  }}
+                >
+                  <ArrowForwardRoundedIcon sx={{ transform: 'rotate(180deg)' }} />
+                </IconButton>
+                <IconButton
+                  aria-label="Next spotlight"
+                  onClick={handleSpotlightNext}
+                  sx={{
+                    color: 'common.white',
+                    border: `1px solid ${alpha(theme.palette.common.white, 0.32)}`,
+                    backgroundColor: alpha(theme.palette.common.black, 0.24),
+                    '&:hover': {
+                      backgroundColor: alpha(theme.palette.common.black, 0.34),
+                    },
+                  }}
+                >
+                  <ArrowForwardRoundedIcon />
+                </IconButton>
+              </Stack>
+            </Box>
+          </Box>
+        </Box>
       </Container>
 
       <Container maxWidth="lg" sx={{ mt: sectionSpacing }}>
