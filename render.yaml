@@ -12,16 +12,10 @@ services:
         value: production
       - key: JWT_SECRET
         generateValue: true
-      - key: MYSQL_HOST
+      - key: SUPABASE_DB_URL
         sync: false
-      - key: MYSQL_USER
-        sync: false
-      - key: MYSQL_PASSWORD
-        sync: false
-      - key: MYSQL_DATABASE
-        sync: false
-      - key: MYSQL_PORT
-        sync: false
+      - key: PG_POOL_MAX
+        value: "10"
       - key: CORS_ORIGIN
         sync: false
       - key: PUBLIC_BASE_URL
@@ -45,4 +39,8 @@ services:
       - key: PAYSTACK_CURRENCY
         sync: false
       - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: MNOTIFY_API_KEY
+        sync: false
+      - key: MNOTIFY_SENDER_ID
         sync: false

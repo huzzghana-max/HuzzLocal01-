@@ -78,7 +78,9 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, change, icon, 
             </Box>
           )}
         </Box>
+        {/** 
         {change !== undefined && (
+          
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 2 }}>
             {change >= 0 ? (
               <>
@@ -96,7 +98,8 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, change, icon, 
               </>
             )}
           </Box>
-        )}
+        
+        )}*/}
       </CardContent>
     </Card>
   )

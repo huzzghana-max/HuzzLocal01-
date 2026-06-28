@@ -24,8 +24,14 @@ const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+const USE_POSTGRES = Boolean(process.env.SUPABASE_DB_URL || process.env.DATABASE_URL);
+let PgPool = null;
+if (USE_POSTGRES) {
+  PgPool = require('pg').Pool;
+}
+
 // First connection without database to create it
-const initialPool = mysql.createPool({
+const initialPool = USE_POSTGRES ? null : mysql.createPool({
   host: process.env.MYSQL_HOST || 'localhost',
   user: process.env.MYSQL_USER || 'root',
   password: process.env.MYSQL_PASSWORD || '',
@@ -39,9 +45,248 @@ const initialPool = mysql.createPool({
 let pool = null;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this';
 
+function convertMysqlPlaceholders(sql) {
+  let index = 0;
+  let inSingle = false;
+  let inDouble = false;
+  let escaped = false;
+
+  return sql.replace(/./g, (char) => {
+    if (escaped) {
+      escaped = false;
+      return char;
+    }
+    if (char === '\\') {
+      escaped = true;
+      return char;
+    }
+    if (char === "'" && !inDouble) inSingle = !inSingle;
+    if (char === '"' && !inSingle) inDouble = !inDouble;
+    if (char === '?' && !inSingle && !inDouble) {
+      index += 1;
+      return `$${index}`;
+    }
+    return char;
+  });
+}
+
+function getSqlCommand(sql) {
+  return String(sql).trim().split(/\s+/)[0]?.toUpperCase() || '';
+}
+
+function normalizePostgresRows(rows) {
+  return rows.map((row) => {
+    const normalized = { ...row };
+    Object.entries(normalized).forEach(([key, value]) => {
+      if (
+        value &&
+        typeof value === 'object' &&
+        !(value instanceof Date) &&
+        !Buffer.isBuffer(value)
+      ) {
+        normalized[key] = JSON.stringify(value);
+      }
+    });
+    return normalized;
+  });
+}
+
+function normalizePostgresSql(sql) {
+  let normalized = String(sql).trim();
+
+  if (/^SHOW\s+COLUMNS\s+FROM\s+/i.test(normalized)) {
+    const likeMatch = normalized.match(/^SHOW\s+COLUMNS\s+FROM\s+([a-zA-Z0-9_]+)\s+LIKE\s+'([^']+)'/i);
+    if (likeMatch) {
+      return {
+        sql: `SELECT column_name AS "Field",
+                     CASE WHEN is_nullable = 'YES' THEN 'YES' ELSE 'NO' END AS "Null"
+              FROM information_schema.columns
+              WHERE table_schema = 'public' AND table_name = $1 AND column_name = $2
+              ORDER BY ordinal_position`,
+        params: [likeMatch[1], likeMatch[2]],
+      };
+    }
+
+    const tableMatch = normalized.match(/^SHOW\s+COLUMNS\s+FROM\s+([a-zA-Z0-9_]+)/i);
+    if (tableMatch) {
+      return {
+        sql: `SELECT column_name AS "Field",
+                     CASE WHEN is_nullable = 'YES' THEN 'YES' ELSE 'NO' END AS "Null"
+              FROM information_schema.columns
+              WHERE table_schema = 'public' AND table_name = $1
+              ORDER BY ordinal_position`,
+        params: [tableMatch[1]],
+      };
+    }
+  }
+
+  if (/^SHOW\s+INDEX\s+FROM\s+/i.test(normalized)) {
+    const match = normalized.match(/^SHOW\s+INDEX\s+FROM\s+([a-zA-Z0-9_]+)\s+WHERE\s+Key_name\s*=\s*'([^']+)'/i);
+    if (match) {
+      return {
+        sql: `SELECT indexname AS "Key_name"
+              FROM pg_indexes
+              WHERE schemaname = 'public' AND tablename = $1 AND indexname = $2`,
+        params: [match[1], match[2]],
+      };
+    }
+  }
+
+  if (/information_schema\.KEY_COLUMN_USAGE/i.test(normalized)) {
+    return { sql: 'SELECT NULL::text AS "referencedTable" WHERE false', params: [] };
+  }
+
+  normalized = normalized
+    .replace(/`/g, '')
+    .replace(/\bNOW\(\)/gi, 'CURRENT_TIMESTAMP')
+    .replace(/\bDATABASE\(\)/gi, 'current_database()')
+    .replace(/\bINSERT\s+IGNORE\s+INTO\b/gi, 'INSERT INTO');
+
+  if (/INSERT INTO support_categories/i.test(normalized) && !/ON CONFLICT/i.test(normalized)) {
+    if (/ON DUPLICATE KEY UPDATE/i.test(normalized)) {
+      normalized = normalized.replace(/ON DUPLICATE KEY UPDATE[\s\S]*$/i, 'ON CONFLICT (name) DO NOTHING');
+    } else {
+      normalized += ' ON CONFLICT (name) DO NOTHING';
+    }
+  }
+
+  if (/INSERT INTO app_settings/i.test(normalized) && /ON DUPLICATE KEY UPDATE/i.test(normalized)) {
+    normalized = normalized.replace(/VALUES\s*\(\s*\?,\s*\?\s*\)/i, 'VALUES (?, ?::jsonb)');
+    normalized = normalized.replace(
+      /ON DUPLICATE KEY UPDATE[\s\S]*$/i,
+      'ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value, updated_at = CURRENT_TIMESTAMP',
+    );
+  }
+
+  normalized = normalized
+    .replace(/notification_preferences\s*=\s*\?/gi, 'notification_preferences = ?::jsonb')
+    .replace(/privacy_settings\s*=\s*\?/gi, 'privacy_settings = ?::jsonb')
+    .replace(/portfolio_images\s*=\s*\?/gi, 'portfolio_images = ?::jsonb');
+
+  if (/INSERT INTO payments/i.test(normalized) && /\bmetadata\b/i.test(normalized)) {
+    normalized = normalized.replace(/,\s*\?\s*\)\s*$/i, ', ?::jsonb)');
+  }
+
+  const command = getSqlCommand(normalized);
+  if (command === 'INSERT' && !/\bRETURNING\b/i.test(normalized) && !/INSERT INTO app_settings/i.test(normalized)) {
+    normalized += ' RETURNING id';
+  }
+
+  return { sql: convertMysqlPlaceholders(normalized), params: null };
+}
+
+function createPostgresCompatPool(pgPool) {
+  const execute = async (sql, params = []) => {
+    const normalized = normalizePostgresSql(sql);
+    const finalParams = normalized.params || params;
+    const result = await pgPool.query(normalized.sql, finalParams);
+    const command = getSqlCommand(normalized.sql);
+
+    if (command === 'SELECT' || command === 'WITH' || command === 'SHOW') {
+      return [normalizePostgresRows(result.rows), result];
+    }
+
+    const metadata = {
+      affectedRows: result.rowCount,
+      changedRows: result.rowCount,
+      insertId: result.rows?.[0]?.id,
+      rowCount: result.rowCount,
+      rows: result.rows,
+    };
+    return [metadata, result];
+  };
+
+  return {
+    isPostgres: true,
+    execute,
+    query: execute,
+    async getConnection() {
+      const client = await pgPool.connect();
+      return {
+        execute: async (sql, params = []) => {
+          const normalized = normalizePostgresSql(sql);
+          const finalParams = normalized.params || params;
+          const result = await client.query(normalized.sql, finalParams);
+          const command = getSqlCommand(normalized.sql);
+          if (command === 'SELECT' || command === 'WITH' || command === 'SHOW') {
+            return [normalizePostgresRows(result.rows), result];
+          }
+          return [{
+            affectedRows: result.rowCount,
+            changedRows: result.rowCount,
+            insertId: result.rows?.[0]?.id,
+            rowCount: result.rowCount,
+            rows: result.rows,
+          }, result];
+        },
+        release: () => client.release(),
+      };
+    },
+    end: () => pgPool.end(),
+  };
+}
+
+async function ensurePostgresRuntimeTables(db) {
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      setting_key VARCHAR(100) PRIMARY KEY,
+      setting_value JSONB NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await db.execute(`
+    INSERT INTO app_settings (setting_key, setting_value)
+    VALUES ('password_policy', '{"minLength":8,"requireUppercase":false,"requireLowercase":false,"requireNumber":false,"requireSpecialCharacter":false}'::jsonb)
+    ON CONFLICT (setting_key) DO NOTHING
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS guest_booking_verifications (
+      id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+      service_id BIGINT NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+      email VARCHAR(255),
+      phone VARCHAR(20),
+      name VARCHAR(255),
+      verification_code VARCHAR(6) NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      consumed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await db.execute(`
+    CREATE INDEX IF NOT EXISTS idx_guest_booking_verifications_email_lookup
+    ON guest_booking_verifications (service_id, email, verification_code)
+  `);
+  await db.execute(`
+    CREATE INDEX IF NOT EXISTS idx_guest_booking_verifications_phone_lookup
+    ON guest_booking_verifications (service_id, phone, verification_code)
+  `);
+  await db.execute(`
+    CREATE INDEX IF NOT EXISTS idx_guest_booking_verifications_expiry
+    ON guest_booking_verifications (expires_at)
+  `);
+}
+
 // Initialize database and tables
 async function initializeDatabase() {
   try {
+    if (USE_POSTGRES) {
+      const connectionString = process.env.SUPABASE_DB_URL || process.env.DATABASE_URL;
+      const pgPool = new PgPool({
+        connectionString,
+        ssl: process.env.PGSSLMODE === 'disable' ? false : { rejectUnauthorized: false },
+        max: Number(process.env.PG_POOL_MAX || 10),
+      });
+
+      pool = createPostgresCompatPool(pgPool);
+      await pool.execute('SELECT 1');
+      await ensurePostgresRuntimeTables(pool);
+      console.log('Connected to Supabase/Postgres database');
+      return;
+    }
+
     // First connection without database to ensure it exists (non-destructive)
     const connection = await initialPool.getConnection()
     // Ensure database exists (non-destructive)
@@ -624,7 +869,7 @@ async function initializeDatabase() {
 
 // Register user with role
 async function registerUser(name, email, password, role = 'organizer') {
-  if (!pool) throw new Error('Database is not initialized. Please ensure MySQL is running on port 3306.')
+  if (!pool) throw new Error('Database is not initialized.')
   
   const connection = await pool.getConnection()
   try {
@@ -656,7 +901,7 @@ async function registerUser(name, email, password, role = 'organizer') {
 
 // Login user
 async function loginUser(email, password) {
-  if (!pool) throw new Error('Database is not initialized. Please ensure MySQL is running on port 3306.')
+  if (!pool) throw new Error('Database is not initialized.')
   
   const connection = await pool.getConnection()
   try {
