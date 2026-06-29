@@ -2,11 +2,11 @@ services:
   - type: web
     name: huzz-backend
     runtime: node
-    rootDir: server
+    rootDir: .
     plan: starter
     autoDeploy: true
     buildCommand: cd server && npm install
-    startCommand: npm start
+    startCommand: cd server && npm start
     envVars:
       - key: NODE_ENV
         value: production
