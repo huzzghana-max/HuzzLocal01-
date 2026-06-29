@@ -8,8 +8,6 @@ import {
   LinearProgress,
 } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
-import TrendingUpIcon from '@mui/icons-material/TrendingUp'
-import TrendingDownIcon from '@mui/icons-material/TrendingDown'
 
 interface StatCardProps {
   title: string
@@ -19,7 +17,7 @@ interface StatCardProps {
   color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info'
 }
 
-export const StatCard: React.FC<StatCardProps> = ({ title, value, change, icon, color = 'primary' }) => {
+export const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color = 'primary' }) => {
   const theme = useTheme()
 
   return (
