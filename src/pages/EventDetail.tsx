@@ -586,7 +586,7 @@ const EventDetail: React.FC = () => {
             }}
           >
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              No signup required. We will email your confirmation and QR check-in code.
+                Want a paid ticket? Use the ticket options below — signup is optional.
             </Typography>
             <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' } }}>
               <TextField
@@ -625,7 +625,7 @@ const EventDetail: React.FC = () => {
                 {registering ? 'Registering...' : 'Register Now'}
               </Button>
               <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
-                Want a paid ticket? Use the ticket options below (sign-in required).
+                Want a paid ticket? Use the ticket options below — signup is optional.
               </Typography>
             </Stack>
             {(registeredToken || registeredQr) && (

@@ -125,11 +125,12 @@ const BrowseVendors: React.FC = () => {
           const imageUrl = service.image ? (service.image.startsWith('/uploads/') ? `${apiHost}${service.image}` : service.image) : `https://i.pravatar.cc/150?img=${service.vendor_id}`;
           return {
             ...service,
+            name: service.title || service.name || service.vendor_name || 'Service',
             business: service.vendor_name,
             serviceType: service.category,
             rating: Number(service.vendor_rating || service.rating || 0),
             totalRatings: Number(service.vendor_total_ratings || service.totalRatings || 0),
-            price: service.price ? `$${typeof service.price === 'string' ? service.price : service.price.toFixed(2)}/hr` : 'Contact for pricing',
+            price: service.price ? `GH₵${typeof service.price === 'string' ? service.price : service.price.toFixed(2)}/hr` : 'Contact for pricing',
             location: service.location || 'Not specified',
             image: imageUrl,
             verified: true,
@@ -181,8 +182,8 @@ const BrowseVendors: React.FC = () => {
     const sorted = [...vendors]
     if (sortBy === 'rating') sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0))
     else if (sortBy === 'price') sorted.sort((a, b) => {
-      const aPrice = parseFloat(a.price?.replace('$', '') || '0')
-      const bPrice = parseFloat(b.price?.replace('$', '') || '0')
+      const aPrice = parseFloat(a.price?.replace('GH₵', '') || '0')
+      const bPrice = parseFloat(b.price?.replace('GH₵', '') || '0')
       return aPrice - bPrice
     })
     else if (sortBy === 'name') sorted.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
@@ -197,21 +198,22 @@ const BrowseVendors: React.FC = () => {
   const handleRatingChange = async (vendor: Vendor, newValue: number | null) => {
     if (newValue == null) return
     const providerId = vendor.vendor_id ?? vendor.user_id
-    if (!providerId) {
+    const ratingKey = providerId ?? vendor.id
+    if (!ratingKey) {
       setRatingNotice({ type: 'error', text: 'Unable to rate this provider right now.' })
       return
     }
 
-    const previousRating = userRatings[vendor.id]
-    setUserRatings((prev) => ({ ...prev, [vendor.id]: newValue }))
+    const previousRating = userRatings[ratingKey]
+    setUserRatings((prev) => ({ ...prev, [ratingKey]: newValue }))
 
     const token = localStorage.getItem('token')
     if (!token) {
       setRatingNotice({ type: 'error', text: 'Please sign in to rate providers.' })
       setUserRatings((prev) => {
         const next = { ...prev }
-        if (previousRating == null) delete next[vendor.id]
-        else next[vendor.id] = previousRating
+        if (previousRating == null) delete next[ratingKey]
+        else next[ratingKey] = previousRating
         return next
       })
       navigate('/signin')
@@ -227,24 +229,33 @@ const BrowseVendors: React.FC = () => {
       })
       const existingReviews = Array.isArray(reviewsResp.data) ? reviewsResp.data : []
       const reviewedIds = new Set(existingReviews.map((r: any) => Number(r.booking_id)))
-      const providerReview = existingReviews.find((r: any) => Number(r.provider_id) === Number(providerId))
       const completed = (bookingsResp.data || []).filter((b: any) => b.status === 'completed')
       const matching = completed.find(
         (b: any) => Number(b.vendor_id) === Number(providerId) && !reviewedIds.has(Number(b.id))
       )
+      const reviewForMatchingBooking = matching
+        ? existingReviews.find((r: any) => Number(r.booking_id) === Number(matching.id))
+        : null
+      const providerReview = existingReviews.find((r: any) => Number(r.provider_id) === Number(providerId))
 
       if (!matching && !providerReview) {
         setRatingNotice({ type: 'info', text: 'You can only rate after completing a booking with this provider.' })
         setUserRatings((prev) => {
           const next = { ...prev }
-          if (previousRating == null) delete next[vendor.id]
-          else next[vendor.id] = previousRating
+          if (previousRating == null) delete next[ratingKey]
+          else next[ratingKey] = previousRating
           return next
         })
         return
       }
 
-      const reviewResp = providerReview
+      const reviewResp = reviewForMatchingBooking
+        ? await api.put(
+            `/reviews/${reviewForMatchingBooking.id}`,
+            { rating: newValue, comment: reviewForMatchingBooking.comment || '' },
+            { headers: { Authorization: `Bearer ${token}` } },
+          )
+        : providerReview && !matching
         ? await api.put(
             `/reviews/${providerReview.id}`,
             { rating: newValue, comment: providerReview.comment || '' },
@@ -272,7 +283,7 @@ const BrowseVendors: React.FC = () => {
           return v
         })
       )
-      setRatingNotice({ type: 'success', text: providerReview ? 'Your rating was updated.' : 'Thanks! Your rating was submitted.' })
+      setRatingNotice({ type: 'success', text: reviewForMatchingBooking || (!matching && providerReview) ? 'Your rating was updated.' : 'Thanks! Your rating was submitted.' })
     } catch (error: any) {
       const status = error?.response?.status
       if (status === 409) {
@@ -282,8 +293,8 @@ const BrowseVendors: React.FC = () => {
       }
       setUserRatings((prev) => {
         const next = { ...prev }
-        if (previousRating == null) delete next[vendor.id]
-        else next[vendor.id] = previousRating
+        if (previousRating == null) delete next[ratingKey]
+        else next[ratingKey] = previousRating
         return next
       })
     }
@@ -834,9 +845,10 @@ const BrowseVendors: React.FC = () => {
                   <CardContent sx={{ flex: 1, p: 2.5, display: 'flex', flexDirection: 'column', gap: 1.2 }}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
                       <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.3, fontSize: '1.05rem' }} noWrap>
-                          {vendor.name}
+                        <Typography variant="subtitle2" sx={{ color: '#F19B7D', fontWeight: 700, mb: 0.3, fontSize: '0.95rem' }} noWrap>
+                          {vendor.services?.[0] || vendor.serviceType || 'Service'}
                         </Typography>
+
                         <Typography variant="body2" sx={{ color: '#8A9099', fontWeight: 500 }} noWrap>
                           {vendor.business}
                         </Typography>
@@ -849,7 +861,7 @@ const BrowseVendors: React.FC = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Box onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
                         <Rating
-                          value={userRatings[vendor.id] ?? vendor.rating ?? 0}
+                          value={userRatings[vendor.vendor_id ?? vendor.user_id ?? vendor.id] ?? vendor.rating ?? 0}
                           onChange={(_e, value) => handleRatingChange(vendor, value)}
                           size="small"
                         />
@@ -958,6 +970,15 @@ const BrowseVendors: React.FC = () => {
                 </Box>
 
                 {/* Business Info */}
+                <Box>
+                  <Typography variant="body2" sx={{ color: '#999', fontWeight: 500, mb: 0.5 }}>
+                    Business Name
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: '#333', fontWeight: 700 }}>
+                    {selectedVendor.business || 'N/A'}
+                  </Typography>
+                </Box>
+
                 <Box>
                   <Typography variant="body2" sx={{ color: '#999', fontWeight: 500, mb: 0.5 }}>
                     Service Type

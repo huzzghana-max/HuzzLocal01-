@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Box,
   Container,
@@ -81,6 +81,7 @@ const ProviderDashboard: React.FC = () => {
   const [tabValue, setTabValue] = useState(0)
   const [stats, setStats] = useState<any>(null)
   const [bookings, setBookings] = useState<Booking[]>([])
+  const [upcomingReminders, setUpcomingReminders] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [openDialog, setOpenDialog] = useState(false)
@@ -135,6 +136,7 @@ const ProviderDashboard: React.FC = () => {
         pendingRequests: transformedBookings.filter((booking: Booking) => booking.status === 'pending').length,
         totalEarnings: totalEarnings.toFixed(2),
       })
+      setUpcomingReminders(getUpcomingReminders(transformedBookings))
       await fetchPayoutData().catch((err) => {
         console.error('Failed to fetch payout data:', err)
       })
@@ -160,6 +162,20 @@ const ProviderDashboard: React.FC = () => {
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
   }
+
+  const getUpcomingReminders = (bookingList: Booking[]) => {
+    const now = new Date()
+    const reminderWindowDays = 3
+    return bookingList.filter((booking) => {
+      if (!booking.booking_date || booking.status !== 'confirmed') return false
+      const bookingDate = new Date(booking.booking_date)
+      if (Number.isNaN(bookingDate.getTime())) return false
+      const diffDays = Math.ceil((bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+      return diffDays >= 0 && diffDays <= reminderWindowDays
+    })
+  }
+
+  const reminderCount = useMemo(() => upcomingReminders.length, [upcomingReminders])
 
   const handleViewDetails = (booking: Booking) => {
     setSelectedBooking(booking)
@@ -193,6 +209,7 @@ const ProviderDashboard: React.FC = () => {
           b.id === selectedBooking.id ? { ...b, status: 'confirmed' as const } : b
         )
         setBookings(updated)
+        setUpcomingReminders(getUpcomingReminders(updated))
         handleCloseDialog()
       } catch (error) {
         console.error('Error confirming booking:', error)
@@ -261,7 +278,7 @@ const ProviderDashboard: React.FC = () => {
         userName={user?.name || 'Service Provider'}
         userEmail={user?.email || 'provider@huzz.com'}
         userImage={user?.profile_image}
-        notifications={stats?.pendingRequests || 0}
+        notifications={(stats?.pendingRequests || 0) + reminderCount}
         messages={0}
         onLogout={handleLogout}
       />
@@ -326,6 +343,11 @@ const ProviderDashboard: React.FC = () => {
               )}
 
               {/* Stats Grid */}
+              {reminderCount > 0 && (
+                <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
+                  You have {reminderCount} confirmed booking{reminderCount === 1 ? '' : 's'} due within the next 3 days. Check your bookings to stay on schedule.
+                </Alert>
+              )}
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 3, mb: 5 }}>
                 <StatCard title="Total Bookings" value={bookings.length} icon={<AssignmentIcon />} color="primary" change={10} />
                 <StatCard title="Pending Requests" value={bookings.filter(b => b.status === 'pending').length} icon={<PendingIcon />} color="warning" change={-3} />

@@ -44,3 +44,9 @@ services:
         sync: false
       - key: MNOTIFY_SENDER_ID
         sync: false
+      - key: FROG_API_KEY
+        sync: false
+      - key: FROG_USERNAME
+        sync: false
+      - key: FROG_SENDER_ID
+        sync: false

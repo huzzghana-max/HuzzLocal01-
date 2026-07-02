@@ -365,7 +365,7 @@ const VendorProfile: React.FC = () => {
                 </Box>
 
                 <TextField
-                  label="Hourly Rate ($)"
+                  label="Hourly Rate (GH₵)"
                   name="hourlyRate"
                   type="number"
                   value={profile.hourlyRate}

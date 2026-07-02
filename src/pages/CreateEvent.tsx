@@ -11,6 +11,8 @@ const CreateEvent: React.FC = () => {
   const [location, setLocation] = useState('')
   const [latitude, setLatitude] = useState('')
   const [longitude, setLongitude] = useState('')
+  const [guestCount, setGuestCount] = useState('')
+  const [budget, setBudget] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageError, setImageError] = useState<string | null>(null)
@@ -114,6 +116,8 @@ const CreateEvent: React.FC = () => {
       form.append('location', location)
       form.append('latitude', latitude)
       form.append('longitude', longitude)
+      if (guestCount) form.append('guest_count', guestCount)
+      if (budget) form.append('budget', budget)
       if (imageFile) form.append('image', imageFile)
 
       const resp = await api.post('/events', form, { headers: { 'Content-Type': 'multipart/form-data' } })
@@ -169,6 +173,24 @@ const CreateEvent: React.FC = () => {
               setLongitude('')
             }} 
             placeholder="Search for address or venue"
+          />
+          
+          <TextField 
+            label="Expected Number of Registrants" 
+            type="number" 
+            fullWidth 
+            value={guestCount}
+            onChange={e => setGuestCount(e.target.value)}
+            inputProps={{ min: '0', step: '1' }}
+          />
+          
+          <TextField 
+            label="Budget (GHS)" 
+            type="number" 
+            fullWidth 
+            value={budget}
+            onChange={e => setBudget(e.target.value)}
+            inputProps={{ min: '0', step: '0.01' }}
           />
           
           <TextField 

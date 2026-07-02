@@ -52,7 +52,7 @@ interface Service {
   title: string
   description: string
   category: string
-  price: number
+  price?: number
   image?: string
   phone?: string
   location?: string
@@ -89,7 +89,7 @@ const VendorServices: React.FC = () => {
     title: '',
     description: '',
     category: 'Photography',
-    price: 0,
+    price: '' as string | number,
     phone: '',
     location: '',
     latitude: '',
@@ -162,8 +162,7 @@ const VendorServices: React.FC = () => {
     const { name, value } = e.target
     setFormData((prev) => {
       if (name === 'price') {
-        // Avoid NaN: return 0 if value is empty, otherwise parse as float
-        return { ...prev, [name]: value === '' ? 0 : parseFloat(value) }
+        return { ...prev, [name]: value }
       }
       return { ...prev, [name]: value }
     })
@@ -214,7 +213,7 @@ const VendorServices: React.FC = () => {
         title: service.title,
         description: service.description,
         category: service.category,
-        price: service.price,
+        price: service.price !== undefined ? service.price : '',
         phone: service.phone || '',
         location: service.location || '',
         latitude: String(service.latitude || ''),
@@ -229,7 +228,7 @@ const VendorServices: React.FC = () => {
         title: '',
         description: '',
         category: 'Photography',
-        price: 0,
+        price: '',
         phone: '',
         location: '',
         latitude: '',
@@ -251,8 +250,14 @@ const VendorServices: React.FC = () => {
   }
 
   const handleSaveService = async () => {
-    if (!formData.title || !formData.description || !formData.price) {
+    if (!formData.title || !formData.description || !formData.category) {
       setErrorMessage('Please fill in all required fields')
+      return
+    }
+
+    const priceValue = formData.price === '' ? 0 : Number(formData.price)
+    if (formData.price !== '' && Number.isNaN(priceValue)) {
+      setErrorMessage('Please enter a valid price')
       return
     }
 
@@ -261,7 +266,7 @@ const VendorServices: React.FC = () => {
       data.append('title', formData.title)
       data.append('description', formData.description)
       data.append('category', formData.category)
-      data.append('price', formData.price.toString())
+      data.append('price', priceValue.toString())
       data.append('duration', formData.duration)
       data.append('availability', formData.availability)
       data.append('phone', formData.phone)
@@ -449,9 +454,11 @@ const VendorServices: React.FC = () => {
 
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 'auto' }}>
                       <Typography variant="h6" sx={{ fontWeight: 700, color: '#F19B7D' }}>
-                        ${service.price}
+                        {service.price ? `GH₵${service.price}` : 'Contact for pricing'}
                       </Typography>
-                      <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>per service</Typography>
+                      <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
+                        per service
+                      </Typography>
                     </Box>
                   </CardContent>
                 </Card>
@@ -549,13 +556,14 @@ const VendorServices: React.FC = () => {
           {/* Price */}
           <TextField
             fullWidth
-            label="Price"
+            label="Price (optional)"
             name="price"
             type="number"
             value={formData.price}
             onChange={handleFormChange}
+            placeholder="Leave blank if pricing is custom"
             InputProps={{
-              startAdornment: <InputAdornment position="start">$</InputAdornment>,
+              startAdornment: <InputAdornment position="start">GH₵</InputAdornment>,
             }}
             sx={{ mb: 2 }}
           />

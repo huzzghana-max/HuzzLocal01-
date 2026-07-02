@@ -1,4 +1,4 @@
-# HUZZ — Event Operations & Vendor Marketplace
+# HUZZ ï¿½ Event Operations & Vendor Marketplace
 
 **Project Overview**
 HUZZ is a full-stack event operations platform that helps organizers plan and run events, book service providers, manage tickets and public registrations, and coordinate vendors from a single dashboard. It includes guest flows for attendance and booking, provider dashboards, admin approvals, messaging, payouts, and integrated payments.
@@ -63,6 +63,13 @@ Payments (optional but supported):
 - `PAYSTACK_PUBLIC_KEY`
 - `PAYSTACK_CURRENCY`
 - `STRIPE_SECRET_KEY` (optional)
+
+SMS Notifications (Frog or mNotify):
+- `FROG_API_KEY`
+- `FROG_USERNAME`
+- `FROG_SENDER_ID`
+- `MNOTIFY_API_KEY`
+- `MNOTIFY_SENDER_ID`
 
 **Running the App (Local)**
 1. Install frontend dependencies:
